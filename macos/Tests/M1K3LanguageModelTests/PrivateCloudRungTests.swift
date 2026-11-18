@@ -9,6 +9,12 @@
 //  set, shows nothing and never escalates.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `stoppedFallbackNotice`: every failure's stopped tail says the
+//  local brain stopped before answering, never that it answered.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 //
 
 import Foundation
@@ -230,6 +236,33 @@ struct PrivateCloudRungTests {
             #expect(line.contains("Private Cloud Compute"), "\(failure)")
             #expect(line.contains("Mini"), "\(failure)")
             #expect(line.hasSuffix("."), "\(failure)")
+        }
+    }
+
+    /// Phone, 2026-11-17: PCC refused, Lil took over, and leaving the app stopped Lil before its first word. The
+    /// empty answer is removed, so the notice above it was the whole reply, claiming an answer that never came.
+    @Test("when the local brain stopped before answering, the notice says so and claims no answer")
+    func stoppedFallbackNotice() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let failures: [PrivateCloudFailure] = [
+            .rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .replyCheckUnavailable, .other,
+        ]
+        for failure in failures {
+            let line = PrivateCloudFallback.notice(for: failure, localBrain: "Lil", now: now, localStopped: true)
+            #expect(line.contains("Private Cloud Compute"), "\(failure)")
+            #expect(line.hasSuffix(", and Lil stopped before answering."), "\(failure)")
+            #expect(!line.contains("answered here instead"), "\(failure)")
+        }
+    }
+
+    @Test("when the local brain could not run in the background, the notice says so and asks again on return")
+    func heldFallbackNotice() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        for failure in [PrivateCloudFailure.network, .unavailable, .other] {
+            let line = PrivateCloudFallback.notice(for: failure, localBrain: "Lil", now: now, localHeld: true)
+            #expect(line.contains("Private Cloud Compute"), "\(failure)")
+            #expect(line.hasSuffix(", and Lil can't answer while M1K3 is in the background. Ask again when you're back."))
+            #expect(!line.contains("answered here instead"))
         }
     }
 

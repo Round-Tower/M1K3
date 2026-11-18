@@ -128,6 +128,15 @@
 //  be put up by voice. Confidence 0.8 (pinned in CitedSourceTests).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
 //  untappable. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `answeringOnPrivateCloud`: read off the streaming answer's origin, so
+//  the phone's exit leaves a Private Cloud answer running but stops a failed one's local fallback. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (phone) — a fallback stopped before its first word rewrites the notice
+//  ("Lil stopped before answering"): on the phone PCC refused, leaving stopped Lil, and the reply read "Lil answered
+//  here instead" over nothing. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 
 import Foundation
 import M1K3Inference
@@ -404,6 +413,16 @@ public final class ChatSession {
     public private(set) var messages: [ChatMessage] = []
     public private(set) var isResponding = false
 
+    /// The answer streaming right now comes from Private Cloud Compute, not this device. Read off the streaming
+    /// message's origin, so a failed Private Cloud turn's LOCAL fallback (which runs inside the same
+    /// `sendPrivateCloud`) reads false: the phone's background exit must stop that one like any Lil turn.
+    public var answeringOnPrivateCloud: Bool {
+        guard isResponding, let last = messages.last, last.role == .assistant, last.status == .streaming else {
+            return false
+        }
+        return last.answerOrigin == .privateCloudCompute
+    }
+
     /// The conversation the transcript belongs to. Rows are created LAZILY —
     /// only `send` writes — so empty conversations never reach the store.
     public private(set) var activeConversationID = UUID()
@@ -443,6 +462,9 @@ public final class ChatSession {
     /// can read AppEnvironment's @Observable selectedBrain directly. Set by
     /// AppEnvironment after construction; nil for test/legacy sessions.
     public var residentBrainName: (@MainActor () -> String?)?
+    /// Whether a Private Cloud turn's local fallback may start now (the phone: not in the background with Lil on its
+    /// GPU, `BackgroundExitPolicy.mayRunLocalFallback`). False: the notice says why and nothing local runs.
+    public var mayRunLocalFallback: @MainActor () -> Bool = { true }
     /// Called with the attachments whose files a conversation delete just
     /// discarded, so the shell can forget the Photo memories keyed on them
     /// (caption memory: a deleted sensitive photo must not stay retrievable
@@ -899,11 +921,29 @@ public final class ChatSession {
                 $0.contextExcluded = true
                 $0.status = .complete
             }
+            // A cloud turn the app's exit let run failed in the background, with Lil on this GPU: starting it there
+            // submits GPU work iOS refuses (#864 review). Say so; nothing local runs.
+            guard mayRunLocalFallback() else {
+                update(assistantID) {
+                    $0.text = PrivateCloudFallback.notice(
+                        for: failure, localBrain: localBrainName, now: now, localHeld: true
+                    )
+                }
+                break
+            }
             let localID = UUID()
             messages.append(ChatMessage(id: localID, role: .assistant, text: "", status: .streaming))
             // The local fallback after a look is fenced like any send after a look.
             await LookAftermath.$withholdsWeb.withValue(fenced) {
                 await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            }
+            // Stopped before its first word, the local answer is gone, and the notice must not say it answered.
+            if !messages.contains(where: { $0.id == localID }) {
+                update(assistantID) {
+                    $0.text = PrivateCloudFallback.notice(
+                        for: failure, localBrain: localBrainName, now: now, localStopped: true
+                    )
+                }
             }
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.

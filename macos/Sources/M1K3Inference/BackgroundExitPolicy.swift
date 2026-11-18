@@ -28,11 +28,37 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `wantsBackgroundGrace` (the complement of `stopsTurn`) so an off-GPU
 //  turn finishes on a background task, and the Live Activity says "Paused" for the stopped ones (TurnActivityPolicy).
 //  The Open's Live Activity half is built; the Private Cloud-with-a-loaded-brain stop is unchanged. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `shedPlan` waits on the chat turn OR any MLX evaluation: a title
+//  prefill outlived the shed by 0.4 s on Kev's phone. Confidence 0.8; the phone check is owed (leave right after a
+//  first exchange, while the title is being made).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the first Open is closed: `turnUsesThisDevicesGPU` reads the turn's
+//  route (a Private Cloud answer is not this GPU, even with Lil loaded; a failed one's local fallback IS, so the shell
+//  reads the route off the session's streaming answer, not a flag around the send), and every stop asks it.
+//  Picking a stopped turn up again on the return stays a design call (Kev). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 //
 
 import Foundation
 
 public enum BackgroundExitPolicy {
+    /// Whether the turn in flight runs on this device's GPU: a local brain is loaded AND the turn is not a Private
+    /// Cloud one. Lil stays loaded through a Private Cloud turn, whose answer comes from Apple's servers, so the
+    /// loaded brain alone stopped (and showed as Paused) a turn that would have finished in the background.
+    /// Home needs no case: activating it releases the local brain.
+    public static func turnUsesThisDevicesGPU(localBrainLoaded: Bool, privateCloudTurn: Bool) -> Bool {
+        localBrainLoaded && !privateCloudTurn
+    }
+
+    /// Whether a Private Cloud turn's local fallback may start now: in front, or anywhere when the local brain is not
+    /// on this device's GPU (Mini, Home). A cloud turn the exit let run can still fail in the background; starting Lil
+    /// there submits GPU work iOS refuses (#864 review), so the notice asks again on return instead.
+    public static func mayRunLocalFallback(appActive: Bool, localBrainLoaded: Bool) -> Bool {
+        appActive || !localBrainLoaded
+    }
+
     /// Whether the turn in flight is stopped when the app leaves for the background.
     public static func stopsTurn(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
         turnInFlight && brainRunsOnThisDevicesGPU
@@ -66,10 +92,12 @@ public enum BackgroundExitPolicy {
     /// The longest the shed waits for a stopped turn to exit before it sheds anyway (jetsam hygiene wins).
     public static let shedWaitLimit: Duration = .seconds(1)
 
-    /// Releasing buffers under an evaluation that is still running is its own hazard, so a shed with a turn
-    /// still in flight waits for it, up to `shedWaitLimit`.
-    public static func shedPlan(turnStillRunning: Bool, waited: Duration) -> ShedPlan {
-        turnStillRunning && waited < shedWaitLimit ? .waitForTurn : .shedNow
+    /// Releasing buffers under an evaluation that is still running is its own hazard, so a shed waits, up to
+    /// `shedWaitLimit`, while the chat turn is still responding OR any MLX evaluation is still running: a title
+    /// or a memory distillation started just before the exit is not the chat turn, and the exit does not stop
+    /// it (#862, Kev's phone 2026-11-16: a 181-token title prefill finished 0.4 s after the shed).
+    public static func shedPlan(chatResponding: Bool, mlxEvaluating: Bool, waited: Duration) -> ShedPlan {
+        (chatResponding || mlxEvaluating) && waited < shedWaitLimit ? .waitForTurn : .shedNow
     }
 
     public enum ReturnPlan: Sendable, Equatable {

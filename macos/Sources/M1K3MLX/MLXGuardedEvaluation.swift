@@ -26,21 +26,31 @@
 //  Open: owed on a phone: leave the app at ~1 s, ~3 s and mid-decode on Lil and read that the turn ends
 //  stopped with no crash (MLX cannot run under `swift test`). Whether the Metal error sticks after one
 //  failure (Kokoro's did not) is unverified for the brains.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `run` counts itself in `MLXEvaluationCounter`, so the phone's
+//  background shed can wait for any evaluation still running (a title, a distillation), not only the chat turn.
+//  The Open's phone half is closed: leaving mid-turn on Lil ended stopped with no crash, 3 of 3 on Kev's 17 Pro
+//  (2026-11-16, #861). Whether the Metal error sticks after one failure stays unmeasured. Confidence 0.8.
 //
 
 import Foundation
 import M1K3Inference
 import MLX
+import Synchronization
 
 enum MLXGuardedEvaluation {
     /// Run `body` (every MLX evaluation inside it, on any task it creates) inside MLX's own error scope.
     static func run<R>(
+        counting counter: MLXEvaluationCounter = .shared,
         isolation _: isolated (any Actor)? = #isolation,
         _ body: () async throws -> R
     ) async throws -> R {
         // The body keeps its own isolation (it hops back to the caller's actor when called), so this box is
         // a hand-off of a closure that is already safe to call from anywhere, not a data race.
         nonisolated(unsafe) let work = body
+        // Counted for the whole scope, so the phone's background shed can wait for ANY evaluation still on the
+        // GPU (a title, a distillation), not only the chat turn (#862).
+        counter.enter()
+        defer { counter.leave() }
         do {
             return try await withError { try await work() }
         } catch {
@@ -63,5 +73,31 @@ enum MLXGuardedEvaluation {
         mlxTTFTLog.notice("MLX error caught (cancelled=\(cancelled, privacy: .public)): \(message, privacy: .public)")
         if cancelled { return CancellationError() }
         return InferenceError.generationFailed("MLX: \(message)")
+    }
+}
+
+/// How many MLX evaluations are inside `MLXGuardedEvaluation.run` right now, process-wide. Every brain evaluation
+/// (generate, stream, tool step, look, read, caption, warm, load) passes through that scope, so this is the
+/// precise "is the GPU still busy with a brain" signal. `GenerationActivity` is not: `LocalAgent` holds it for a
+/// whole agent run, tool waits and Mini or Home turns included. An instance, so a test counts on its own.
+final class MLXEvaluationCounter: Sendable {
+    static let shared = MLXEvaluationCounter()
+
+    private let count = Mutex<Int>(0)
+
+    var current: Int {
+        count.withLock { $0 }
+    }
+
+    var any: Bool {
+        current > 0
+    }
+
+    func enter() {
+        count.withLock { $0 += 1 }
+    }
+
+    func leave() {
+        count.withLock { $0 -= 1 }
     }
 }

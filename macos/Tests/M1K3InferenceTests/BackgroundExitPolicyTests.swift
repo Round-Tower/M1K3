@@ -31,11 +31,20 @@ struct BackgroundExitPolicyTests {
 
     @Test("the shed waits for a running turn, and only for the bound")
     func shedWaitsBounded() {
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .zero) == .waitForTurn)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .milliseconds(900)) == .waitForTurn)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .seconds(1)) == .shedNow)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: false, waited: .zero) == .shedNow)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: false, waited: .zero) == .waitForTurn)
+        #expect(
+            BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: true, waited: .milliseconds(900))
+                == .waitForTurn
+        )
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: true, waited: .seconds(1)) == .shedNow)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: false, waited: .zero) == .shedNow)
         #expect(BackgroundExitPolicy.shedWaitLimit <= .seconds(1))
+    }
+
+    @Test("a side generation with no chat turn (a title, a distillation) makes the shed wait too (#862)")
+    func shedWaitsForASideGeneration() {
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: true, waited: .zero) == .waitForTurn)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: true, waited: .seconds(1)) == .shedNow)
     }
 
     @Test("the phone stops an on-device turn at .inactive, without touching speech or voice")
@@ -58,6 +67,7 @@ struct BackgroundExitPolicyTests {
         let shed = try body(of: "func releaseForBackground()", in: "AppCore.swift")
         #expect(shed.contains("BackgroundExitPolicy.shedPlan("))
         #expect(shed.contains("chat.isResponding"))
+        #expect(shed.contains("MLXBrainProvider.evaluating"), "a title or a distillation in flight counts too (#862)")
         #expect(!shed.contains("releaseMemory()"), "the release itself lives in shedBrain, behind the wait")
         let release = try body(of: "func shedBrain()", in: "AppCore.swift")
         #expect(release.contains("releaseMemory()"))
@@ -96,6 +106,29 @@ struct BackgroundExitPolicyTests {
         #expect(body.contains("stopSpeakingAnswer()"))
     }
 
+    @Test("a Private Cloud turn runs on Apple's servers even with Lil loaded here: it is not this device's GPU")
+    func privateCloudTurnIsNotThisGPU() {
+        #expect(BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: true, privateCloudTurn: false))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: true, privateCloudTurn: true))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: false, privateCloudTurn: false))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: false, privateCloudTurn: true))
+    }
+
+    @Test("every stop and the Live Activity read the turn's route, never the loaded brain alone")
+    func theShellReadsTheRoute() throws {
+        let source = try String(contentsOf: Self.shell.appendingPathComponent("AppCore.swift"), encoding: .utf8)
+        #expect(!source.contains("brainRunsOnThisDevicesGPU: currentMLX != nil"), "a Private Cloud turn with Lil loaded")
+        for function in ["func stopForBackground()", "func stopTurnForInactive()"] {
+            let body = try body(of: function, in: "AppCore.swift")
+            #expect(body.contains("brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU"), "\(function)")
+        }
+        // The route comes from the session (the streaming answer's origin), never a flag around the send: a failed
+        // Private Cloud turn falls back to Lil inside the same call (review, 2026-11-17).
+        let route = try body(of: "var turnUsesThisDevicesGPU", in: "AppCore.swift")
+        #expect(route.contains("chat.answeringOnPrivateCloud"))
+        #expect(!source.contains("privateCloudTurnInFlight"))
+    }
+
     @Test("a brain still in memory on the return is taken back, never loaded a second time")
     func theReturnNeverLoadsBesideALiveBrain() throws {
         #expect(BackgroundExitPolicy.onReturn(shedBrainStillLoaded: true) == .takeItBack)
@@ -109,5 +142,14 @@ struct BackgroundExitPolicyTests {
         let warmed = try #require(warm.range(of: "warmSelectedBrain()"))
         #expect(asked.lowerBound < warmed.lowerBound)
         #expect(warm.contains("currentMLX = stillLoaded"))
+    }
+
+    /// #864 review: a Private Cloud turn left running in the background can still fail there, and its local
+    /// fallback would then start Lil on a GPU iOS refuses in the background.
+    @Test("a Private Cloud turn's local fallback runs in front, or anywhere when the local brain is not on this GPU")
+    func localFallbackOnlyWhereTheGPUServes() {
+        #expect(BackgroundExitPolicy.mayRunLocalFallback(appActive: true, localBrainLoaded: true))
+        #expect(BackgroundExitPolicy.mayRunLocalFallback(appActive: false, localBrainLoaded: false), "Mini or Home")
+        #expect(!BackgroundExitPolicy.mayRunLocalFallback(appActive: false, localBrainLoaded: true))
     }
 }

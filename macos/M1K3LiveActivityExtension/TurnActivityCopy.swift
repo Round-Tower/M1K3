@@ -8,16 +8,31 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.75 (words by feel; the look on a real
 //  phone is verify-on-device), Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `isStale`: a working card past its stale date says "Open M1K3 to
+//  check" / "This card stopped updating." with the eyes-shut face. Words by feel; owed on a phone.
 
 import M1K3LiveActivity
 import SwiftUI
 
 struct TurnActivityCopy {
     let phase: TurnActivityPhase
+    /// The card's stale date has passed: the app stopped updating it (TurnActivityStaleness).
+    var isStale = false
+
+    /// A working card nobody can update any more: it says so instead of "thinking" forever.
+    private var stopped: Bool {
+        isStale && TurnActivityStaleness.isWorking(phase)
+    }
+
+    /// The face to draw (a stopped card shuts its eyes).
+    var facePhase: TurnActivityPhase {
+        TurnActivityStaleness.facePhase(phase, isStale: isStale)
+    }
 
     /// The headline: also the VoiceOver label.
     var title: String {
-        switch phase {
+        if stopped { return String(localized: "Open M1K3 to check") }
+        return switch phase {
         case .thinking: String(localized: "M1K3 is thinking…")
         case .reading: String(localized: "M1K3 is reading…")
         case .answering: String(localized: "M1K3 is answering…")
@@ -28,7 +43,8 @@ struct TurnActivityCopy {
 
     /// The line under it.
     var detail: String {
-        switch phase {
+        if stopped { return String(localized: "This card stopped updating.") }
+        return switch phase {
         case .thinking, .reading, .answering: String(localized: "Tap to open the chat.")
         case .ready: String(localized: "Tap to read it.")
         case .paused: String(localized: "Leaving M1K3 stopped this answer.")
@@ -37,7 +53,8 @@ struct TurnActivityCopy {
 
     /// The compact Dynamic Island's trailing word: short, so it never crowds the camera cut-out.
     var short: String {
-        switch phase {
+        if stopped { return String(localized: "Open") }
+        return switch phase {
         // Silkscreen is wide (about 8 pt a letter at 12 pt): five letters at most.
         case .thinking: String(localized: "Think")
         case .reading: String(localized: "Read")
@@ -49,7 +66,8 @@ struct TurnActivityCopy {
 
     /// Working phases wear the phosphor green, settled ones (done, waiting) the near-white mark.
     var titleColor: Color {
-        switch phase {
+        if stopped { return TurnBrand.mark }
+        return switch phase {
         case .thinking, .reading, .answering: TurnBrand.phosphor
         case .ready, .paused: TurnBrand.mark
         }

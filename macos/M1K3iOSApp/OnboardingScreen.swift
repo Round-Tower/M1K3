@@ -39,6 +39,7 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. The cards' footnote is `.caption` (the phone audit flagged
 //  `.caption2` as not scaling). Not yet measured on the phone at the time of writing.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the brain cards take a touch anywhere on the glass (contentShape).
 
 import M1K3Avatar
 import M1K3Inference
@@ -295,6 +296,9 @@ struct OnboardingScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .m1k3Glass(cornerRadius: 18)
+        // The whole card takes the touch, the glass between the words included (the Settings rows' dead
+        // Spacer, 2026-11-17: a `.plain` button answers only where something is drawn).
+        .contentShape(.rect(cornerRadius: 18))
     }
 
     /// The pairing sheet closed: a paired Mac means Home was the pick.
