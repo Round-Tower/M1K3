@@ -17,6 +17,9 @@
 //  cascade on the cap trim AND Clear, and latestChips = newest pulse only. Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the newest-only pin moves to `latestPulseForCanvas` (date + chips, one read). Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `foreignKeysAreEnforced`. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (review fold, the starter chips' removal) — latestPulseForCanvas (the
+//  chip row's only reader) and its test are gone; the ASK lines it read stay, behind heartbeat.authorChips (off by
+//  default), a follow-up to retire.
 
 import Foundation
 @testable import M1K3Heartbeat
@@ -195,21 +198,6 @@ struct HeartbeatStoreTests {
         #expect(try store.recent()[0].chips == ["New one?"])
         try store.clear()
         #expect(try store.chipRowCount() == 0)
-    }
-
-    @Test("latestPulseForCanvas returns the newest pulse's date AND chips from one read — never two pulses' halves")
-    func latestPulseForCanvasIsOneRead() throws {
-        let store = try makeStore()
-        #expect(try store.latestPulseForCanvas() == nil)
-        let base = Date(timeIntervalSince1970: 1_754_480_000)
-        store.record(digest: "a", narrative: nil, renderedBy: "digest", chips: ["From the first?"], at: base)
-        var latest = try #require(try store.latestPulseForCanvas())
-        #expect(latest.createdAt == base)
-        #expect(latest.chips == ["From the first?"])
-        store.record(digest: "b", narrative: nil, renderedBy: "digest", at: base.addingTimeInterval(7200))
-        latest = try #require(try store.latestPulseForCanvas())
-        #expect(latest.createdAt == base.addingTimeInterval(7200))
-        #expect(latest.chips.isEmpty, "the newer, chipless pulse — not the older one's questions under a fresh date")
     }
 
     @Test("foreign keys are ENFORCED on the queue this store opens — the cascades above depend on it")

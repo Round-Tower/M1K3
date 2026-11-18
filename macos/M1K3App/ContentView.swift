@@ -132,6 +132,8 @@
 //  on this Mac, display-only) instead of FILE blocks prepended to a full chat turn; a read's answers offer "Keep this".
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
 //  and the files back to the composer instead of dropping them. Confidence 0.7 (compile-checked).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — the starters state and its redraw task are gone with the chips.
 
 import M1K3Avatar
 import M1K3Chat
@@ -185,11 +187,6 @@ struct ContentView: View {
     /// Last observed window width — nil until the first layout pass.
     @State private var windowWidth: CGFloat?
     @State private var showImporter = false
-    /// The blank canvas's chips — a fresh draw every time the transcript
-    /// empties (launch and every New chat), from what the stores hold then.
-    /// Seeded with the door so the first frame carries a chip (the task runs
-    /// after the first layout); the copy lives in one place, StarterPrompts.
-    @State private var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
@@ -741,20 +738,11 @@ struct ContentView: View {
                     isFirstSession: !greetingFirstTurnDone,
                     isIngesting: env.isIngesting,
                     lastIngestedTitle: env.lastIngestedTitle,
-                    starters: starters,
                     season: SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline),
                     onImport: { showImporter = true },
                     onSend: { text in Task { await env.send(text) } }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Blank canvas (first appearance and every New chat) → new chips,
-                // from the stores as they stand at that moment (the iOS beat).
-                // A plain task is enough: this card only exists inside the
-                // `messages.isEmpty` branch, so SwiftUI rebuilds it (and re-runs
-                // the task) each time the transcript empties.
-                .task {
-                    if env.chat.messages.isEmpty { starters = env.starterPrompts() }
-                }
                 // The idle main screen IS the heartbeat surface — "what's
                 // going on", chilled back under the greeting. Renders
                 // nothing until the toggle is on and a pulse exists.

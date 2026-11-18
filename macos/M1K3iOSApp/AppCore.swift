@@ -191,6 +191,8 @@
 //  refreshes the update row.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — selectBrain clears the update row; a shed
 //  brain on the old weights is released before the new ones load; the warm's download check reads .complete.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — recentMemoryTitles (the chips' only reader) is gone.
 
 import AVFoundation
 #if os(iOS)
@@ -1458,19 +1460,6 @@ final class AppCore {
     /// always — the pure table in MobileBrainMenu.
     var brainMenu: MobileBrainMenu {
         MobileBrainMenu.resolve(afm: miniAvailability, physicalMemoryGB: Self.physicalMemoryGB, active: selectedBrain)
-    }
-
-    /// Titles of the newest live memories, for the blank-canvas chips. Empty when
-    /// the store is absent or nothing has a title yet. Wiring-shaped self notes
-    /// (#286) never become chips — same filter as the Mac's gatherer.
-    func recentMemoryTitles(limit: Int = 4) -> [String] {
-        guard let memoryStore, let memories = try? memoryStore.allMemories(limit: 40) else { return [] }
-        // allMemories is already newest-first.
-        return memories
-            .filter { !SelfNoteClassifier.isWiringNote(title: $0.title ?? "", text: $0.text) }
-            .compactMap(\.title)
-            .prefix(limit)
-            .map { $0 }
     }
 
     // MARK: - Send (drives the avatar around ChatSession's streaming send)

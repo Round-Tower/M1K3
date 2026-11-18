@@ -136,6 +136,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
 //  and the files back to the composer instead of dropping them. Compile-checked.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — New chat tells the Live Activity (`turnActivity.turnFinished(.newChat)`).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — the blank canvas's starter chips are gone: a memory title trimmed into a chip was sent
+//  as the person's words. The canvas is the face and the composer.
 
 import M1K3Avatar
 import M1K3Chat
@@ -164,7 +167,6 @@ struct ChatScreen: View {
     @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @State private var draft = ""
-    @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
     @State private var pickedPhotos: [PhotosPickerItem] = []
     /// The ＋ menu's Photos row presents the picker; a PhotosPicker can't live inside a Menu.
@@ -230,19 +232,6 @@ struct ChatScreen: View {
         VStack(spacing: 0) {
             hero
             transcript
-            // The blank canvas's chips sit at the thumb, over the scrim — the
-            // creature owns the screen above them. The Group carries the
-            // transaction: hero's animation is scoped to hero, so without this
-            // the chips pop instead of fading on the first send (#411 review).
-            Group {
-                if !chatting {
-                    starterChips
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 10)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: chatting)
             inputBar
         }
         .background(backdrop)
@@ -342,9 +331,6 @@ struct ChatScreen: View {
                     AttachmentStore.discard(pendingAttachments)
                     pendingAttachments = []
                 }
-            }
-            .task(id: chatting) {
-                if !chatting { reshuffleStarters() }
             }
             .onChange(of: core.reviewLedger.completedTurns) { _, _ in
                 askForRatingIfEarned()
@@ -616,8 +602,8 @@ struct ChatScreen: View {
                                 { await core.keep(source) }
                             },
                             onSendFollowUp: { question in
-                                // Same gate the starter chips use (brainReady) — chips
-                                // carry their own prompt, so no draft dependency; chips
+                                // Gate on brainReady, not canSend: a follow-up chip carries
+                                // its own prompt, so no draft dependency; chips
                                 // on EARLIER turns stay tappable while a new answer
                                 // streams (ChatSession would otherwise silently drop the
                                 // send and the avatar epilogue would bloom the backdrop
@@ -775,65 +761,6 @@ struct ChatScreen: View {
         if let last = core.chat.messages.last {
             withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
         }
-    }
-
-    /// Starter prompts for the blank canvas — the same tap-to-send path (and the
-    /// same `canSend` gate) as the reply follow-up chips, so a tap while the brain
-    /// is still warming is a no-op rather than an eaten message. Dimmed until ready
-    /// so the readiness hint in the hero reads as the reason.
-    private var starterChips: some View {
-        M1K3GlassGroup(spacing: 8) {
-            starterChipStack
-        }
-        .frame(maxWidth: 340)
-        // brainReady, NOT canSend: the chips live on the EMPTY canvas (draft == ""),
-        // and canSend requires a non-empty draft — so canSend would dim them by
-        // default and swallow every tap even when the brain is warm and ready.
-        .opacity(brainReady ? 1 : 0.5)
-    }
-
-    private var starterChipStack: some View {
-        VStack(spacing: 8) {
-            ForEach(starters, id: \.self) { prompt in
-                Button { sendStarter(prompt) } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkle")
-                            .font(.caption2)
-                            .foregroundStyle(.tint)
-                        Text(prompt)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .m1k3Glass(cornerRadius: 14)
-                    .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    /// A fresh draw every time the canvas goes blank: a shuffle of the pool with
-    /// one recent memory woven in (StarterPrompts, pure + tested) — four on the
-    /// iPad's regular width, three on a phone.
-    private func reshuffleStarters() {
-        var rng = SystemRandomNumberGenerator()
-        starters = StarterPrompts.pick(
-            memoryTitles: core.recentMemoryTitles(),
-            count: horizontalSizeClass == .regular ? 4 : 3,
-            using: &rng
-        )
-    }
-
-    private func sendStarter(_ prompt: String) {
-        // The chip carries its own prompt, so gate on brain readiness only — NOT
-        // canSend (which requires a non-empty draft the empty canvas never has). Same
-        // gate the reply follow-up chips use.
-        guard brainReady else { return }
-        Task { await core.send(prompt) }
     }
 
     // MARK: - Input bar

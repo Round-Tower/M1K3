@@ -34,6 +34,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-11-05 — `plainPromptCarriesEgressOnlyOnAPrivacyAsk`: the egress clause is
 //  gated on the question (`EgressDisclosure.applies(to:)`); a recipe ask's plain prompt ends on the question with
 //  nothing between the identity line and the rules.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — the starter-chip profile-ask pin goes with StarterPrompts.
 //
 
 import Foundation
@@ -350,13 +352,6 @@ struct PlainTurnRouteTests {
         #expect(!named.contains("Galway"))
         // A profile ask passes the gate untouched (HashingMemoryGateTests pins that on the rule); this
         // store's retrieval finds nothing over the floor for it either way.
-    }
-
-    /// The shipped door chip that asks for the profile, and no other chip, keeps every memory.
-    @Test("of the starter chips, only the remember-about-me chip is a profile ask")
-    func starterChipsProfileAsks() {
-        let asks = Set(StarterPrompts.phonePool + StarterPrompts.pool).filter(HashingMemoryGate.isProfileAsk)
-        #expect(asks == ["What do you remember about me?"])
     }
 
     /// Two remembered facts on the hashing embedder, stored as the distiller stores them.
