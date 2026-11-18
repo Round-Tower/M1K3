@@ -172,6 +172,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (restore consent, the launch slot, the
 //  re-pick guard, the warm, the return's take-back) goes through the WeightsRefresh resolver; the warm's ready
 //  refreshes the update row.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — selectBrain clears the update row; a shed
+//  brain on the old weights is released before the new ones load; the warm's download check reads .complete.
 
 import AVFoundation
 #if os(iOS)
@@ -426,6 +428,7 @@ final class AppCore {
     var weightsUpdateFailure: String?
     var leftoverWeights: InstalledWeights?
     @ObservationIgnored var weightsUpdateTask: Task<Void, Never>?
+    @ObservationIgnored var weightsUpdateRefreshGeneration = 0
     /// The repo the local MLX brain has loaded (nil when none): what the update row compares against.
     var servingMLXModelID: String? {
         currentMLX?.modelIdentifier
@@ -997,6 +1000,8 @@ final class AppCore {
             }
         }
 
+        // The update row was about the outgoing brain (and a Switch re-picks the same one): stop its fetch, clear it.
+        resetWeightsUpdateForSwitch()
         selectedBrain = tier
         UserDefaults.standard.set(tier.rawValue, forKey: Self.selectedBrainKey)
         // The first-run gate (hasChosenBrainKey) is written by the onboarding
@@ -1119,7 +1124,7 @@ final class AppCore {
             do {
                 // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
                 // processing task). MLX may load only in the foreground, so the download and the load are two steps.
-                if !LocalModelInventory().isInstalled(modelID: modelID) {
+                if LocalModelInventory().installState(modelID: modelID) != .complete {
                     // Room first: a full phone used to fail every attempt, late, in words that blamed the network.
                     if let downloadMB = selectedBrain.approxDownloadMB,
                        let short = DownloadSpacePreflight.shortfallMB(
@@ -1340,6 +1345,10 @@ final class AppCore {
         if BackgroundExitPolicy.onReturn(shedBrainStillLoaded: stillLoaded != nil) == .takeItBack {
             currentMLX = stillLoaded
             Self.log.notice("the shed brain was still loaded on the return: taking it back, not loading a second")
+        } else if let shed = shedMLX, shed.modelIdentifier != loadable {
+            // Shed on the old weights, and the update landed meanwhile: free them before the new ones load, or the
+            // warm loads beside them (two copies of Lil, the kill above).
+            shed.releaseMemory()
         }
         shedMLX = nil
         warmSelectedBrain()

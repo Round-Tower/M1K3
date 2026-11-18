@@ -222,7 +222,7 @@ struct DownloadsSettingsPane: View {
         if item.actions.contains(.useUpdate), let tier = item.kind.brainTier {
             Button("Switch") { env.useWeightsUpdate(tier) }
                 .buttonStyle(.glass)
-                .disabled(env.chat.isResponding)
+                .disabled(env.chat.isResponding || env.deepDelegationTaskLabel != nil)
                 .accessibilityLabel("Switch \(item.name) to its update")
         }
         if item.actions.contains(.cancel) {

@@ -16,6 +16,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-18, Confidence 0.8 (pure, pinned by WeightsRefreshTests; the Settings
 //  rows, the fetch and the switch are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — the old weights are left over only once the
+//  update has SERVED (a failed Switch leaves them the only working copy); mayFetchUpdate guards Update on a settled
+//  brain and a fresh row.
 
 import Foundation
 
@@ -76,13 +79,21 @@ public enum WeightsRefresh {
         return servingID == predecessor ? .ready : nil
     }
 
-    /// The predecessor, once nothing needs it: the update is complete and the old weights are not what serves.
-    /// The person removes it with a tap (the phone has no "Free up space" list; the Mac lists it there).
+    /// The predecessor, once nothing needs it: the update is complete AND has served (`servingID` is the update,
+    /// settled). Not merely "not serving": after a Switch whose load failed, nothing serves and the old weights are
+    /// the only copy that works (review catch, 2026-11-18). The person removes it with a tap (the phone's
+    /// Settings ▸ Brain; the Mac lists it under "Free up space").
     public static func leftover(
-        predecessor: String?, predecessorOnDisk: Bool, currentComplete: Bool, servingID: String?
+        predecessor: String?, current: String, predecessorOnDisk: Bool, currentComplete: Bool, servingID: String?
     ) -> String? {
-        guard let predecessor, predecessorOnDisk, currentComplete, servingID != predecessor else { return nil }
+        guard let predecessor, predecessorOnDisk, currentComplete, servingID == current else { return nil }
         return predecessor
+    }
+
+    /// Whether Update may start a fetch: the row is `.available` (re-read, not a stale row from another brain), the
+    /// brain is settled (a warm in flight may be downloading the same folder), and no update fetch is running.
+    public static func mayFetchUpdate(update: WeightsUpdate?, brainSettled: Bool, fetching: Bool) -> Bool {
+        update == .available && brainSettled && !fetching
     }
 }
 

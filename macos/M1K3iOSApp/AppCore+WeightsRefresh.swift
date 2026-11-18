@@ -13,6 +13,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-18, Confidence 0.7 (glue over WeightsRefresh; the row, the fetch, the
 //  switch and the remove are verify-by-launch on the phone). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — the row reads disk off the main actor (newest
+//  read wins), a brain switch stops the fetch and clears the row, Remove re-checks that the update serves, settled.
 
 import Foundation
 import M1K3Inference
@@ -34,7 +36,16 @@ extension AppCore {
         Self.weightsResolution(for: tier)?.loadID
     }
 
-    /// Re-read the selected brain's update state off disk. Cheap (stat calls): run on transitions only.
+    /// What one disk read of a brain's update found.
+    private struct UpdateScan {
+        var currentComplete = false
+        var predecessorComplete = false
+        var predecessorOnDisk = false
+        var predecessorBytes: Int64 = 0
+    }
+
+    /// Re-read the selected brain's update state, off the main actor (a partial folder's size is a recursive walk).
+    /// Run on transitions only: Settings appearing, a warm settling, a fetch or a remove ending. The newest read wins.
     func refreshWeightsUpdate() {
         let tier = selectedBrain
         guard let current = tier.mlxModelID, let predecessor = tier.predecessorMLXModelID else {
@@ -42,33 +53,54 @@ extension AppCore {
             leftoverWeights = nil
             return
         }
-        let inventory = LocalModelInventory()
-        let currentComplete = inventory.installState(modelID: current) == .complete
-        let previousState = inventory.installState(modelID: predecessor)
-        let serving = brainLoad == .ready ? servingMLXModelID : nil
-        if weightsUpdateFraction == nil {
-            weightsUpdate = WeightsRefresh.update(
-                predecessor: predecessor, currentComplete: currentComplete,
-                predecessorComplete: previousState == .complete, servingID: serving
-            )
+        weightsUpdateRefreshGeneration += 1
+        let generation = weightsUpdateRefreshGeneration
+        Task { [weak self] in
+            let scan = await Task.detached(priority: .utility) { () -> UpdateScan in
+                let inventory = LocalModelInventory()
+                let previous = inventory.installState(modelID: predecessor)
+                var scan = UpdateScan()
+                scan.currentComplete = inventory.installState(modelID: current) == .complete
+                scan.predecessorComplete = previous == .complete
+                scan.predecessorOnDisk = previous != .absent
+                if scan.predecessorOnDisk {
+                    scan.predecessorBytes = inventory.installedWeights().first { $0.repoID == predecessor }?.bytes ?? 0
+                }
+                return scan
+            }.value
+            guard let self, generation == weightsUpdateRefreshGeneration, selectedBrain == tier else { return }
+            // Serving = settled on a repo. A load in flight or a failed one serves nothing: the old weights may be
+            // the only copy that works (review catch, 2026-11-18).
+            let serving = brainLoad == .ready ? servingMLXModelID : nil
+            if weightsUpdateFraction == nil {
+                weightsUpdate = WeightsRefresh.update(
+                    predecessor: predecessor, currentComplete: scan.currentComplete,
+                    predecessorComplete: scan.predecessorComplete, servingID: serving
+                )
+            }
+            leftoverWeights = WeightsRefresh.leftover(
+                predecessor: predecessor, current: current, predecessorOnDisk: scan.predecessorOnDisk,
+                currentComplete: scan.currentComplete, servingID: serving
+            ).map { InstalledWeights(repoID: $0, bytes: scan.predecessorBytes) }
         }
-        let leftover = WeightsRefresh.leftover(
-            predecessor: predecessor, predecessorOnDisk: previousState != .absent,
-            currentComplete: currentComplete, servingID: serving
-        )
-        leftoverWeights = leftover.map { id in
-            InstalledWeights(
-                repoID: id,
-                bytes: inventory.installedWeights().first(where: { $0.repoID == id })?.bytes ?? 0
-            )
-        }
+    }
+
+    /// A brain switch: the update row was about the outgoing brain. Stop its fetch (the partial stays and resumes
+    /// from the next Update) and clear the row until the new brain's warm settles and re-reads it.
+    func resetWeightsUpdateForSwitch() {
+        weightsUpdateTask?.cancel()
+        weightsUpdateTask = nil
+        weightsUpdateFraction = nil
+        weightsUpdate = nil
+        leftoverWeights = nil
+        weightsUpdateRefreshGeneration += 1
     }
 
     /// "Update": fetch the selected brain's new weights to disk beside the ones serving. Resumes a partial.
     func fetchWeightsUpdate() {
-        guard weightsUpdateTask == nil, weightsUpdate == .available, let modelID = selectedBrain.mlxModelID else {
-            return
-        }
+        guard WeightsRefresh.mayFetchUpdate(
+            update: weightsUpdate, brainSettled: brainLoad == .ready, fetching: weightsUpdateTask != nil
+        ), selectedBrain.predecessorMLXModelID != nil, let modelID = selectedBrain.mlxModelID else { return }
         if let downloadMB = selectedBrain.approxDownloadMB,
            let short = DownloadSpacePreflight.shortfallMB(downloadMB: downloadMB, availableBytes: Self.freeDiskBytes())
         {
@@ -96,11 +128,11 @@ extension AppCore {
                 // Believe the disk, not the return: offline, the downloader returns instead of throwing.
                 try LocalModelInventory().requireComplete(modelID: modelID)
             } catch is CancellationError {
-                failure = nil
+                return // a brain switch cancelled it (resetWeightsUpdateForSwitch owns the row)
             } catch {
                 failure = DownloadFailureCopy.knownMessage(for: error) ?? error.localizedDescription
             }
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             weightsUpdateTask = nil
             weightsUpdateFraction = nil
             weightsUpdateFailure = failure
@@ -121,8 +153,9 @@ extension AppCore {
 
     /// "Remove old weights": delete the predecessor once nothing needs it (re-checked here, not trusted from the row).
     func removeLeftoverWeights() {
-        refreshWeightsUpdate()
-        guard let leftover = leftoverWeights else { return }
+        // Re-checked against the live load, not trusted from the row: only once the update serves, settled.
+        guard let leftover = leftoverWeights, brainLoad == .ready,
+              servingMLXModelID == selectedBrain.mlxModelID else { return }
         let id = leftover.repoID
         leftoverWeights = nil
         Task { [weak self] in

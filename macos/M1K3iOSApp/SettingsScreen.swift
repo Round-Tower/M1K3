@@ -328,7 +328,7 @@ struct SettingsScreen: View {
                     title: "Update \(name)",
                     detail: "New weights for \(name)"
                         + (core.selectedBrain.approxDownloadMB.map { ", \(BrainTier.downloadSizeLabel(megabytes: $0))" } ?? "")
-                        + ". \(name) keeps working while it downloads.",
+                        + ". \(name) keeps working meanwhile; keep M1K3 open until it's done.",
                     systemImage: "arrow.down.circle"
                 )
             }

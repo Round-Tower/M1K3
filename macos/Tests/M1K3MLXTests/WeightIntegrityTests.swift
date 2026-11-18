@@ -9,6 +9,8 @@
 //
 //  Signed (the 2026-10-19 `restrictedToPatterns` addition only): Kev + claude-opus-5-5, 2026-10-19,
 //  Confidence 0.85. Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every repo in a brain's lineage is pinned (WeightsRefresh: an
+//  unpinned update reads complete on any safetensors).
 //
 
 import Foundation
@@ -272,6 +274,18 @@ struct ReceiptValidityTests {
 }
 
 struct PinnedWeightsTests {
+    /// WeightsRefresh: an UNPINNED repo reads `.complete` on any safetensors, so a torn update would count as whole,
+    /// load, fail its heal and re-download unasked; and the predecessor's pin is what verifies it while it serves.
+    /// Set a predecessor only with both pins (review catch, 2026-11-18).
+    @Test("every repo in a brain's lineage is pinned, the predecessor and its update alike")
+    func lineageIsPinned() {
+        for tier in BrainTier.allCases {
+            for id in tier.lineageMLXModelIDs {
+                #expect(PinnedWeights.pin(for: id) != nil, "\(tier): \(id) has no pin (python3 macos/tools/weights/pin_weights.py)")
+            }
+        }
+    }
+
     @Test("both shipping brains are pinned — the tiers a user can actually select")
     func shippingBrainsArePinned() {
         #expect(PinnedWeights.pin(for: "mlx-community/gemma-4-12B-it-4bit") != nil)

@@ -83,18 +83,31 @@ struct WeightsRefreshTests {
         ) == nil, "no lineage, no update")
     }
 
-    @Test("the old weights are left over only once the update is whole and they no longer serve")
+    @Test("the old weights are left over only once the update has served: never while they are the only working copy")
     func leftover() {
         func leftover(current: Bool, previousOnDisk: Bool, serving: String?) -> String? {
             WeightsRefresh.leftover(
-                predecessor: previous, predecessorOnDisk: previousOnDisk, currentComplete: current, servingID: serving
+                predecessor: previous, current: self.current, predecessorOnDisk: previousOnDisk,
+                currentComplete: current, servingID: serving
             )
         }
-        #expect(leftover(current: true, previousOnDisk: true, serving: current) == previous)
-        #expect(leftover(current: true, previousOnDisk: true, serving: nil) == previous, "another brain picked")
+        #expect(leftover(current: true, previousOnDisk: true, serving: current) == previous, "the update serves")
+        // Review catch (2026-11-18): Switch, then the update fails to load (jetsam, a bad pack). Nothing serves,
+        // and the old weights are the only copy that works. They must not be offered for removal.
+        #expect(leftover(current: true, previousOnDisk: true, serving: nil) == nil, "nothing serving: keep them")
         #expect(leftover(current: true, previousOnDisk: true, serving: previous) == nil, "still serving: not yet")
         #expect(leftover(current: false, previousOnDisk: true, serving: nil) == nil, "the fallback: keep it")
         #expect(leftover(current: true, previousOnDisk: false, serving: current) == nil, "already gone")
+    }
+
+    @Test("Update fetches only on the person's tap, for a brain that is settled and not already fetching")
+    func mayFetch() {
+        #expect(WeightsRefresh.mayFetchUpdate(update: .available, brainSettled: true, fetching: false))
+        #expect(!WeightsRefresh.mayFetchUpdate(update: .available, brainSettled: false, fetching: false),
+                "a warm in flight may be downloading the same folder")
+        #expect(!WeightsRefresh.mayFetchUpdate(update: .available, brainSettled: true, fetching: true))
+        #expect(!WeightsRefresh.mayFetchUpdate(update: .ready, brainSettled: true, fetching: false))
+        #expect(!WeightsRefresh.mayFetchUpdate(update: nil, brainSettled: true, fetching: false), "a stale row")
     }
 
     @Test("every tier's lineage starts with its current id, holds at most one predecessor, never repeats")

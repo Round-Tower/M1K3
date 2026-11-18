@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-18, Confidence 0.75 (glue over WeightsRefresh and the downloads
 //  manager; the rows, the fetch and the switch are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — Switch refuses under a turn or a dive (the
+//  pane disables it too).
 
 import Foundation
 import M1K3Inference
@@ -51,7 +53,8 @@ extension AppEnvironment {
     /// "Switch": re-pick the brain. Its resolution is now the update, which no longer matches the loaded
     /// predecessor, so `selectBrain` builds the new weights (from disk) instead of the already-loaded no-op.
     func useWeightsUpdate(_ tier: BrainTier) {
-        guard tier == selectedBrain else { return }
+        // Never under a turn or a dive: selectBrain retires the loaded brain, and refuses (silently) mid-dive.
+        guard tier == selectedBrain, !chat.isResponding, deepDelegationTaskLabel == nil else { return }
         Self.refreshLog.notice("weights update: switching \(tier.rawValue, privacy: .public) to its new weights")
         selectBrain(tier)
         refreshDownloads()

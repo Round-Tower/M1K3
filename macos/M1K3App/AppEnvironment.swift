@@ -174,6 +174,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (the launch build, isBrainDownloaded, the
 //  restore consent, selectBrain and its re-pick check) goes through the WeightsRefresh resolver: a brain on its
 //  predecessor loads from disk, and a re-pick after the update lands is the switch.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — isBrainDownloaded is a cheap lineage read
+//  again (view bodies call it per tick); the resolver decides what loads.
 
 import AppKit
 import Foundation
@@ -1735,9 +1737,11 @@ final class AppEnvironment {
     /// Whether a downloaded-tier brain's weights are already on disk. Mini (Apple
     /// Foundation Models) has nothing to download, so it's never "downloaded" here.
     func isBrainDownloaded(_ tier: BrainTier) -> Bool {
-        // Complete weights it can load, its predecessor's included (WeightsRefresh): Lil on its previous weights
-        // is downloaded, so the launch never gates it behind the update.
-        weightsResolution(for: tier)?.isOnDisk ?? false
+        // Weights on disk for any repo in the tier's lineage (WeightsRefresh): Lil on its previous weights is
+        // downloaded, so nothing gates it behind the update. A cheap read on purpose (one directory listing per
+        // repo): view bodies call this on every progress tick, and `installState` walks a partial folder's size
+        // (review catch, 2026-11-18). Which folder LOADS is the resolver's call, in selectBrain and the preload.
+        tier.lineageMLXModelIDs.contains { brainInventory.isInstalled(modelID: $0) }
     }
 
     /// Accept the launch offer (#237): the tap this download was waiting for.
