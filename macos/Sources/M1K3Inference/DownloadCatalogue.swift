@@ -28,7 +28,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — WeightsUpdate: a brain whose previous weights serve shows Update
 //  available (fetch) or Update ready (switch), never Download or Remove for a brain that works.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: names and purposes resolve from M1K3Inference's
-//  catalog (`bundle: .module`); Lil, Big and Mini are marked never-translate there. English unchanged.
+//  catalog (`bundle: .module`); Lil, Big, Mini and M1K3 Voice are marked never-translate there. English unchanged.
 
 import Foundation
 
@@ -292,7 +292,7 @@ public enum DownloadCatalogue {
         case .pocket: String(localized: "Mini", bundle: .module, comment: "Brain name: never translated.")
         case .semanticMemory: String(localized: "Semantic memory", bundle: .module)
         case .sharperEars: String(localized: "Sharper ears", bundle: .module)
-        case .voice: String(localized: "M1K3 Voice", bundle: .module)
+        case .voice: String(localized: "M1K3 Voice", bundle: .module, comment: "Voice tier name: never translated.")
         }
     }
 

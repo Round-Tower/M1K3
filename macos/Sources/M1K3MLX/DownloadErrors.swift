@@ -21,8 +21,9 @@
 //  by DownloadErrorsTests; a real Hub timeout retrying is verify-by-launch). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: a wrapped download error
 //  inside a cancelled task classifies as cancelled, not offline. Confidence 0.85.
-//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the three integrity sentences resolve from M1K3MLX's
-//  catalog (`bundle: .module`, beside its jinja resources). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the three integrity sentences stay plain English:
+//  DownloadFailureCopy.knownMessage feeds AppStateLine's model line (plan §4; fenced in DoNotTranslateFenceTests).
+//  English unchanged.
 
 import Foundation
 import Hub
@@ -61,28 +62,31 @@ extension Hub.HubClientError: DownloadFailureClassifying {
 
 extension WeightTamperError: DownloadFailureClassifying {
     public var downloadFailureKind: DownloadFailureKind? {
-        .integrity(message: String(localized: """
+        // model-facing: knownMessage feeds AppStateLine (plan §4), stays English
+        .integrity(message: """
         I didn't use those files: they don't match what this version of M1K3 expects. \
         I left them untouched. Try the download again, and tell us if it keeps happening.
-        """, bundle: .module))
+        """)
     }
 }
 
 extension WeightsStaleError: DownloadFailureClassifying {
     public var downloadFailureKind: DownloadFailureKind? {
-        .integrity(message: String(localized: """
+        // model-facing: knownMessage feeds AppStateLine (plan §4), stays English
+        .integrity(message: """
         Those files are from an earlier release of M1K3. Nothing is wrong with them; \
         connect and download again to update them.
-        """, bundle: .module))
+        """)
     }
 }
 
 extension WeightUnverifiableError: DownloadFailureClassifying {
     public var downloadFailureKind: DownloadFailureKind? {
-        .integrity(message: String(localized: """
+        // model-facing: knownMessage feeds AppStateLine (plan §4), stays English
+        .integrity(message: """
         I couldn't read those files to check them, so I didn't use them. Try again; if it \
         keeps happening, remove the download and fetch it fresh.
-        """, bundle: .module))
+        """)
     }
 }
 

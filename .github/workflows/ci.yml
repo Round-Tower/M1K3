@@ -354,11 +354,14 @@ jobs:
       # guard quietly stopped guarding. Run them.
       # tools/dev joined 2026-11-05 (branch_audit.py): its tests build throwaway repos
       # and pin git's hooks and signing off, so the runner's git config can't sway them.
-      - name: Unit-test the guards themselves (+ the eval, weights, router and dev tooling)
+      - name: Unit-test the guards themselves (+ the eval, weights, router, dev and screengrab l10n tooling)
         working-directory: macos
+        # zsh: test_l10n_args.py runs the screengrab lanes' l10n-args.zsh under /bin/zsh (not on the runner image).
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends zsh
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7' 'numpy>=1.26,<3'
-          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router tools/dev
+          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router tools/dev \
+            tools/screengrab/test_l10n_args.py
       # The Claude bundle's bridge and manifest (integrations/mcpb): Node's own test runner, no
       # dependencies. The manifest test reads the MCP kit's tool names, so a tool added to the app
       # without the bundle listing it fails here.
@@ -496,3 +499,6 @@ jobs:
 # (integrations/mcpb/test/claude-plugin.test.js): the plugin no longer ships a bridge or a test.
 # Review: claude-opus-5-5, 2026-11-19 — the guards job runs check_string_catalogs.py (localisation Phase 0:
 # stale keys, untranslated keys in shipped locales, format-specifier drift); its tests ride the tools/ci pytest.
+# Review: claude-opus-5-5, 2026-11-19 — review fold: the guards' pytest also runs tools/screengrab/test_l10n_args.py
+# (only that file: direct/test_hud_capture.py is a Mac lane), with zsh installed for it. Confidence 0.75: the
+# apt step and the test on ubuntu-24.04 are unproven until CI's own run.

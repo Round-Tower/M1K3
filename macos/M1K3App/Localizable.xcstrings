@@ -361,7 +361,7 @@
     "Brain" : {
 
     },
-    "Brain at Home — serving ^[%lld device](inflect: true)" : {
+    "Brain at Home — serving ^[%@ device](inflect: true)" : {
 
     },
     "Brains" : {

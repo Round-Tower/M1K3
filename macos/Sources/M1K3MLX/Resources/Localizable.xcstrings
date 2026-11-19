@@ -1,15 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "I couldn't read those files to check them, so I didn't use them. Try again; if it keeps happening, remove the download and fetch it fresh." : {
 
-    },
-    "I didn't use those files: they don't match what this version of M1K3 expects. I left them untouched. Try the download again, and tell us if it keeps happening." : {
-
-    },
-    "Those files are from an earlier release of M1K3. Nothing is wrong with them; connect and download again to update them." : {
-
-    }
   },
   "version" : "1.0"
 }

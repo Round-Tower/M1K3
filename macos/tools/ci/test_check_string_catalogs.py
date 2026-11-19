@@ -128,6 +128,37 @@ def test_a_specifier_mismatch_fails_in_any_locale_shipped_or_not():
     assert problems[1].startswith("en value: argument 2 is object, the key has int")
 
 
+def multi_argument_plural(format_specifier="lld", one="%arg Element", other="%arg Elemente"):
+    """The shape Xcode writes for "Vary by plural" on a key with two arguments."""
+    return catalog({
+        "%@ has %lld items": {"localizations": {"de": {
+            "stringUnit": {"state": "translated", "value": "%1$@ hat %#@arg2@"},
+            "substitutions": {"arg2": {
+                "argNum": 2,
+                "formatSpecifier": format_specifier,
+                "variations": {"plural": {"one": unit(one), "other": unit(other)}},
+            }},
+        }}},
+    })
+
+
+def test_xcodes_multi_argument_plural_substitution_passes():
+    assert m.catalog_problems(multi_argument_plural(), shipped=("de",)) == []
+
+
+def test_a_substitution_variant_may_drop_its_argument_but_not_add_one():
+    assert m.catalog_problems(multi_argument_plural(one="ein Element"), shipped=("de",)) == []
+    problems = m.catalog_problems(multi_argument_plural(one="%arg Element von %3$@"), shipped=("de",))
+    assert len(problems) == 1
+    assert "substitution.arg2/plural.one/: argument 3 (object) is not in the key" in problems[0]
+
+
+def test_a_substitution_with_the_wrong_kind_fails():
+    problems = m.catalog_problems(multi_argument_plural(format_specifier="@"), shipped=("de",))
+    assert problems, "a %@ substitution for the key's %lld must fail"
+    assert all("argument 2 is object, the key has int" in p for p in problems)
+
+
 def test_a_catalog_in_another_source_language_fails():
     assert m.catalog_problems(catalog({}, source="en-GB"), shipped=()) == ['sourceLanguage is "en-GB", not "en"']
 

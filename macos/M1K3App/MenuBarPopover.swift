@@ -22,8 +22,8 @@
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the todo line and Brain at Home's serving caption are
-//  inflected whole lines, not English plural ternaries or a joined fragment. English unchanged below 1,000 paired
-//  devices (the caption now groups digits like every other count Text).
+//  inflected whole lines, not English plural ternaries or a joined fragment. English unchanged (the caption is an
+//  AttributedString with `.grouping(.never)`, like BrainServeController's, so 1,000+ devices still print ungrouped).
 
 import AppKit
 import M1K3Avatar
@@ -329,7 +329,11 @@ struct MenuBarPopover: View {
     private func brainServeSection(_ env: AppEnvironment) -> some View {
         if env.brainServe.isRunning {
             Label {
-                Text("Brain at Home — serving ^[\(env.brainServe.pairedDevices.count) device](inflect: true)")
+                // AttributedString, not a Text key: a `format:` inside a Text key stops inflection ("2 device").
+                Text(AttributedString(localized: """
+                Brain at Home — serving \
+                ^[\(env.brainServe.pairedDevices.count, format: .number.grouping(.never)) device](inflect: true)
+                """))
             } icon: {
                 Image(systemName: "antenna.radiowaves.left.and.right")
             }

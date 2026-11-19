@@ -33,6 +33,10 @@ Signed: claude-opus-5-5, 2026-11-19, Confidence 0.8 (the specifier grammar cover
 what Swift's String(localized:) and SwiftUI's LocalizedStringKey emit — %@ %lld %lf
 %d, positional forms, %% — not every printf corner; `%#@name@` substitutions are
 skipped, not checked). Prior: none (new file, localisation Phase 0).
+Review: claude-opus-5-5, 2026-11-19 — review fold: a `%#@name@` substitution now counts
+as its own `argNum`/`formatSpecifier`, and `%arg` inside its variants as that argument
+(Xcode's "Vary by plural" on a multi-argument key read as three false failures).
+Unknown substitutions are still skipped. Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -57,6 +61,8 @@ _SPEC = re.compile(
     r"(?P<len>hh|h|ll|l|q|L|z|t|j)?(?P<conv>[@dDiuUxXoOfFeEgGaAcCsSp])"
 )
 _SUBSTITUTION = re.compile(r"%#@[A-Za-z0-9_]+@")
+_SUBSTITUTION_NAME = re.compile(r"%#@([A-Za-z0-9_]+)@")
+_IN_SUBSTITUTION = re.compile(r"(?:^|/)substitution\.([A-Za-z0-9_]+)/")
 
 _KIND = {
     **{c: "int" for c in "dDiuUxXoO"},
@@ -79,7 +85,8 @@ def specifiers(text: str) -> dict[int, str]:
 
     `%%` is a literal percent, not an argument. Implicit specifiers take the next
     position in order, as printf does; `%2$@` names its own. `%#@name@`
-    substitutions are skipped. A position used twice with two kinds keeps the
+    substitutions are skipped (`catalog_problems` resolves the known ones first,
+    via `resolve_substitutions`). A position used twice with two kinds keeps the
     first kind and records the clash as kind "conflict".
     """
     text = _SUBSTITUTION.sub("", text.replace("%%", ""))
@@ -136,6 +143,34 @@ def string_units(localization: dict, path: str = "") -> Iterator[tuple[str, dict
         yield from string_units(sub or {}, f"{path}substitution.{name}/")
 
 
+def substitution_specs(localization: dict) -> dict[str, str]:
+    """{substitution name: its positional printf spec}, e.g. {"arg2": "%2$lld"}.
+
+    Gathered from every level of the localization (a device variant may carry its
+    own substitutions). A substitution without argNum or formatSpecifier is left out.
+    """
+    found: dict[str, str] = {}
+    for name, sub in (localization.get("substitutions") or {}).items():
+        sub = sub or {}
+        if sub.get("argNum") and sub.get("formatSpecifier"):
+            found[name] = f"%{sub['argNum']}${sub['formatSpecifier']}"
+        found.update(substitution_specs(sub))
+    for cases in (localization.get("variations") or {}).values():
+        for nested in (cases or {}).values():
+            found.update(substitution_specs(nested or {}))
+    return found
+
+
+def resolve_substitutions(text: str, subs: dict[str, str], variant: str = "") -> str:
+    """`text` with each known `%#@name@` written as its spec, and — inside a
+    substitution's variant — Xcode's `%arg` placeholder written as that spec.
+    Unknown substitutions are left for `specifiers` to skip."""
+    inside = _IN_SUBSTITUTION.findall(variant)
+    if inside and inside[-1] in subs:
+        text = text.replace("%arg", subs[inside[-1]])
+    return _SUBSTITUTION_NAME.sub(lambda match: subs.get(match.group(1), match.group(0)), text)
+
+
 def catalog_problems(catalog: dict, shipped: tuple[str, ...] = SHIPPED_LOCALES) -> list[str]:
     """Every rule broken by one parsed catalog, as human-readable lines."""
     problems: list[str] = []
@@ -156,13 +191,14 @@ def catalog_problems(catalog: dict, shipped: tuple[str, ...] = SHIPPED_LOCALES) 
                 for variant, unit, _ in units:
                     if (unit or {}).get("state") != "translated":
                         problems.append(f"{locale}: {variant} is {(unit or {}).get('state')!r}, not translated: {key!r}")
-        source = specifiers(key)
+        source = specifiers(resolve_substitutions(key, substitution_specs(localizations.get(SOURCE_LANGUAGE) or {})))
         for locale, localization in sorted(localizations.items()):
+            subs = substitution_specs(localization or {})
             for variant, unit, is_variant in string_units(localization or {}):
                 value = (unit or {}).get("value")
                 if value is None:
                     continue
-                why = specifier_problem(source, specifiers(value), is_variant)
+                why = specifier_problem(source, specifiers(resolve_substitutions(value, subs, variant)), is_variant)
                 if why:
                     problems.append(f"{locale} {variant}: {why}: {key!r} -> {value!r}")
     return problems

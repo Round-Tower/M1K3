@@ -21,6 +21,9 @@
 //  ternary split across lines slips past, and the fence lists files, so a tool written
 //  in a new folder needs its folder added — the `AgentTool` conformance scan catches most).
 //  Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-19 — review fold: the fence takes DownloadErrors.swift (its integrity
+//  sentences) and two fenced LINES in DownloadFailureCopy.swift (offline, disk full): `knownMessage` feeds
+//  AppStateLine's model line, while the file's other copy is display-only. Confidence 0.75.
 //
 
 import Foundation
@@ -150,6 +153,15 @@ struct DoNotTranslateFenceTests {
         "Sources/M1K3Inference/AFMToolPicker.swift",
         "Sources/M1K3Inference/AFMToolMapping.swift",
         "Sources/M1K3LanguageModel/PrivateCloudLending.swift",
+        // The integrity refusals reach AppStateLine's model line via DownloadFailureCopy.knownMessage.
+        "Sources/M1K3MLX/DownloadErrors.swift",
+    ]
+    /// Model-facing lines in a file whose other copy is display-only: `DownloadFailureCopy.knownMessage`
+    /// (offline, disk full, integrity) becomes a brain-load failure, which AppStateLine writes into
+    /// every turn's grounding and the system_status tool result.
+    static let fencedLines = [
+        (file: "Sources/M1K3Inference/DownloadFailureCopy.swift", text: "Couldn't reach the download server."),
+        (file: "Sources/M1K3Inference/DownloadFailureCopy.swift", text: "Not enough space on this device."),
     ]
     /// Whole folders of model or wire text: the tools, the MCP surfaces, the Local API, the CLI.
     static let fencedFolders = [
@@ -207,6 +219,19 @@ struct DoNotTranslateFenceTests {
         Text(verbatim: "fine")
         """
         #expect(Self.localisingLines(source) == [2, 3, 4])
+    }
+
+    @Test("brain-load failure sentences stay plain English: knownMessage feeds AppStateLine")
+    func fencedLinesHold() throws {
+        let root = LocalisationRatchetScanTests.macosRoot
+        for fenced in Self.fencedLines {
+            let source = try String(contentsOf: root.appendingPathComponent(fenced.file), encoding: .utf8)
+            let lines = LocalisationRatchetScanTests.codeLines(source).filter { $0.text.contains(fenced.text) }
+            #expect(lines.count == 1, "fenced line moved or doubled: \(fenced.file): \(fenced.text)")
+            for line in lines where line.text.contains(LocalisationRatchetScanTests.localisingAPI) {
+                Issue.record("model-facing text must stay plain English (plan §4): \(fenced.file):\(line.number)")
+            }
+        }
     }
 
     @Test("what a model reads stays plain English: no String(localized:) behind the fence")

@@ -14,7 +14,8 @@
 //  edited payload could hand a tokenizer raw text on "Ask more". Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `keptStatus` is four whole sentences from the module's
 //  catalog (`bundle: .module`), not fragments; the titles ("Pasted text", "… and N more") reach grounding, so they
-//  are plain English. English unchanged. Confidence 0.85.
+//  are plain English (the count grouped with an en locale, as master printed it in English). English unchanged.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -100,7 +101,8 @@ public struct ReadSource: Codable, Sendable, Equatable {
             : files.map { "\($0.filename)\n\n\($0.extractedText)" }.joined(separator: "\n\n")
         let title = files.count == 1
             ? first.filename
-            : "\(first.filename) and \(files.count - 1) more" // a title: model-facing, stays English (plan §4)
+            : "\(first.filename) and \((files.count - 1).formatted(.number.locale(Locale(identifier: "en")))) more"
+        // ^ a title: model-facing, stays English (plan §4); en grouping keeps master's English "1,000"
         self.init(title: title, raw: raw)
     }
 

@@ -38,9 +38,6 @@
     "Couldn't download — try again from Settings ▸ Brains & downloads" : {
 
     },
-    "Couldn't reach the download server. Check your connection and try again." : {
-
-    },
     "Couldn't start just now — try again from Settings ▸ Brains & downloads" : {
 
     },
@@ -67,7 +64,8 @@
       "shouldTranslate" : false
     },
     "M1K3 Voice" : {
-
+      "comment" : "Voice tier name: never translated.",
+      "shouldTranslate" : false
     },
     "Mini" : {
       "comment" : "Brain name: never translated.",
@@ -80,9 +78,6 @@
 
     },
     "My own voice, instead of the built-in one." : {
-
-    },
-    "Not enough space on this device. Remove a download you don't use, or free some space, then try again." : {
 
     },
     "Ready" : {
