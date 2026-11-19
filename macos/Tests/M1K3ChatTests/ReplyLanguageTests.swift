@@ -11,6 +11,10 @@
 //  Review: claude-opus-5-5, 2026-11-19 (pre-push review fold) — pins the three closed false positives (a short
 //  English turn mid-chat on a German device, a short frame beside a quote, a paste outweighing its instruction),
 //  kana as Japanese, and the zh-TW / und tags.
+//  Review: claude-opus-5-5, 2026-11-19 (challenger fold) — pins the three blind-set fixes on lines written here,
+//  not the blind set's: a short foreign opener says nothing (and agreeing pieces keep their read), a two-line
+//  paste is read by its shorter line, a CJK paste under an English question is English. Blind set 134 → 137/150,
+//  0 wrong-language clauses. Confidence 0.75.
 //
 
 import Foundation
@@ -158,5 +162,44 @@ struct ReplyLanguageTests {
         #expect(code("", device: "zh-HK") == "zh-Hant")
         #expect(code("", device: "zh-CN") == "zh-Hans")
         #expect(code("", device: "und") == nil)
+    }
+
+    /// A short foreign opener on an English turn is a phrase being asked about, not the person's language: the
+    /// pieces disagree, so the turn says nothing (challenger, 2026-11-19: a wrong "reply in X" is worse than none).
+    @Test(arguments: [
+        "Vielen herzlichen Dank — how do I say that properly? off to Munich soon",
+        "Dankjewel allemaal — how formal is that? flying to Utrecht in June",
+        "Tusen takk for hjelpen — how do I pronounce that? Bergen trip in July",
+    ])
+    func aShortForeignOpenerDoesNotPickTheLanguage(turn: String) {
+        #expect(ReplyLanguage.detect(turn) == nil)
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// Every piece agreeing keeps the read: a German turn of several sentences is still German.
+    @Test func aTurnWhosePiecesAgreeKeepsItsLanguage() {
+        let turn = "Ich fahre im Mai nach München. Kannst du mir ein paar Museen empfehlen? Danke dir!"
+        #expect(ReplyLanguage.detect(turn) == "de")
+    }
+
+    /// Two lettered lines leave no middle: the body is the longer line, so the short instruction under an English
+    /// article is the one that differs (challenger, 2026-11-19).
+    @Test func aTwoLinePasteIsReadByItsShorterLine() {
+        let article = "The city council voted on Tuesday to expand the bike lane network across the downtown core, "
+            + "citing a sharp rise in cycling commuters over the past two years and a drop in traffic injuries along "
+            + "the pilot routes. Critics argued the plan would hurt local shops that rely on street parking."
+        #expect(ReplyLanguage.detect(article + "\n\nPor favor, resume este artículo en tres frases.") == "es")
+    }
+
+    /// A CJK paste is long by letter weight, not by characters: under an English question it is the body, and the
+    /// question is the instruction (challenger, 2026-11-19).
+    @Test func aCJKPasteUnderAnEnglishQuestionIsEnglish() {
+        let notice = "本大楼将于下周二上午九点至下午五点进行电梯年度检修，届时所有电梯将暂停使用。请住户提前安排出行，"
+            + "如有不便敬请谅解。如需帮助，请联系物业服务中心，电话为八八六六五五四四。感谢各位业主的理解与配合，"
+            + "祝大家生活愉快。另外，地下停车场的照明系统也将同步更换为节能灯具。"
+        let turn = "Can you tell me what this notice from my building says?\n" + notice
+        #expect(turn.count <= ReplyLanguage.pasteThreshold)
+        #expect(ReplyLanguage.detect(turn) == "en")
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
     }
 }

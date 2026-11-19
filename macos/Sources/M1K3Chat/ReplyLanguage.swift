@@ -27,6 +27,14 @@
 //  line (the first or last line that differs from the body). The confidence floor stays 0.6 (0.7 dropped a Spanish
 //  fixture read 0.67 against Catalan); kana reads as Japanese whatever the recogniser says, `und` and
 //  region-only Chinese tags fold correctly. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 (challenger fold, 150-turn blind set) — three fixes, no threshold moved:
+//  a turn that is not a paste keeps a non-English read only when every readable piece (split at —–:;.!? and
+//  newlines) agrees, so a short foreign opener on an English question says nothing; a two-line paste's body is
+//  its longer line, so the shorter instruction can differ and win; paste length is the larger of characters and
+//  letter weight, so a CJK paste under an English question is a paste. Blind set 134/150 → 137/150, wrong-language
+//  clauses 3 → 0, English false positives 2 → 0 (sc-zhs-03 still reads a Chinese question about a Python error as
+//  English: no clause, missed); the 48 language fixtures still all read right. Confidence 0.75 (the blind set is
+//  one author's lines; the agreement rule trades a missed clause for a wrong one, on purpose).
 //
 
 import Foundation
@@ -41,7 +49,8 @@ public enum ReplyLanguage {
     /// wrong "reply in X" is worse than none. 0.7 was tried and dropped a plain Spanish question (es 0.67 against
     /// Catalan 0.33); at 0.6 the language fixtures' 48 prompts all read right.
     static let minimumConfidence = 0.6
-    /// A turn longer than this, over more than one line, is read by its instruction line, not its body.
+    /// A turn longer than this, over more than one line, is read by its instruction line, not its body. Length is
+    /// the larger of characters and letter weight: 150 characters of Chinese is a paste, not a question.
     static let pasteThreshold = 280
     /// How many earlier user turns a short turn looks back through for a readable one.
     static let carryLookback = 4
@@ -52,17 +61,39 @@ public enum ReplyLanguage {
         let prose = proseOnly(turn)
         let lines = prose.split(whereSeparator: \.isNewline).map(String.init)
             .filter { $0.unicodeScalars.contains(where: \.properties.isAlphabetic) }
-        guard prose.count > pasteThreshold, lines.count > 1 else { return readable(prose).flatMap(recognise) }
+        // Characters undercount a CJK paste (one ideograph is a word), so length takes the letter weight too: an
+        // English question above 190 characters of Japanese was read whole, and the Japanese won.
+        let length = max(prose.count, letterWeight(of: prose))
+        guard length > pasteThreshold, lines.count > 1 else { return agreed(prose) }
         // A long multi-line turn is an instruction around a paste. The instruction is the first or last line
         // whose language differs from the body's: "Fasse das zusammen:" above an English email is German.
         // The body is read from the middle lines alone: the recogniser weighs a text's opening heavily, and read
-        // whole, one German line above six English ones came back German at 0.96.
-        let middle = lines.dropFirst().dropLast().joined(separator: "\n")
+        // whole, one German line above six English ones came back German at 0.96. Two lines have no middle, so
+        // the body is the longer of the two: with a nil body the first line always "differed" and won, and an
+        // English article above a French instruction read English.
+        let middle = lines.count == 2
+            ? lines.max { letterWeight(of: $0) < letterWeight(of: $1) } ?? ""
+            : lines.dropFirst().dropLast().joined(separator: "\n")
         let body = readable(middle).flatMap(recognise)
         for line in [lines[0], lines[lines.count - 1]] {
             if let read = readable(line).flatMap(recognise), read != body { return read }
         }
         return body
+    }
+
+    /// The read of a turn that is not a paste, kept only when its pieces agree. The recogniser weighs a text's
+    /// opening heavily, so a short foreign opener outweighed the English after it ("Dziękuję bardzo — how do I say
+    /// that properly?" read Polish at 0.99). A non-English read is split at clause punctuation and every piece long
+    /// enough to read must read the same language, else the turn says nothing: a wrong "reply in X" is worse than
+    /// none. English is never vetoed, since an English read adds no clause.
+    private static func agreed(_ prose: String) -> String? {
+        guard let text = readable(prose), let whole = recognise(text) else { return nil }
+        guard whole != "en" else { return whole }
+        let pieces = text.components(separatedBy: CharacterSet(charactersIn: "—–:;.!?\n"))
+        for piece in pieces where letterWeight(of: piece) >= minimumLetters {
+            if let read = recognise(piece), read != whole { return nil }
+        }
+        return whole
     }
 
     /// The recogniser's read of readable prose, under the confidence floor, folded to a language code.
