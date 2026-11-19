@@ -16,6 +16,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `tagline` and `detail` resolve from M1K3Voice's
 //  catalog (`bundle: .module`), each detail one literal (the `+` joins merged); `displayName` stays plain English
 //  because MCP `get_status` reports it. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — `localizedName`: the views' copy of the tier name ("Built-in" from the
+//  catalog, "M1K3 Voice" catalogued shouldTranslate false); `displayName` stays the plain-English wire value.
 
 import Foundation
 
@@ -32,6 +34,21 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .builtin: "Built-in"
         case .m1k3Voice: "M1K3 Voice"
+        }
+    }
+
+    /// The name a VIEW shows (pickers, Settings). Never on a wire or in a prompt: those read
+    /// `displayName`. "M1K3 Voice" is a brand and is catalogued `shouldTranslate: false`.
+    public var localizedName: String {
+        switch self {
+        case .builtin:
+            String(
+                localized: "Built-in",
+                bundle: .module,
+                comment: "Voice tier name: the device's own system speech voice (no download)."
+            )
+        case .m1k3Voice:
+            String(localized: "M1K3 Voice", bundle: .module, comment: "Voice tier name: never translated.")
         }
     }
 

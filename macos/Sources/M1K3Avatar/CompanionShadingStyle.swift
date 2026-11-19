@@ -26,6 +26,8 @@
 //  shading pick is overridden while the device is offline in season, and returns when it is back online. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — a season now costumes the Phosphor Fox alone: on creatures with no
 //  lattice the costume was a rim glow on a near-black body (Kev's iPhone round; his call). Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: `displayName` resolves from M1K3Avatar's catalog
+//  (`bundle: .module`); only the two skin pickers read it, nothing a model sees. English unchanged.
 //
 
 public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable {
@@ -42,9 +44,24 @@ public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable 
 
     public var displayName: String {
         switch self {
-        case .off: "Off (textured)"
-        case .phosphor: "Phosphor"
-        case .cel: "Cel"
+        case .off:
+            String(
+                localized: "Off (textured)",
+                bundle: .module,
+                comment: "Companion skin picker: no shader, the creature keeps its own painted textures."
+            )
+        case .phosphor:
+            String(
+                localized: "Phosphor",
+                bundle: .module,
+                comment: "Companion skin picker: a glowing rim like an old phosphor screen."
+            )
+        case .cel:
+            String(
+                localized: "Cel",
+                bundle: .module,
+                comment: "Companion skin picker: cel shading, the flat cartoon (toon) look."
+            )
         }
     }
 

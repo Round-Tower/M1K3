@@ -7,14 +7,24 @@
     "A warm, natural neural voice that runs entirely on your device. One download, then offline forever. The voice M1K3 was meant to have." : {
 
     },
+    "Built-in" : {
+      "comment" : "Voice tier name: the device's own system speech voice (no download)."
+    },
     "Clean" : {
       "comment" : "Voice character name."
+    },
+    "End with “%@” and M1K3 will take its turn" : {
+      "comment" : "Voice mode hint while listening. %@ is the English word please: the listener only hears English, so it stays English in every language."
     },
     "Full range, nothing added. Clearest consonants." : {
 
     },
     "Heavier lo-fi. Character over clarity." : {
 
+    },
+    "M1K3 Voice" : {
+      "comment" : "Voice tier name: never translated.",
+      "shouldTranslate" : false
     },
     "Neural voice · ~192 MB" : {
 
@@ -24,6 +34,9 @@
     },
     "Ready now · no download" : {
 
+    },
+    "Speech recognition isn't allowed — check Settings › Privacy & Security." : {
+      "comment" : "Voice mode error. Settings › Privacy & Security must match the system's own localized names for the Settings app and that pane."
     },
     "The signature transmitted voice — a little radio, a little machine." : {
 

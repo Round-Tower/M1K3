@@ -23,6 +23,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the voice rows draw SettingsChoiceRow: the whole row takes the touch.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: the rows show `VoiceTier.localizedName` ("Built-in" from
+//  M1K3Voice's catalog; the iPhone pseudo pass showed it single). English unchanged.
 //
 
 import M1K3Inference
@@ -45,7 +47,7 @@ struct VoiceOutputSection: View {
             ForEach(tiers) { tier in
                 SettingsChoiceRow(
                     glyph: tier.glyph,
-                    title: tier.displayName,
+                    title: tier.localizedName,
                     detail: tier.tagline,
                     isChosen: core.selectedVoiceTier == tier
                 ) {

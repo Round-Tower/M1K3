@@ -9,6 +9,8 @@
 //  submit) or forgets that a mid-sentence "please" is not a submit.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-13, Confidence 0.9. Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: the catalogued hint's English bytes and the English
+//  `submitWord` are pinned.
 
 @testable import M1K3Voice
 import Testing
@@ -57,5 +59,11 @@ struct PoliteEndpointTests {
         // Both shells render this one constant; if the submit word ever
         // changes, the hint must move with it or the UI teaches a lie.
         #expect(PoliteEndpoint.uiHint.lowercased().contains("please"))
+    }
+
+    @Test("the catalogued hint keeps its English bytes, and the submit word stays English")
+    func uiHintEnglishBytesFrozen() {
+        #expect(PoliteEndpoint.submitWord == "please")
+        #expect(PoliteEndpoint.uiHint == "End with “please” and M1K3 will take its turn")
     }
 }

@@ -35,6 +35,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
 //  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
 //  (a script compared every merged literal with its old join: 0 of 24 differ).
+//  Review: claude-opus-5-5, 2026-11-19 — "Active voice" shows `VoiceTier.localizedName`; MCP get_status keeps
+//  `displayName` (plain English). English unchanged.
 import M1K3Chat
 import M1K3Inference
 import M1K3MLX
@@ -118,7 +120,7 @@ struct M1K3SettingsPane: View {
             CompanionSettingsSection(env: env)
 
             Section {
-                LabeledContent("Active voice", value: env.selectedVoiceTier.displayName)
+                LabeledContent("Active voice", value: env.selectedVoiceTier.localizedName)
                 voiceOutputControl
                 if env.selectedVoiceTier == .m1k3Voice {
                     // Character applies to the neural voice's effect chain, so it's

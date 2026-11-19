@@ -57,6 +57,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `cardTitle` / `cardCaption` take a LocalizedStringKey so their
 //  literals reach the string catalog; the About-you caption's three `+` pieces became one literal (same words).
 //  `kitRowLabel` stays String: it shows runtime names, sizes and package-localised lines. English renders unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the voice card shows `VoiceTier.localizedName` (catalogued in M1K3Voice);
+//  `displayName` stays the plain-English value MCP get_status reports. English unchanged.
 
 import M1K3Avatar
 import M1K3Inference
@@ -245,7 +247,7 @@ struct WakeSetupCarousel: View {
                     HStack(spacing: 10) {
                         SelectionRadio(isSelected: env.selectedVoiceTier == tier)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(tier.displayName).font(.headline)
+                            Text(tier.localizedName).font(.headline)
                             Text(tier.tagline).font(.caption).foregroundStyle(.readableSecondary)
                         }
                         Spacer()

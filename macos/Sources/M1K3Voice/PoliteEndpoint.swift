@@ -17,6 +17,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-13, Confidence 0.85 (pure and pinned;
 //  the felt beat of the 1s polite window is Kev's to settle). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: `uiHint` resolves from M1K3Voice's catalog with the
+//  submit word filled in as `%@` from `submitWord` (English in every language: the listener matches it);
+//  `isSubmit` reads the same constant. English unchanged.
 
 import Foundation
 
@@ -25,14 +28,25 @@ public enum PoliteEndpoint {
     /// The one hint both shells show while listening — shared for the same
     /// anti-drift reason as `EndpointCadence`: the Mac and iOS copies of a
     /// user-facing literal agree until someone edits one of them.
-    public static let uiHint = "End with “please” and M1K3 will take its turn"
+    /// Display-only (both voice screens). The quoted word is `submitWord`, filled in rather than
+    /// translated: the listener matches the English word in every language.
+    public static var uiHint: String {
+        String(
+            localized: "End with “\(submitWord)” and M1K3 will take its turn",
+            bundle: .module,
+            comment: "Voice mode hint while listening. %@ is the English word please: the listener only hears English, so it stays English in every language."
+        )
+    }
+
+    /// The spoken submit word. English on purpose: `isSubmit` matches it and `uiHint` teaches it.
+    public static let submitWord = "please"
 
     public static func isSubmit(_ text: String) -> Bool {
         let lastWord = text
             .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
             .last
             .map { $0.lowercased().trimmingCharacters(in: edgeTrim) } ?? ""
-        return lastWord == "please"
+        return lastWord == submitWord
     }
 
     /// Punctuation peeled off the final word ("please." / "please!" / ", please").
