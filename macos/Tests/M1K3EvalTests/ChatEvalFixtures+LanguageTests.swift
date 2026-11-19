@@ -8,6 +8,7 @@
 //  sits last.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-19, Confidence 0.8. Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-19 — pins Lil's real spaced Japanese answer ("17 時 15 分") as a pass.
 //
 
 @testable import M1K3Eval
@@ -123,6 +124,15 @@ struct ChatEvalReplyLanguageScoreTests {
         let answer = "Bonjour! That is how you say good morning in French. You can use it until about midday, "
             + "and after that most people switch to bonsoir in the evening."
         #expect(check("en", answer)?.outcome == .pass)
+    }
+
+    /// Lil's real answer on 2026-11-19 (lang-ja-reasoning, clause on): right, but spaced around the numbers, the way
+    /// Japanese text often sets half-width digits. The fixture must take that form, or a correct reply scores a miss.
+    @Test func japaneseSpacedTimeIsTheRightAnswer() throws {
+        let fixture = try #require(ChatEvalFixtures.language.first { $0.id == "lang-ja-reasoning" })
+        let answer = "出発が 14 時 20 分、所要時間が 2 時間 55 分なので、到着は 17 時 15 分になりますよ。"
+        let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer, latencyMS: 10))
+        #expect(!score.checks.contains { $0.outcome == .fail }, "\(score.checks.filter { $0.outcome == .fail })")
     }
 
     @Test func emptyAnswerFails() {

@@ -23,6 +23,8 @@
 //  MiniLiveEvalTests.
 //  Review: claude-opus-5-5, 2026-11-19 (pre-push review fold) — a ninth shape (privacy) and the times and spellings
 //  a right answer may use ("17 Uhr 15", "cinco y cuarto", "كانبيرا"). Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-19 (after the Lil A/B) — ja-reasoning also takes "17 時 15 分" and "午後 5 時 15 分":
+//  Lil wrote the right time with spaces around half-width digits on both repeats and scored a miss.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-19, Confidence 0.7 (model translations, n = 48; read paired per
 //  fixture against the clause-off arm, never the aggregate). Prior: Unknown.
@@ -124,7 +126,7 @@ public extension ChatEvalFixtures {
         turn("ja", "knowledge", "オーストラリアの首都はどこですか？なぜシドニーではないのですか？", any: ["キャンベラ", "Canberra"], minChars: 8),
         turn(
             "ja", "reasoning", "電車が14時20分に出発して、2時間55分かかります。何時に着きますか？",
-            any: ["17時15分", "17:15", "１７時１５分", "午後5時15分"], minChars: 4
+            any: ["17時15分", "17 時 15 分", "17:15", "１７時１５分", "午後5時15分", "午後 5 時 15 分"], minChars: 4
         ),
         turn("ja", "tool", "今日は何日ですか？", tool: "datetime", minChars: 4),
         turn("ar", "chat", "مرحبًا! كان يومي طويلًا في العمل. كيف حالك أنت؟"),
@@ -145,6 +147,9 @@ public extension ChatEvalFixtures {
             "en", "guard-translate", "Translate this into English for me: 'Wo ist der Bahnhof, bitte?'",
             any: ["station"]
         ),
-        turn("en", "guard-saudade", "What's the meaning of the Portuguese word saudade? Is there an English equivalent?"),
+        turn(
+            "en", "guard-saudade",
+            "What's the meaning of the Portuguese word saudade? Is there an English equivalent?"
+        ),
     ]
 }
