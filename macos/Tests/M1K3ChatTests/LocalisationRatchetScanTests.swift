@@ -24,6 +24,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — review fold: the fence takes DownloadErrors.swift (its integrity
 //  sentences) and two fenced LINES in DownloadFailureCopy.swift (offline, disk full): `knownMessage` feeds
 //  AppStateLine's model line, while the file's other copy is display-only. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 — a third fence: the stdio M1K3MCP binary and the m1k3 CLI never reach a
+//  `bundle: .module` string (SwiftPM's accessor calls fatalError beside a bare executable off a dev Mac).
 //
 
 import Foundation
@@ -240,6 +242,51 @@ struct DoNotTranslateFenceTests {
             let lines = try Self.localisingLines(String(contentsOf: url, encoding: .utf8))
             for line in lines {
                 Issue.record("model-facing text must stay a plain English String (plan §4): \(url.path):\(line)")
+            }
+        }
+    }
+}
+
+/// The stdio `M1K3MCP` binary and the `m1k3` CLI run OUTSIDE the app bundle. SwiftPM's generated
+/// `Bundle.module` accessor calls `fatalError` when it can't find a module's resource bundle, and beside
+/// a bare executable on someone's Mac it can't. The build-folder fallback hides this on a developer's
+/// machine. So nothing those binaries link may reach a `bundle: .module` lookup. Today the only path in is
+/// `KnowledgeKind.displayLabel` (M1K3MCPKit → M1K3Knowledge), and nothing in that closure reads it.
+struct StdioBinaryBundleFenceTests {
+    /// The modules the stdio server and the CLI link, other than M1K3Knowledge (fenced by its one API below).
+    static let stdioModules = ["Sources/M1K3MCP", "Sources/M1K3MCPKit", "Sources/M1K3Memory", "Sources/M1K3Todos",
+                               "Sources/M1K3CLICore"]
+
+    /// `.displayLabel` read as a property (KnowledgeKind's), not M1K3Memory's own `displayLabel(_:)` function.
+    static func knowledgeLabelReads(_ source: String) -> [Int] {
+        LocalisationRatchetScanTests.codeLines(source)
+            .filter { $0.text.contains(/\.displayLabel\b(?!\s*\()/) }
+            .map(\.number)
+    }
+
+    @Test("the scan tells KnowledgeKind's label from Memory's displayLabel(_:)")
+    func scanSeesTheShape() {
+        #expect(Self.knowledgeLabelReads("let s = item.kind.displayLabel") == [1])
+        #expect(Self.knowledgeLabelReads("label: displayLabel(memory.text)\nlet t = Self.displayLabel(x)").isEmpty)
+        #expect(Self.knowledgeLabelReads("// kind.displayLabel in a comment").isEmpty)
+    }
+
+    @Test("nothing the stdio MCP server or the CLI links reads a Bundle.module string")
+    func stdioBinariesNeverReachBundleModule() throws {
+        let root = LocalisationRatchetScanTests.macosRoot
+        for folder in Self.stdioModules {
+            let catalog = root.appendingPathComponent("\(folder)/Resources/Localizable.xcstrings")
+            #expect(!FileManager.default.fileExists(atPath: catalog.path),
+                    "\(folder) gained a catalog: its Bundle.module crashes the stdio binary off a dev Mac")
+        }
+        for url in LocalisationRatchetScanTests.swiftFiles(under: Self.stdioModules) {
+            let source = try String(contentsOf: url, encoding: .utf8)
+            for line in LocalisationRatchetScanTests.codeLines(source) where line.text.contains("bundle: .module") {
+                Issue.record("Bundle.module in a stdio-linked module: \(url.path):\(line.number)")
+            }
+            for line in Self.knowledgeLabelReads(source) {
+                let site = "\(url.path):\(line)"
+                Issue.record("KnowledgeKind.displayLabel in the stdio binary (fatalError off a dev Mac): \(site)")
             }
         }
     }
