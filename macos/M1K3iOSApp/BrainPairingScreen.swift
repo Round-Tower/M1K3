@@ -26,6 +26,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — the paste field's `m1k3-pair://…` placeholder is a String title (never a
 //  catalog key), and the Mac-path instruction carries a translator comment: its steps must match the Mac's own
 //  translated names. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the last step names the Mac button as it reads ("Pair a device…", not
+//  "Pair a Device"), so a person can find it and a translator matches one string.
 //
 
 #if os(iOS)
@@ -103,7 +105,7 @@ struct BrainPairingScreen: View {
         Section {
             // One literal, not a `+` join: a joined Text is a plain String, which the catalog never sees.
             Text(
-                "On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. Then scan the code it shows.",
+                "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
                 comment: "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
             )
             .font(.callout)

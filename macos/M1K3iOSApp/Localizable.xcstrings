@@ -272,7 +272,7 @@
     },
     "Now click Approve on your Mac…" : {},
     "OK" : {},
-    "On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. Then scan the code it shows." : {
+    "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows." : {
       "comment" : "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
     },
     "One moment." : {},
