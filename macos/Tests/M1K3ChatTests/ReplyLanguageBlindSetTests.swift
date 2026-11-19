@@ -14,8 +14,9 @@
 //  A failure prints every turn that went wrong. If the OS moved, fix the detector on lines written in
 //  ReplyLanguageTests (never on these sets), or lower a floor with the reason in the commit.
 //
-//  Batch 1 is NOT blind any more: the detector was tuned against it on 2026-11-19 after its first run. It is a
-//  regression set. Batch 2 was written fresh after that tuning and was still blind when it was checked in.
+//  Neither batch is blind any more: the detector was tuned against batch 1 on 2026-11-19 after its first run, and
+//  against batch 2 in round 2 the same day (the romanised and native-question-over-English-paste fixes). Both are
+//  regression sets; a fresh blind batch is owed before a claim about unseen turns.
 //
 //  Scoring: an English-expected turn is right with an "en" read or no read (no clause is added either way); a
 //  non-English turn is right only on its own language, or on no read when `unreadable_ok`. Chinese counts by base
@@ -28,6 +29,9 @@
 //  measured on (27) upward. PR CI runs on macos-26, whose recogniser nobody has measured, so a floor from 27 is not a
 //  claim about it. A newer OS still trips the floor (the tripwire this file exists for). The English false-positive
 //  check runs on every OS: macOS 26 is a supported target, so a wrong clause there is a real bug, not noise.
+//  Review: claude-opus-5-5, 2026-11-19 (round 2) — batch 2's floor 78 → 89 after the allowlist, Arabizi guard,
+//  multi-line instruction rule and comma split; b2-op-23 leaves the known-miss list (the comma split fixes it).
+//  Batch 1 holds at 137, every turn read the same as before.
 //
 
 import Foundation
@@ -54,17 +58,13 @@ struct ReplyLanguageBlindSetTests {
 
     /// English-expected turns that may carry a wrong-language clause, each with why. Keep it short: every entry is a
     /// person asked a question in English and told, in effect, that they wrote Swedish.
-    private static let knownEnglishMisses: [String: String] = [
-        // "Tack så mycket for the help earlier, can you summarize the article i saved this morning" reads "sv":
-        // a Swedish thanks opening an English question. Blind on arrival (batch 2); the cause is not diagnosed yet,
-        // and the detector was not tuned on it. Remove the entry when a fix lands on a line in ReplyLanguageTests.
-        "b2-op-23": "Swedish thanks on an English question reads sv",
-    ]
+    /// Empty since round 2 (2026-11-19): b2-op-23's Swedish thanks before a comma now splits from the English after it.
+    private static let knownEnglishMisses: [String: String] = [:]
 
     /// The correct count each file must keep (≥), measured on macOS 27 on 2026-11-19 when the floor was set.
     private static let correctFloor: [String: Int] = [
         "reply-language-blind-1": 137, // of 150; wrong 1, missed 12 (tuned against: a regression set)
-        "reply-language-blind-2": 78, // of 105; wrong 25, missed 2 (blind on arrival)
+        "reply-language-blind-2": 89, // of 105; wrong 2, missed 14 (tuned against in round 2: a regression set now)
     ]
 
     /// The macOS major the floors were measured on. They bind there and on every later OS (an update that moves

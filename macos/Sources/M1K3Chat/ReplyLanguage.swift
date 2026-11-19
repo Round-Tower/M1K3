@@ -14,9 +14,10 @@
 //  an English prompt is byte for byte what it was.
 //
 //  What the read skips, because it says nothing about the person's own language: code fences, inline code,
-//  links, quoted words ("Translate 'Wo ist der Bahnhof?'"). On a long multi-line turn, the first or last line
-//  whose language differs from the body's is the instruction ("Fasse das zusammen:" above an English email is
-//  German); a pasted sign-off in another language at the end of an otherwise English turn would win too (known).
+//  links, quoted words ("Translate 'Wo ist der Bahnhof?'"). On a multi-line turn, the first or last line whose
+//  language differs from the body's is the instruction ("Fasse das zusammen:" above an English email is German);
+//  a pasted sign-off in another language at the end of an otherwise English paste would win too (known). The clause
+//  names only languages on `replyLanguages`, and romanised Arabic (Arabizi) says nothing.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-19, Confidence 0.7 (the recogniser is Apple's; the letter floor
 //  and confidence floor are set on ReplyLanguageTests' lines, and the chateval `language` kind is the measure,
@@ -35,6 +36,18 @@
 //  clauses 3 → 0, English false positives 2 → 0 (sc-zhs-03 still reads a Chinese question about a Python error as
 //  English: no clause, missed); the 48 language fixtures still all read right. Confidence 0.75 (the blind set is
 //  one author's lines; the agreement rule trades a missed clause for a wrong one, on purpose).
+//  Review: claude-opus-5-5, 2026-11-19 (round 2, blind batch 2) — four rules. (1) An allowlist of 29 languages: the
+//  recogniser read Hinglish, romaji, Taglish and Finglish as Indonesian, so id/ms/tl and anything unlisted say nothing.
+//  (2) An Arabizi guard: two or more words, and 15% of them, with a digit between lowercase letters ("a3raf") say
+//  nothing; it trips on 3 Arabizi turns and on no fixture or batch-1 turn. (3) The instruction rule covers every
+//  multi-line turn, not only pastes over 280: the body is the heaviest blank-line block once the first and last lines
+//  are set aside. Under the paste threshold two guards keep it from naming a wrong language: a Latin-script edge
+//  wins only when it reads English, and of two lines the heavier must double the other to be the body (an English
+//  question a little heavier than the Arabic message it asked about read Arabic). (4) A comma splits pieces for the
+//  agreement rule. Batch 2 78 → 89/105 (ratchet scoring), wrong-language clauses on English turns 1 → 0, romanised
+//  wrong reads 11 → 0 (all now no clause); batch 1 unchanged at 137/150, turn for turn; the 48 fixtures all read
+//  right. Both batches are now tuned against. Confidence 0.7 (the two-line doubling rule is a judgment call, and a
+//  native question heavier than a short English line it asks about is still read English: no clause, missed).
 //
 
 import Foundation
@@ -52,33 +65,78 @@ public enum ReplyLanguage {
     /// A turn longer than this, over more than one line, is read by its instruction line, not its body. Length is
     /// the larger of characters and letter weight: 150 characters of Chinese is a paste, not a question.
     static let pasteThreshold = 280
+    /// How many times a short two-line turn's heavier line must outweigh the other to be its body (a paste).
+    static let pasteOutweighs = 2
     /// How many earlier user turns a short turn looks back through for a readable one.
     static let carryLookback = 4
+    /// The only languages a read may name. A wrong "reply in X" is the worst outcome, and the recogniser reads
+    /// romanised text (Hinglish, romaji, Taglish, Finglish) as Indonesian with near certainty, so Indonesian, Malay
+    /// and Tagalog are left out on purpose, as is every language not listed: a read outside the list says nothing
+    /// and the brain answers as it would without the clause. The list grows only with measurement: a language joins
+    /// when its reads, and the romanised turns that land on it, have been checked on a blind set.
+    static let replyLanguages: Set<String> = [
+        "en", "de", "fr", "es", "pt", "it", "nl", "sv", "da", "nb", "fi", "pl", "cs", "ro", "hu", "tr", "el", "ru",
+        "uk", "he", "ar", "fa", "hi", "ja", "zh-Hans", "zh-Hant", "ko", "th", "vi",
+    ]
+    /// The share of a Latin-script turn's words that must carry a digit between letters ("a3raf", "bta3y") before
+    /// it is called Arabizi, with at least two such words: one model name or numeronym ("mp3s") is not enough.
+    static let romanisedShare = 0.15
 
     /// The language a turn is written in, as a language code ("de", "pt", "ja", "zh-Hans"), or nil when
     /// the turn is too short, too mixed, or only a frame around someone else's words.
     public static func detect(_ turn: String) -> String? {
         let prose = proseOnly(turn)
+        // Arabizi reads as Spanish or Polish with confidence: its digits-for-letters say it is not either.
+        guard !isRomanised(prose), let read = read(prose) else { return nil }
+        return replyLanguages.contains(read) ? read : nil
+    }
+
+    /// The read before the allowlist.
+    private static func read(_ prose: String) -> String? {
         let lines = prose.split(whereSeparator: \.isNewline).map(String.init)
             .filter { $0.unicodeScalars.contains(where: \.properties.isAlphabetic) }
+        guard lines.count > 1 else { return agreed(prose) }
         // Characters undercount a CJK paste (one ideograph is a word), so length takes the letter weight too: an
         // English question above 190 characters of Japanese was read whole, and the Japanese won.
-        let length = max(prose.count, letterWeight(of: prose))
-        guard length > pasteThreshold, lines.count > 1 else { return agreed(prose) }
-        // A long multi-line turn is an instruction around a paste. The instruction is the first or last line
-        // whose language differs from the body's: "Fasse das zusammen:" above an English email is German.
-        // The body is read from the middle lines alone: the recogniser weighs a text's opening heavily, and read
-        // whole, one German line above six English ones came back German at 0.96. Two lines have no middle, so
-        // the body is the longer of the two: with a nil body the first line always "differed" and won, and an
-        // English article above a French instruction read English.
-        let middle = lines.count == 2
-            ? lines.max { letterWeight(of: $0) < letterWeight(of: $1) } ?? ""
-            : lines.dropFirst().dropLast().joined(separator: "\n")
-        let body = readable(middle).flatMap(recognise)
-        for line in [lines[0], lines[lines.count - 1]] {
-            if let read = readable(line).flatMap(recognise), read != body { return read }
+        let isPaste = max(prose.count, letterWeight(of: prose)) > pasteThreshold
+        // Two short lines of similar weight could be a question over a paste or a paste over a question: an English
+        // question a little heavier than the Arabic message it asks about read Arabic. Neither line is the body then,
+        // and the turn is read whole.
+        if !isPaste, lines.count == 2 {
+            let weights = lines.map(letterWeight(of:)).sorted()
+            guard weights[1] >= pasteOutweighs * weights[0] else { return agreed(prose) }
         }
-        return body
+        // A multi-line turn is an instruction around a paste, long or short. The instruction is the first or last
+        // line whose language differs from the body's: "Fasse das zusammen:" above an English email is German, and
+        // so is a Japanese question under a two-line English notice (read whole, the English won 14 of 15 times).
+        let body = readable(bodyText(of: prose, lines: lines)).flatMap(recognise)
+        for line in [lines[0], lines[lines.count - 1]] {
+            guard let edge = readable(line).flatMap(recognise), edge != body else { continue }
+            // Under the paste threshold, a Latin-script edge wins only when it reads English (which adds no clause):
+            // the recogniser confuses Latin-script languages on one short line ("Merci beaucoup!" above an English
+            // question is an opener, not an instruction), while another script anchors its read.
+            if isPaste || edge == "en" || !isMostlyLatin(line) { return edge }
+        }
+        // Nothing differs: a paste is its body, a short turn is read whole under the agreement rule.
+        return isPaste ? body : agreed(prose)
+    }
+
+    /// The body of a multi-line turn: the heaviest block of lines (blocks split at blank lines) once the first and
+    /// last lines are set aside, since the recogniser weighs a text's opening heavily (one German line above six
+    /// English ones read German at 0.96). Two lines leave nothing aside, so the body is the heavier line: with a nil
+    /// body the first line always "differed" and won, and an English article above a French instruction read English.
+    private static func bodyText(of prose: String, lines: [String]) -> String {
+        guard lines.count > 2 else { return lines.max { letterWeight(of: $0) < letterWeight(of: $1) } ?? "" }
+        // Each lettered line with the block it sits in: a blank line starts a new block.
+        var block = 0
+        var placed: [(block: Int, line: String)] = []
+        for raw in prose.components(separatedBy: .newlines) {
+            if raw.trimmingCharacters(in: .whitespaces).isEmpty { block += 1; continue }
+            if raw.unicodeScalars.contains(where: \.properties.isAlphabetic) { placed.append((block, raw)) }
+        }
+        let blocks = Dictionary(grouping: placed.dropFirst().dropLast(), by: \.block).values
+            .map { $0.map(\.line).joined(separator: "\n") }
+        return blocks.max { letterWeight(of: $0) < letterWeight(of: $1) } ?? ""
     }
 
     /// The read of a turn that is not a paste, kept only when its pieces agree. The recogniser weighs a text's
@@ -89,7 +147,7 @@ public enum ReplyLanguage {
     private static func agreed(_ prose: String) -> String? {
         guard let text = readable(prose), let whole = recognise(text) else { return nil }
         guard whole != "en" else { return whole }
-        let pieces = text.components(separatedBy: CharacterSet(charactersIn: "—–:;.!?\n"))
+        let pieces = text.components(separatedBy: CharacterSet(charactersIn: "—–:;,.!?\n"))
         for piece in pieces where letterWeight(of: piece) >= minimumLetters {
             if let read = recognise(piece), read != whole { return nil }
         }
@@ -197,6 +255,35 @@ public enum ReplyLanguage {
             #"『[^』\n]*』"#, #"(?<!\p{L})['‘][^'’\n]+['’](?!\p{L})"#,
         ]
         return patterns.reduce(text) { $0.replacingOccurrences(of: $1, with: " ", options: .regularExpression) }
+    }
+
+    /// Arabizi: a mostly Latin-script turn where at least two words, and `romanisedShare` of them, carry a single
+    /// digit between two lowercase letters ("a3raf", "ta2s", "bta3y"). Narrow on purpose: a word-initial digit
+    /// ("7aga") is not counted, since "3rd" and "4K" look the same, and a run of digits ("i18n", "l10n") never counts.
+    static func isRomanised(_ text: String) -> Bool {
+        guard isMostlyLatin(text) else { return false }
+        let words = text.split { !($0.isLetter || $0.isNumber) }
+        let romanised = words.filter { word in
+            let chars = Array(word)
+            return chars.indices.dropFirst().dropLast().contains { index in
+                chars[index].isASCII && chars[index].isNumber
+                    && chars[index - 1].isLowercase && chars[index + 1].isLowercase
+            }
+        }
+        return romanised.count >= 2 && Double(romanised.count) >= romanisedShare * Double(words.count)
+    }
+
+    /// Whether most of the text's letters are Latin script.
+    static func isMostlyLatin(_ text: String) -> Bool {
+        var latin = 0
+        var other = 0
+        for scalar in text.unicodeScalars where scalar.properties.isAlphabetic {
+            switch scalar.value {
+            case 0x41 ... 0x24F, 0x1E00 ... 0x1EFF: latin += 1
+            default: other += 1
+            }
+        }
+        return latin > other
     }
 
     static func letterWeight(of text: String) -> Int {

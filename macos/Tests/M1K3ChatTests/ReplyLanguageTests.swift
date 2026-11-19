@@ -15,6 +15,10 @@
 //  not the blind set's: a short foreign opener says nothing (and agreeing pieces keep their read), a two-line
 //  paste is read by its shorter line, a CJK paste under an English question is English. Blind set 134 → 137/150,
 //  0 wrong-language clauses. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 (round 2, blind batch 2) — pins the reply-language allowlist (romanised text
+//  read as Indonesian says nothing), the Arabizi guard and the digits it must not trip on, a native question over a
+//  short English paste, the Latin opener line and the two-line weight rule that keep that from naming a wrong
+//  language, and the comma split. Every line is new, none copied from a blind set. Confidence 0.75.
 //
 
 import Foundation
@@ -201,5 +205,111 @@ struct ReplyLanguageTests {
         #expect(turn.count <= ReplyLanguage.pasteThreshold)
         #expect(ReplyLanguage.detect(turn) == "en")
         #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// The clause names only languages whose reads have proved reliable. Romanised Hindi, Japanese and Tagalog read
+    /// as Indonesian with near certainty, so Indonesian, Malay and Tagalog are left out on purpose and an excluded
+    /// read says nothing (blind batch 2, 2026-11-19).
+    @Test(arguments: [
+        "Bagaimana cara membuat nasi goreng yang enak di rumah?",
+        "watashi wa ramen ga daisuki desu, oishii mise wo oshiete kudasai",
+        "Ano ang magandang pasalubong para sa pamilya ko galing Japan?",
+    ])
+    func aReadOutsideTheAllowlistSaysNothing(turn: String) {
+        #expect(ReplyLanguage.detect(turn) == nil)
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    @Test func theAllowlistKeepsTheMeasuredLanguages() {
+        for code in ["en", "de", "fr", "es", "pt", "ja", "ar", "zh-Hans", "zh-Hant", "ko", "ru", "hi"] {
+            #expect(ReplyLanguage.replyLanguages.contains(code), "\(code)")
+        }
+        for code in ["id", "ms", "tl", "ca"] {
+            #expect(!ReplyLanguage.replyLanguages.contains(code), "\(code)")
+        }
+    }
+
+    /// Arabizi writes Arabic letters as digits inside Latin words ("a3raf", "bta3y"): the recogniser reads it as
+    /// Spanish or Polish, so a turn where a share of words carry a digit between letters says nothing.
+    @Test func arabiziSaysNothing() {
+        #expect(ReplyLanguage.detect("3ayza a3raf azay a7ot el sora 3ala el telefon bta3y") == nil)
+        #expect(ReplyLanguage.detect("marhaba, 3andi so2al 3an el ta2meen el s7i") == nil)
+    }
+
+    /// Digits in an ordinary turn are not Arabizi: models, units and numeronyms keep the read.
+    @Test(arguments: [
+        ("Mein iPhone 15 lädt nicht mehr, was kann ich tun?", "de"),
+        ("Ich habe 2 Fragen zu meinem 4K-Fernseher und der PS5.", "de"),
+        ("Comment déployer k8s avec i18n dans mon projet ?", "fr"),
+        ("Je cherche un job en B2B, tu peux relire mon CV ?", "fr"),
+    ])
+    func digitsInAnOrdinaryTurnKeepTheRead(turn: String, code: String) {
+        #expect(ReplyLanguage.detect(turn) == code)
+    }
+
+    /// A native question above or below a short English paste is read by the question, not the paste: under the
+    /// paste threshold the turn was read whole and the English won (blind batch 2: 14 of 15).
+    @Test(arguments: [
+        (
+            "Что здесь написано? Это письмо от арендодателя\n\nDear tenant, the water will be shut off on Monday "
+                + "from 9am to noon for pipe repairs. Please store some water in advance.",
+            "ru"
+        ),
+        (
+            "이 영어 문장 무슨 뜻이야?\n\nThe meeting has been moved to next Wednesday afternoon because the manager "
+                + "is travelling.",
+            "ko"
+        ),
+        (
+            "Please return the signed form to the front office by the end of the month. Late forms cannot be "
+                + "processed and will be sent back.\n\nこれはどういう意味ですか？",
+            "ja"
+        ),
+    ])
+    func aNativeQuestionOverAShortEnglishPasteIsTheQuestion(turn: String, code: String) {
+        #expect(ReplyLanguage.detect(turn) == code)
+    }
+
+    /// The other way round stays English: an English question over a short foreign paste adds no clause.
+    @Test func anEnglishQuestionOverAShortForeignPasteAddsNoClause() {
+        let turn = "What does this German letter say?\n\nSehr geehrte Frau Murphy, wir möchten Sie darüber "
+            + "informieren, dass Ihr Vertrag zum Ende des Monats ausläuft."
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// Two lines of similar weight could be either a question over a paste or a paste over a question, so neither
+    /// wins: an English question a little heavier than the Arabic message it asks about is not Arabic (blind batch 2's
+    /// round-2 fix gave such a turn "reply in Arabic"). The heavier line must at least double the other to be a paste.
+    @Test func twoLinesOfSimilarWeightPickNoInstruction() {
+        let turn = "my sister sent me this after the wedding, what does she mean\n\n"
+            + "مبروك عليكم، الله يتمم بخير ويسعدكم يا رب"
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// A short Latin-script thank-you on its own line above an English question is an opener, not an instruction:
+    /// the recogniser confuses Latin-script languages on a short line, so it never wins a short turn.
+    @Test(arguments: [
+        "Merci beaucoup!\nnow how do i export the spreadsheet as a pdf",
+        "Vielen lieben Dank!\nnow can you help me write the cover letter",
+        "Muchas gracias por la ayuda!\n\nnext question, how long do I rest the steak before slicing it",
+    ])
+    func aShortLatinOpenerLineDoesNotWin(turn: String) {
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// A comma splits pieces too: a foreign thank-you before a comma no longer outweighs the English after it.
+    @Test(arguments: [
+        "Muchas gracias por todo, can you remind me what we decided about the flights",
+        "Vielen Dank nochmal, could you draft the reply to the landlord we talked about",
+    ])
+    func aForeignThanksBeforeACommaDoesNotPickTheLanguage(turn: String) {
+        #expect(ReplyLanguage.detect(turn) == nil)
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// Commas inside one language keep the read.
+    @Test func aTurnWithCommasInOneLanguageKeepsIt() {
+        let turn = "Ich habe Hunger, aber der Kühlschrank ist leer, was soll ich heute kochen?"
+        #expect(ReplyLanguage.detect(turn) == "de")
     }
 }
