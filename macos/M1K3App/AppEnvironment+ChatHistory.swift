@@ -58,6 +58,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: `browserContextProvider` also reads the voice page's own slot
 //  (`VoicePageContext`) when the review panel shows nothing. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — deepBrainAvailable reads Big through the WeightsRefresh resolver.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — the Mac sends a picker `none` to the agent turn (`toolNoneToAgent`,
+//  `whenUnset: true`; `-toolNoneToAgent NO` is the off arm). iOS stays off. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -594,7 +596,9 @@ extension AppEnvironment {
                     groupRouter: ToolRouterWiring.groupRouterEnabled(whenUnset: true),
                     allTiers: ToolRouterWiring.allTiersEnabled(whenUnset: true),
                     chain: ToolRouterWiring.chainEnabled(whenUnset: true),
-                    searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: true)
+                    searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: true),
+                    // A picker `none` takes the agent turn (2026-11-19 route control); `-toolNoneToAgent NO` is off.
+                    noneToAgent: ToolRouterWiring.noneToAgentEnabled(whenUnset: true)
                 )
             },
             excludedKinds: excludedKinds

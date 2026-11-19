@@ -38,6 +38,9 @@
 //  it absent, `privacyAskCarriesEgressOnDispatchAndSynthesis` pins it on both prompts of a privacy ask. The live
 //  case: Kev's iPhone (build 544) dispatched "a recipe for banana bread" to web_search and Mini opened on the
 //  clause's quoted answer.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `nonePickTakesTheAgent`, `nonePickPlainIsRecorded`,
+//  `vetoedPickStaysPlainUnderTheFlag`: a picker `none` takes the agent turn under `toolNoneToAgent` (the 11-19 route
+//  control), and the eval reads a none pick apart from a tool pick. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -130,13 +133,14 @@ private func run(
     _ provider: Scripted, tools: [any AgentTool], pick: ToolPick?, hasPicker: Bool = true,
     activity: Activity = Activity(), question: String = "what time is it?", ageClause: String? = nil,
     egress: String? = nil, store: KnowledgeStore? = nil, history: [ChatTurn] = [],
-    staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil
+    staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil, noneTakesAgent: Bool = false
 ) async throws -> String {
     let route = PlainTurnRoute(
         decide: { _ in .init(verdict: .tools, probability: 0.9) },
         instructions: nil,
         pick: hasPicker ? { @Sendable _, _ in pick } : nil,
-        staysLocal: staysLocal
+        staysLocal: staysLocal,
+        noneTakesAgent: noneTakesAgent
     )
     let responder = try AgentRAGResponder(
         store: store ?? KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
@@ -260,6 +264,59 @@ struct DispatchTurnTests {
         #expect(text == "Canberra.")
         #expect(calls.log.withLock { $0 }.isEmpty)
         #expect(provider.prompts.first?.contains("RETURNED JUST NOW") == false)
+    }
+
+    /// 2026-11-19 route control (shipped Lil, 17 routed puzzles): the 8 that Apple's picker answered `none` scored
+    /// 16/24 on the plain turn and 15/16 when the same turns reached the agent turn. The flag sends them there.
+    @Test("with noneTakesAgent, a none pick is the agent turn with the whole palette, and the eval sees it")
+    func nonePickTakesTheAgent() async throws {
+        let calls = Calls()
+        let provider = Scripted(["CONCLUSION: Day 8."])
+        let stages = PickStageRecorder()
+        let question = "A snail climbs 3 m a day and slides 2 m a night up a 10 m wall. Which day does it reach the top?"
+        _ = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            try await run(
+                provider, tools: [Recording(name: "calendar_peek", output: "x", calls: calls)],
+                pick: ToolPick(tool: ToolPick.noTool, query: ""), question: question, noneTakesAgent: true
+            )
+        }
+        let prompt = try #require(provider.prompts.first)
+        #expect(!prompt.hasSuffix("USER: \(question)"), "took the plain route")
+        #expect(!prompt.contains(AgentRAGResponder.plainRules))
+        #expect(prompt.contains("calendar_peek"), "the agent keeps the whole palette")
+        #expect(stages.stages == [.noneToAgent])
+    }
+
+    @Test("without the flag a none pick stays plain, and the eval reads it apart from a tool pick")
+    func nonePickPlainIsRecorded() async throws {
+        let provider = Scripted(["Canberra."])
+        let stages = PickStageRecorder()
+        let text = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            try await run(
+                provider, tools: [Recording(name: "web_search", output: "x", calls: Calls())],
+                pick: ToolPick(tool: ToolPick.noTool, query: ""), question: "capital of Australia?"
+            )
+        }
+        #expect(text == "Canberra.")
+        #expect(stages.stages == [.pickedNone])
+    }
+
+    @Test("a web pick the search head emptied stays plain even with noneTakesAgent: the agent could search again")
+    func vetoedPickStaysPlainUnderTheFlag() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Dublin began as a Viking port on the Liffey."])
+        let stages = PickStageRecorder()
+        let text = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            try await run(
+                provider, tools: [Recording(name: "web_search", output: "1. Dublin - Wikipedia", calls: calls)],
+                pick: ToolPick(tool: "web_search", query: "history of Dublin"),
+                question: "tell me the history of Dublin", staysLocal: SearchVetoTurnTests.local, noneTakesAgent: true
+            )
+        }
+        #expect(text == "Dublin began as a Viking port on the Liffey.")
+        #expect(calls.log.withLock { $0 }.isEmpty)
+        #expect(provider.prompts.first?.contains(AgentRAGResponder.plainRules) == true)
+        #expect(stages.stages == [.searchVeto])
     }
 
     @Test("an action pick, a failed pick, or no picker: the agent turn runs as today")
@@ -507,7 +564,7 @@ struct DispatchTurnTests {
 /// The search head's veto inside the dispatched turn (#713): "tell me the history of Dublin" went to web_search
 /// on 2026-10-25 (#680). A local verdict answers on the plain route; it never adds a web call.
 struct SearchVetoTurnTests {
-    private static let local: @Sendable (String) -> SearchRouter.Decision = { _ in
+    static let local: @Sendable (String) -> SearchRouter.Decision = { _ in
         .init(verdict: .local, probability: 0.08)
     }
 

@@ -264,6 +264,9 @@
 //  own turn text; a follow-up ("and when I search?") carries no cue and gets no clause (known gap). The age
 //  clause is unchanged everywhere; a Home clause (`EgressDisclosure.ridesEveryTurn`) rides every turn.
 //  Confidence 0.75: the gate is unmeasured on the phone itself.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `runDispatchedTurn` hands the picker's own `none` to the agent turn when the
+//  route says `noneTakesAgent`; a pick the search head emptied stays plain. Confidence 0.8: the gain is the 11-19
+//  route control's, re-measured by the arm in the PR.
 
 import Foundation
 import M1K3Agent
@@ -756,7 +759,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
                         question: question, picker: picker, staysLocal: plainRoute?.staysLocal,
-                        tools: tools, chunks: turnChunks,
+                        noneTakesAgent: plainRoute?.noneTakesAgent ?? false, tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -1058,6 +1061,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         question: String,
         picker: @Sendable (String, String) async -> ToolPick?,
         staysLocal: (@Sendable (String) -> SearchRouter.Decision)?,
+        noneTakesAgent: Bool,
         tools: [any AgentTool],
         chunks: [ChunkHit],
         memories: [ChunkHit],
@@ -1108,6 +1112,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
         }
         if pick.tool == ToolPick.noTool {
+            // The picker's own `none`, not a pick the search head emptied (the agent could search again).
+            if picked.tool == ToolPick.noTool {
+                if noneTakesAgent {
+                    // 2026-11-19 route control: these turns scored 15/16 on the agent turn, 16/24 plain.
+                    Self.log.notice("tool dispatch: none — the agent turn answers")
+                    ToolRouterWiring.pickRecorder?.record(.noneToAgent)
+                    return .agent(tools)
+                }
+                ToolRouterWiring.pickRecorder?.record(.pickedNone)
+            }
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()
         }

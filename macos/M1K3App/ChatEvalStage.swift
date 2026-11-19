@@ -143,6 +143,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs the live path (garbled voice turns, the
 //  bench for recogniser changes). A heard-line arm was measured and dropped (docs/evals/2026-11-16-heard-line).
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `_ROUTER_NONE_AGENT=1` wires `toolNoneToAgent` like the Mac app, and a reasoning
+//  turn records the tools it ran (`tools` skip check). Confidence 0.85.
 
 import Foundation
 
@@ -440,7 +442,8 @@ enum ChatEvalStage {
                 provider: provider, enabled: true, dispatch: true,
                 groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true,
                 chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1",
-                searchHead: searchHead
+                searchHead: searchHead,
+                noneToAgent: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT") == "1"
             )
             plainRoute = { route }
         default:
@@ -1025,9 +1028,17 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                let score = shippedScore(
+                var score = shippedScore(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+                // Which tools a reasoning turn ran (2026-11-19): a puzzle grounded on a datetime or notes stub read
+                // like a fast commit, because the record carried no tool calls for this kind.
+                if fixture.kind == .reasoning {
+                    score = score.appending(EvalCheck(
+                        name: "tools", outcome: .skip,
+                        detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                    ))
+                }
                 guard calculatorRequested else { return score }
                 return score.appending(EvalCheck(
                     name: "calls calculate",

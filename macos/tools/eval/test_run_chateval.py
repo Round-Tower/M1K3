@@ -641,6 +641,17 @@ def test_main_threads_router_search_to_the_trigger(tmp_path, monkeypatch, capsys
     assert key not in capsys.readouterr().out
 
 
+def test_router_none_agent_follows_the_mac_default_under_dispatch():
+    # 2026-11-19: the Mac app sends a picker `none` to the agent turn (`toolNoneToAgent`, `whenUnset: true`), so a
+    # dispatch run wires like it unless --no-router-none-agent says otherwise; refused without dispatch.
+    key = "M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT"
+    assert _trig(router="dispatch")[key] == "1"
+    assert key not in _trig(router="dispatch", router_none_agent=False)
+    with pytest.raises(ValueError):
+        _trig(router="off", router_none_agent=True)
+    assert key not in _trig(router="off", router_none_agent=False)
+
+
 def test_unknown_router_mode_is_refused():
     with pytest.raises(ValueError):
         _trig(router="turbo")

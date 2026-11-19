@@ -60,6 +60,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — `OneTurnEmbedder` keeps hits only. A cached miss held a repeated
 //  turn at `p=none` after the phone's sentence asset turned up (review catch on the NLSentenceEmbedder fix).
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `toolNoneToAgent` (`noneToAgentEnabled`, `route`/`compose(noneToAgent:)`): a picker
+//  `none` on a brain that isn't Mini takes the agent turn (11-19 route control: 16/24 plain vs 15/16 agent on Lil's
+//  routed puzzles). `PickStage` gains `none-plain` / `none-agent` so a none pick reads apart from a tool pick. Confidence 0.8.
 //
 
 import Foundation
@@ -142,6 +145,16 @@ public enum ToolRouterWiring {
         flag(searchHeadKey, defaults, whenUnset: whenUnset)
     }
 
+    /// A picker `none` on a brain that isn't Mini takes the agent turn instead of the plain one. 2026-11-19 route
+    /// control (shipped Lil, routed puzzles): the `none` picks scored 16/24 as plain turns and 15/16 when the same
+    /// turns reached the agent turn (Apple's picker down). Absent = the shell's default: ON on the Mac
+    /// (`M1K3 -toolNoneToAgent NO` is the off arm), OFF on iOS until a phone run (the 11-02 agent-turn echo).
+    public static let noneToAgentKey = "toolNoneToAgent"
+
+    public static func noneToAgentEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(noneToAgentKey, defaults, whenUnset: whenUnset)
+    }
+
     /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
     /// the Mac turns the router flags on (the 2026-10-10 arm); iOS turns `allTiers` on (2026-11-02)
     /// and keeps the head and chains off until a phone run.
@@ -173,13 +186,15 @@ public enum ToolRouterWiring {
     /// `allTiers` gives a brain that isn't Mini the route too: measured 2026-10-10 (Lil 38/48 → 48/48
     /// tool-use at half the latency, Big 42.6 s → 14.7 s), on for the Mac, off on iOS.
     /// `searchHead` (#713) puts the search head on the dispatch route as a veto on web reads.
+    /// `noneToAgent` hands a picker `none` to the agent turn on a brain that isn't Mini (`toolNoneToAgent`).
     public static func route(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
-        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false, searchHead: Bool = false
+        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false, searchHead: Bool = false,
+        noneToAgent: Bool = false
     ) -> PlainTurnRoute? {
         compose(
             provider: provider, enabled: enabled, dispatch: dispatch, groupRouter: groupRouter,
-            allTiers: allTiers, chain: chain, searchHead: searchHead, embedder: turnEmbedder
+            allTiers: allTiers, chain: chain, searchHead: searchHead, noneToAgent: noneToAgent, embedder: turnEmbedder
         )
     }
 
@@ -188,7 +203,7 @@ public enum ToolRouterWiring {
     static func compose(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
         groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false, searchHead: Bool = false,
-        embedder: OneTurnEmbedder
+        noneToAgent: Bool = false, embedder: OneTurnEmbedder
     ) -> PlainTurnRoute? {
         guard enabled else { return nil }
         let mini = servedMini(provider)
@@ -216,7 +231,9 @@ public enum ToolRouterWiring {
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
             instructions: nil,
             pick: picker,
-            staysLocal: staysLocal
+            staysLocal: staysLocal,
+            // Mini keeps its plain turn: offered the palette, its native session overflowed its window (#427).
+            noneTakesAgent: dispatch && noneToAgent && mini == nil
         )
     }
 
@@ -316,12 +333,16 @@ final class OneTurnEmbedder: Sendable {
 /// Which stage named a tool turn's pick: the group head, Apple's picker, or neither (the
 /// agent turn). The router arm of 2026-10-09 couldn't tell: the head's notice went to os_log,
 /// so a head that never fired read as a head that won. `searchVeto` follows a pick when the
-/// search head took its web reads back out (#713), so the eval sees the veto fire.
+/// search head took its web reads back out (#713), so the eval sees the veto fire. A picker `none` adds
+/// `pickedNone` (a plain turn answered) or `noneToAgent` (the agent turn did): before 2026-11-19 a `none` and a
+/// tool pick both read `picker`, so a plain-turn miss and a tool-grounded one looked alike.
 public enum PickStage: String, Sendable, Codable {
     case head
     case picker
     case agent
     case searchVeto = "search-veto"
+    case pickedNone = "none-plain"
+    case noneToAgent = "none-agent"
 }
 
 /// An eval's ear on the cascade: the stages this task's tool turns took, in order.
