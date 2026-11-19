@@ -67,6 +67,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2), Confidence 0.85 — `imageReaders(platform:)` +
 //  `DevicePlatform.current`: the tiers Mini's image decline may name, derived from `supportsImageInput`
 //  and the platform floor (PR #526 review: "Switch to Big" went stale the day Lil learned to see).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `tagline` and `detail` resolve from M1K3Inference's
+//  catalog (`bundle: .module`); rg shows only views and accessibility labels read them. Each card line is one key
+//  (no `+` join); `HostPlatform.yourDevice` stays an English argument. `displayName`, `heartbeatDescriptor` untouched.
+//  English unchanged.
 
 import Foundation
 
@@ -158,38 +162,58 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         }
     }
 
-    /// The one-line personality hook (lifted from the KMP tiers).
+    /// The one-line personality hook (lifted from the KMP tiers). Display-only: read by the
+    /// brain cards, pickers and their accessibility labels, never by a prompt, so it resolves
+    /// from M1K3Inference's catalog.
     public var tagline: String {
         switch self {
-        case .mini, .pocket: "Fast and focused"
-        case .lil: "Sharp and capable"
-        case .big: "Full intelligence"
+        case .mini, .pocket:
+            String(localized: "Fast and focused", bundle: .module, comment: "Tagline under the brain name Mini.")
+        case .lil:
+            String(localized: "Sharp and capable", bundle: .module, comment: "Tagline under the brain name Lil.")
+        case .big:
+            String(localized: "Full intelligence", bundle: .module, comment: "Tagline under the brain name Big.")
         }
     }
 
-    /// The longer capability description shown on the brain card.
+    /// The longer capability description shown on the brain card. Display-only (the
+    /// onboarding cards on both shells), so it resolves from M1K3Inference's catalog.
     public var detail: String {
         switch self {
         case .mini:
-            "Apple's built-in on-device model. "
-                + "No download. The quickest way to start."
+            String(
+                localized: "Apple's built-in on-device model. No download. The quickest way to start.",
+                bundle: .module,
+                comment: "Brain card copy for Mini (Apple's on-device model)."
+            )
         case .pocket:
-            "A small brain of M1K3's own, for devices without Apple Intelligence. "
-                + "One-time download. Runs entirely on \(HostPlatform.yourDevice)."
+            String(
+                localized: "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on \(HostPlatform.yourDevice).",
+                bundle: .module,
+                comment: "Brain card copy for Mini without Apple Intelligence. M1K3 is the app's name. The argument is \"your machine\" / \"your device\" / \"your Vision Pro\", in English."
+            )
         case .lil:
             Self.lilDetail
         case .big:
-            "Maximum capability, fully local. The full M1K3."
+            String(
+                localized: "Maximum capability, fully local. The full M1K3.",
+                bundle: .module,
+                comment: "Brain card copy for Big. M1K3 is the app's name."
+            )
         }
     }
 
     /// Platform-honest wording: the same card renders in the iOS/visionOS shell,
     /// where "your Mac" would be a lie on an iPhone (caught on-simulator,
     /// 2026-07-18; consolidated onto HostPlatform same-day — macOS bytes frozen,
-    /// pinned in BrainTierTests).
+    /// pinned in BrainTierTests). `HostPlatform.yourDevice` stays an argument: it is
+    /// prompt-surface English the persona reads too.
     private static var lilDetail: String {
-        "A fully local engine — multi-turn conversation, memory, and "
-            + "reasoning that keeps up with you. Runs entirely on \(HostPlatform.yourDevice)."
+        String(
+            localized: "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on \(HostPlatform.yourDevice).",
+            bundle: .module,
+            comment: "Brain card copy for Lil. The argument is \"your machine\" / \"your device\" / \"your Vision Pro\", in English."
+        )
     }
 
     /// SF Symbol for the brain card. Mini wears Apple Intelligence's own mark
