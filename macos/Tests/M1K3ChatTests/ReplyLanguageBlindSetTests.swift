@@ -2,7 +2,7 @@
 //  ReplyLanguageBlindSetTests.swift
 //  M1K3ChatTests
 //
-//  A ratchet on the reply-language read over the two checked-in blind sets (Resources/reply-language-blind-*.json).
+//  A ratchet on the reply-language read over the three checked-in blind sets (Resources/reply-language-blind-*.json).
 //  ReplyLanguage leans on Apple's NLLanguageRecognizer, and an OS update can move its reads with no code change here
 //  (the challenger's point, 2026-11-19), so this pins two things per file:
 //    (a) no English-expected turn gets a wrong-language clause ("reply in Swedish" on an English question is the
@@ -14,9 +14,11 @@
 //  A failure prints every turn that went wrong. If the OS moved, fix the detector on lines written in
 //  ReplyLanguageTests (never on these sets), or lower a floor with the reason in the commit.
 //
-//  Neither batch is blind any more: the detector was tuned against batch 1 on 2026-11-19 after its first run, and
-//  against batch 2 in round 2 the same day (the romanised and native-question-over-English-paste fixes). Both are
-//  regression sets; a fresh blind batch is owed before a claim about unseen turns.
+//  Batches 1 and 2 are not blind any more: the detector was tuned against batch 1 on 2026-11-19 after its first run,
+//  and against batch 2 in round 2 the same day (the romanised and native-question-over-English-paste fixes). Both
+//  are regression sets. Batch 3 was blind when measured (2026-11-19, after round 2, no tuning against it):
+//  {"total":125,"correct":101,"wrong":3,"efp":3,"noclause":5,"missed":16}. That run is the one unseen-turns claim
+//  this file can back; once the detector is tuned against batch 3 it is a regression set too.
 //
 //  Scoring: an English-expected turn is right with an "en" read or no read (no clause is added either way); a
 //  non-English turn is right only on its own language, or on no read when `unreadable_ok`. Chinese counts by base
@@ -32,6 +34,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 (round 2) — batch 2's floor 78 → 89 after the allowlist, Arabizi guard,
 //  multi-line instruction rule and comma split; b2-op-23 leaves the known-miss list (the comma split fixes it).
 //  Batch 1 holds at 137, every turn read the same as before.
+//  Review: claude-opus-5-5, 2026-11-19 — blind batch 3 (125 turns) joins the ratchet at its blind-measured 101,
+//  with its three English false positives (b3-pa-40, b3-op-08, b3-op-30) allowlisted as undiagnosed, not fixed.
 //
 
 import Foundation
@@ -58,13 +62,19 @@ struct ReplyLanguageBlindSetTests {
 
     /// English-expected turns that may carry a wrong-language clause, each with why. Keep it short: every entry is a
     /// person asked a question in English and told, in effect, that they wrote Swedish.
-    /// Empty since round 2 (2026-11-19): b2-op-23's Swedish thanks before a comma now splits from the English after it.
-    private static let knownEnglishMisses: [String: String] = [:]
+    /// Empty after round 2 (2026-11-19): b2-op-23's Swedish thanks before a comma now splits from the English after it.
+    /// Batch 3's three arrived with it, measured blind; each is still a bug, pinned so a fourth can't hide among them.
+    private static let knownEnglishMisses: [String: String] = [
+        "b3-pa-40": "blind on arrival 2026-11-19, undiagnosed", // English question over an Arabic caption, read ar
+        "b3-op-08": "blind on arrival 2026-11-19, undiagnosed", // Japanese thanks line, English question; read ja
+        "b3-op-30": "blind on arrival 2026-11-19, undiagnosed", // Korean thanks line, English question; read ko
+    ]
 
     /// The correct count each file must keep (≥), measured on macOS 27 on 2026-11-19 when the floor was set.
     private static let correctFloor: [String: Int] = [
         "reply-language-blind-1": 137, // of 150; wrong 1, missed 12 (tuned against: a regression set)
         "reply-language-blind-2": 89, // of 105; wrong 2, missed 14 (tuned against in round 2: a regression set now)
+        "reply-language-blind-3": 101, // of 125; wrong 8 (3 English false positives), missed 16 (blind when measured)
     ]
 
     /// The macOS major the floors were measured on. They bind there and on every later OS (an update that moves
@@ -115,7 +125,7 @@ struct ReplyLanguageBlindSetTests {
         return tally
     }
 
-    @Test(arguments: ["reply-language-blind-1", "reply-language-blind-2"])
+    @Test(arguments: ["reply-language-blind-1", "reply-language-blind-2", "reply-language-blind-3"])
     func holdsTheRatchet(file: String) throws {
         let turns = try load(file)
         #expect(!turns.isEmpty)

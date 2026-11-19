@@ -14,6 +14,10 @@ should come back in (`en` for an English question with a foreign greeting, quote
   tuning: foreign openers on English questions, CJK / Arabic / Cyrillic pastes, romanised
   Hindi / Arabic / Japanese / Tagalog / Persian. Still blind when it was checked in; keep it
   that way by fixing the detector on lines written in `ReplyLanguageTests`, never on these.
+  **No longer blind:** tuned against in round 2 on 2026-11-19 (78 → 89/105).
+- `reply-language-blind-3.json` — batch 3, 125 turns, written 2026-11-19 after round 2 and
+  measured blind: 101/125 correct, 3 English turns given a wrong-language clause (allowlisted
+  in the test as undiagnosed), 16 missed. The floor is that blind count.
 
 Re-run after every macOS / iOS update (Apple's `NLLanguageRecognizer` can move its reads
 without a code change here):
@@ -21,3 +25,4 @@ without a code change here):
     nice -n 15 tools/dev/tdd.sh M1K3ChatTests ReplyLanguageBlindSet
 
 Signed: claude-opus-5-5, 2026-11-19, Confidence 0.8 (the sets are one author's lines). Prior: Unknown
+Review: claude-opus-5-5, 2026-11-19 — batch 3 added (blind when measured); batch 2 marked tuned-against.
