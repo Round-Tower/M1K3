@@ -1,8 +1,20 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ answers. Web search is off." : {
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+    },
+    "%@ answers. Web search is on." : {
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+    },
     "%@ can't remember photos. Switch to Lil to remember photos." : {
       "comment" : "Shown when 'Remember this photo' is tapped on a brain that cannot caption"
+    },
+    "Adult: no adjustments" : {
+      "comment" : "Settings ▸ Content Controls: an adult age range is stored, so nothing is adjusted"
+    },
+    "Age-appropriate adjustments active" : {
+      "comment" : "Settings ▸ Content Controls: a minor's age range is stored, so content is adjusted"
     },
     "Finished reading" : {
 
@@ -53,6 +65,9 @@
         }
       }
     },
+    "No age range declared" : {
+      "comment" : "Settings ▸ Content Controls: no age range has been shared"
+    },
     "Open M1K3 to finish your answer." : {
 
     },
@@ -68,11 +83,23 @@
     "Please provide a title for M1K3." : {
 
     },
+    "Set up" : {
+      "comment" : "Settings ▸ Content Controls button: share an age range for the first time"
+    },
     "The answer is waiting in the chat." : {
 
     },
     "This brain can't read photos right now." : {
 
+    },
+    "Update" : {
+      "comment" : "Settings ▸ Content Controls button: share the age range again"
+    },
+    "Web off" : {
+      "comment" : "Chat status chip: web search is off for the next message"
+    },
+    "Web on" : {
+      "comment" : "Chat status chip: web search can run for the next message"
     },
     "Your answer paused" : {
 

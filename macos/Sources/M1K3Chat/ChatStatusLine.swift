@@ -13,8 +13,14 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-03 (pre-push review) — the web half is the EFFECTIVE state:
 //  a child's age band withholds web tools whatever the switch says, so the line said "Web on" for a
 //  search that could never run. `webLockedByAge` lets the shells disable the switch. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisable (l10n Phase 0): the chip's "Web on"/"Web off" and
+//  the VoiceOver label resolve from M1K3Chat's catalog (`bundle: .module`). The label is ONE sentence per
+//  state with the brain name as its argument, never a nested "on"/"off" fragment. Display-only (rg: only
+//  the Mac toolbar, the iPhone status line and tests read it; nothing model-facing). English unchanged;
+//  `brainText` stays the untranslated brain/PCC name. Confidence 0.85.
 //
 
+import Foundation
 import M1K3LanguageModel
 
 public struct ChatStatusLine: Equatable, Sendable {
@@ -47,14 +53,27 @@ public struct ChatStatusLine: Equatable, Sendable {
 
     /// The web half alone, for a surface that shows the brain elsewhere (the Mac's toolbar).
     public static func webText(on: Bool) -> String {
-        on ? "Web on" : "Web off"
+        on
+            ? String(localized: "Web on", bundle: .module, comment: "Chat status chip: web search can run for the next message")
+            : String(localized: "Web off", bundle: .module, comment: "Chat status chip: web search is off for the next message")
     }
 
     public var text: String {
         "\(brainText) · \(webText)"
     }
 
+    /// One whole sentence per state so a translation never stitches "on"/"off" into another sentence.
     public var accessibilityLabel: String {
-        "\(brainText) answers. Web search is \(webSearchOn ? "on" : "off")."
+        webSearchOn
+            ? String(
+                localized: "\(brainText) answers. Web search is on.",
+                bundle: .module,
+                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+            )
+            : String(
+                localized: "\(brainText) answers. Web search is off.",
+                bundle: .module,
+                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+            )
     }
 }
