@@ -746,18 +746,29 @@ public enum ChatEvalScorer {
     }
 
     /// The language an answer's prose is written in ("de", "pt", "zh-Hans"), or nil with no letters to read.
-    /// Fenced code, inline code and links are dropped; region tags fold to the language.
+    /// Fenced code, inline code and links are dropped; region tags fold to the language. Read sentence by
+    /// sentence and won by letters: the recogniser weighs a text's opening heavily (one German line above six
+    /// English ones read German at 0.96), so an English answer that opens "Bonjour!" would read French whole.
     static func replyLanguage(of answer: String) -> String? {
         var prose = RefusalHeuristic.proseOutsideFences(answer)
         for pattern in [#"`[^`\n]*`"#, #"\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+"#] {
             prose = prose.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
         }
-        guard prose.unicodeScalars.contains(where: \.properties.isAlphabetic) else { return nil }
-        let recognizer = NLLanguageRecognizer()
-        recognizer.processString(prose)
-        guard let code = recognizer.dominantLanguage?.rawValue else { return nil }
-        if code.hasPrefix("zh") { return code }
-        return code.split(separator: "-").first.map(String.init)
+        let sentences = prose.split { "\n.!?。！？".contains($0) }.map(String.init)
+        var letters: [String: Int] = [:]
+        for sentence in sentences {
+            let weight = sentence.unicodeScalars.count(where: \.properties.isAlphabetic)
+            guard weight > 0 else { continue }
+            let recognizer = NLLanguageRecognizer()
+            recognizer.processString(sentence)
+            guard var code = recognizer.dominantLanguage?.rawValue else { continue }
+            // Kana is only ever Japanese; a kanji-heavy Japanese sentence can read as Chinese.
+            let kana = sentence.unicodeScalars.contains { (0x3040 ... 0x30FF).contains($0.value) }
+            if code.hasPrefix("zh"), kana { code = "ja" }
+            if !code.hasPrefix("zh") { code = code.split(separator: "-").first.map(String.init) ?? code }
+            letters[code, default: 0] += weight
+        }
+        return letters.max { $0.value < $1.value || ($0.value == $1.value && $0.key > $1.key) }?.key
     }
 
     /// Score one observation against one fixture. Emits the two always-on

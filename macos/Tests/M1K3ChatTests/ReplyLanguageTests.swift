@@ -8,6 +8,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-19, Confidence 0.75 (the recogniser is Apple's; the floors are
 //  set on these lines, and the chateval language kind is the measure). Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 (pre-push review fold) — pins the three closed false positives (a short
+//  English turn mid-chat on a German device, a short frame beside a quote, a paste outweighing its instruction),
+//  kana as Japanese, and the zh-TW / und tags.
 //
 
 import Foundation
@@ -15,6 +18,11 @@ import Foundation
 import Testing
 
 struct ReplyLanguageTests {
+    /// The resolved code alone.
+    private func code(_ turn: String, earlier: [String] = [], device: String?) -> String? {
+        ReplyLanguage.resolve(turn: turn, earlierTurns: earlier, deviceLanguage: device)?.code
+    }
+
     @Test(arguments: [
         ("Wie hoch ist der höchste Berg Europas?", "de"),
         ("Peux-tu m'expliquer comment fonctionne la photosynthèse ?", "fr"),
@@ -35,15 +43,54 @@ struct ReplyLanguageTests {
         "Translate 'Wo ist der Bahnhof?' into English please",
     ])
     func englishTurnQuotingAnotherLanguageStaysEnglish(turn: String) {
-        #expect(ReplyLanguage.resolve(turn: turn, deviceLanguage: "en") == "en")
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+        #expect(ReplyLanguage.clause(for: turn, earlierTurns: ["Hi there, quick question for you."], deviceLanguage: "de") == nil)
     }
 
-    /// Too short to read: the device's language answers. "ok" on a German Mac wants German back.
+    /// A short frame beside a quote is unreadable, never read as the quote (pre-push review, 2026-11-19).
+    @Test func shortFrameBesideAQuoteIsNotTheQuote() {
+        #expect(ReplyLanguage.detect("Translate 'Wo ist der Bahnhof, bitte?'") == nil)
+        #expect(ReplyLanguage.clause(for: "Translate 'Wo ist der Bahnhof, bitte?'", deviceLanguage: "en") == nil)
+        #expect(ReplyLanguage.detect("Was bedeutet eigentlich das Wort 'Hello' auf Deutsch?") == "de")
+    }
+
+    /// Too short to read, first turn of a chat: the device's language answers. "ok" on a German Mac wants German.
     @Test(arguments: ["ok", "danke", "merci!", "👍", "42", ""])
-    func shortTurnFallsBackToTheDevice(turn: String) {
+    func shortFirstTurnFallsBackToTheDevice(turn: String) {
         #expect(ReplyLanguage.detect(turn) == nil)
-        #expect(ReplyLanguage.resolve(turn: turn, deviceLanguage: "de") == "de")
-        #expect(ReplyLanguage.resolve(turn: turn, deviceLanguage: nil) == nil)
+        #expect(code(turn, device: "de") == "de")
+        #expect(code(turn, device: nil) == nil)
+    }
+
+    /// Mid-chat, a short turn keeps the person's last readable language, never the device's: an English speaker on
+    /// a German Mac who types "thanks, got it" stays in English (pre-push review, 2026-11-19).
+    @Test func shortTurnMidChatCarriesThePersonsLanguage() {
+        let english = ["Can you explain how photosynthesis works?"]
+        #expect(code("thanks, got it", earlier: english, device: "de") == "en")
+        #expect(ReplyLanguage.clause(for: "thanks, got it", earlierTurns: english, deviceLanguage: "de") == nil)
+        let german = ["Wie hoch ist der höchste Berg Europas?", "ok"]
+        #expect(code("danke!", earlier: german, device: "en") == "de")
+        // Nothing readable earlier and not the first turn: say nothing, the history speaks for itself.
+        #expect(code("ok", earlier: ["hm", "ja"], device: "de") == nil)
+    }
+
+    /// A long paste is read by its instruction line, both ways round (pre-push review, 2026-11-19).
+    @Test func aPasteIsReadByItsInstruction() {
+        let englishBody = String(
+            repeating: "The quarterly figures show steady growth across every region we operate in.\n", count: 6
+        )
+        let germanBody = String(
+            repeating: "Die Quartalszahlen zeigen ein stetiges Wachstum in allen Regionen, in denen wir tätig sind.\n",
+            count: 6
+        )
+        #expect(ReplyLanguage.detect("Fasse das bitte kurz zusammen:\n" + englishBody) == "de")
+        #expect(ReplyLanguage.detect("Please summarise this email for me:\n" + germanBody) == "en")
+        #expect(ReplyLanguage.detect(englishBody + "Kannst du das bitte übersetzen?") == "de")
+    }
+
+    /// A kanji-heavy Japanese line with kana is Japanese, whatever the recogniser leans to.
+    @Test func kanaIsJapanese() {
+        #expect(ReplyLanguage.detect("東京都庁の所在地は新宿区です。") == "ja")
     }
 
     /// Apostrophes inside words are not quotes: the French elision and the English contraction stay read.
@@ -85,10 +132,8 @@ struct ReplyLanguageTests {
 
     /// The turn's language beats the device's when the turn is readable: a French speaker on an English Mac.
     @Test func turnBeatsTheDevice() {
-        #expect(ReplyLanguage.resolve(
-            turn: "Peux-tu m'expliquer comment fonctionne la photosynthèse ?", deviceLanguage: "en"
-        ) == "fr")
-        #expect(ReplyLanguage.resolve(turn: "Can you explain how photosynthesis works?", deviceLanguage: "de") == "en")
+        #expect(code("Peux-tu m'expliquer comment fonctionne la photosynthèse ?", device: "en") == "fr")
+        #expect(code("Can you explain how photosynthesis works?", device: "de") == "en")
     }
 
     /// The shells' switch: on when unset, off on NO (the A/B's argv override).
@@ -104,8 +149,12 @@ struct ReplyLanguageTests {
 
     /// Region and script tags fold to the language: en-GB is English, pt-BR is Portuguese.
     @Test func deviceTagsFoldToTheLanguage() {
-        #expect(ReplyLanguage.resolve(turn: "", deviceLanguage: "en-GB") == "en")
-        #expect(ReplyLanguage.resolve(turn: "", deviceLanguage: "pt-BR") == "pt")
-        #expect(ReplyLanguage.resolve(turn: "", deviceLanguage: "zh-Hans-CN") == "zh-Hans")
+        #expect(code("", device: "en-GB") == "en")
+        #expect(code("", device: "pt-BR") == "pt")
+        #expect(code("", device: "zh-Hans-CN") == "zh-Hans")
+        #expect(code("", device: "zh-TW") == "zh-Hant")
+        #expect(code("", device: "zh-HK") == "zh-Hant")
+        #expect(code("", device: "zh-CN") == "zh-Hans")
+        #expect(code("", device: "und") == nil)
     }
 }

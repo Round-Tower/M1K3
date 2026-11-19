@@ -483,10 +483,11 @@ enum ChatEvalStage {
             styleClauseProvider: { steer.clause },
             // The language arm (2026-11-19): `_REPLY_LANGUAGE=1` wires the app's clause; `_DEVICE_LANGUAGE`
             // stands in for the device's language list (unset = English, so a short turn adds nothing).
-            replyLanguageClauseProvider: { turn in
+            replyLanguageClauseProvider: { turn, earlier in
                 guard SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE") == "1" else { return nil }
                 return ReplyLanguage.clause(
-                    for: turn, deviceLanguage: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE") ?? "en"
+                    for: turn, earlierTurns: earlier,
+                    deviceLanguage: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE") ?? "en"
                 )
             },
             plainRouteProvider: plainRoute

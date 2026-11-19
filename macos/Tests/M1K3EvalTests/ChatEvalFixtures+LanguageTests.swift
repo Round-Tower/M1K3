@@ -118,6 +118,13 @@ struct ChatEvalReplyLanguageScoreTests {
         #expect(check("ar", "عاصمة أستراليا هي كانبرا، وقد اختيرت كحل وسط بين سيدني وملبورن.")?.outcome == .pass)
     }
 
+    /// An English answer that opens with the foreign word it was asked for is still English (read by sentence).
+    @Test func englishAnswerOpeningInFrenchIsEnglish() {
+        let answer = "Bonjour! That is how you say good morning in French. You can use it until about midday, "
+            + "and after that most people switch to bonsoir in the evening."
+        #expect(check("en", answer)?.outcome == .pass)
+    }
+
     @Test func emptyAnswerFails() {
         #expect(check("fr", "")?.outcome == .fail)
     }

@@ -571,7 +571,7 @@ extension AppEnvironment {
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
             // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
-            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0) },
+            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0, earlierTurns: $1) },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             // The review panel's page, else the one voice mode has open (#839): never both at once.

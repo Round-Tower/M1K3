@@ -1745,7 +1745,7 @@ final class AppCore {
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
             // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
-            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0) },
+            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0, earlierTurns: $1) },
             appStateProvider: { Self.appStateLine(afm: afm) },
             // The Mac's tool router, mirrored. Every brain takes it (Kev, 2026-11-02): without it Lil's every
             // message was an agent turn over pasted history, and Lil copied its last answer back word for word.
