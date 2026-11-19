@@ -66,6 +66,8 @@
 //  English unchanged.
 //  Review: claude-opus-5-5, 2026-11-19 — build stage: the weights-update rows, the Home and Private Cloud rows' details
 //  and the Mini hint are String(localized:) too (SettingsChoiceRow and updateRow stay String-typed). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the Reading preview line is `ReadingText(localized:)`, so the catalog sees it
+//  (the String init rendered it verbatim). English unchanged.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -214,7 +216,7 @@ struct SettingsScreen: View {
                         Text(mode.displayName).tag(mode.rawValue)
                     }
                 }
-                ReadingText("Reading should feel effortless.")
+                ReadingText(localized: "Reading should feel effortless.")
                     .font(.callout)
             } header: {
                 Text("Reading")

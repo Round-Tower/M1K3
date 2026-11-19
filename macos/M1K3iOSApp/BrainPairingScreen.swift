@@ -23,6 +23,9 @@
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the instruction's `+` join is one literal; the
 //  String-typed done and working lines are String(localized:). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the paste field's `m1k3-pair://…` placeholder is a String title (never a
+//  catalog key), and the Mac-path instruction carries a translator comment: its steps must match the Mac's own
+//  translated names. English unchanged.
 //
 
 #if os(iOS)
@@ -33,6 +36,9 @@ import M1K3Screengrab
 import SwiftUI
 
 struct BrainPairingScreen: View {
+    /// The paste field's placeholder: the shape of a pairing link, shown verbatim in every language.
+    private static let pairLinkPlaceholder = "m1k3-pair://…"
+
     @Environment(AppCore.self) private var core
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -96,9 +102,12 @@ struct BrainPairingScreen: View {
     @ViewBuilder private var scanSections: some View {
         Section {
             // One literal, not a `+` join: a joined Text is a plain String, which the catalog never sees.
-            Text("On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. Then scan the code it shows.")
-                .font(.callout)
-                .foregroundStyle(.readableSecondary)
+            Text(
+                "On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. Then scan the code it shows.",
+                comment: "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
+            )
+            .font(.callout)
+            .foregroundStyle(.readableSecondary)
         }
         #if os(iOS)
             // Never under the screengrab harness: the TCC alert landed in the plate.
@@ -140,7 +149,8 @@ struct BrainPairingScreen: View {
             }
         #endif
         Section {
-            TextField("m1k3-pair://…", text: $pastedLink)
+            // A String title, not a literal key: the link's scheme is not words to translate.
+            TextField(Self.pairLinkPlaceholder, text: $pastedLink)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.footnote.monospaced())

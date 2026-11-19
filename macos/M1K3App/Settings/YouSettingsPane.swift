@@ -21,6 +21,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
 //  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
 //  (a script compared every merged literal with its old join: 0 of 24 differ).
+//  Review: claude-opus-5-5, 2026-11-19 — the Reading preview line is `ReadingText(localized:)`, so the catalog sees it
+//  (the String init rendered it verbatim). English unchanged.
 
 import M1K3Inference
 import SwiftUI
@@ -51,7 +53,7 @@ struct YouSettingsPane: View {
                     .font(.callout)
                     .foregroundStyle(.readableSecondary)
                 // Live preview in the chosen mode.
-                ReadingText("M1K3 keeps your words on this Mac — ask it anything.",
+                ReadingText(localized: "M1K3 keeps your words on this Mac — ask it anything.",
                             mode: readingMode)
                     .padding(.vertical, 4)
             } header: {
