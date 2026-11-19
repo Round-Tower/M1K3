@@ -343,6 +343,12 @@ jobs:
       - name: The company name is Round Tower Software Ltd
         working-directory: macos
         run: python3 tools/ci/check_company_name.py
+      # Localisation Phase 0: every .xcstrings is source "en", carries no stale key, keeps
+      # each value's format specifiers in step with its key, and is fully translated in
+      # every SHIPPED locale (the set starts empty: English only). Seconds, pure Python.
+      - name: String catalogs are clean (stale keys · shipped locales · format specifiers)
+        working-directory: macos
+        run: python3 tools/ci/check_string_catalogs.py
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
@@ -488,3 +494,5 @@ jobs:
 # (integrations/claude-plugin: its bridge is the bundle's, byte for byte).
 # Review: Kev + claude-fable-5.2, 2026-11-13 — the plugin's test moved beside the bundle's
 # (integrations/mcpb/test/claude-plugin.test.js): the plugin no longer ships a bridge or a test.
+# Review: claude-opus-5-5, 2026-11-19 — the guards job runs check_string_catalogs.py (localisation Phase 0:
+# stale keys, untranslated keys in shipped locales, format-specifier drift); its tests ride the tools/ci pytest.
