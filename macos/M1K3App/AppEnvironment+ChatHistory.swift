@@ -58,6 +58,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: `browserContextProvider` also reads the voice page's own slot
 //  (`VoicePageContext`) when the review panel shows nothing. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — deepBrainAvailable reads Big through the WeightsRefresh resolver.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider: ReplyLanguage.liveClause`: the reply
+//  comes back in the turn's language, else the device's; nil for English. `-replyLanguage NO` turns it off.
+//  Confidence 0.7 until the language arm reads it.
 
 import Foundation
 import M1K3Agent
@@ -567,6 +570,8 @@ extension AppEnvironment {
             egressClauseProvider: { EgressDisclosure.clause(Self.egressFacts(), device: HostPlatform.thisDevice) },
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
+            // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
+            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0) },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             // The review panel's page, else the one voice mode has open (#839): never both at once.

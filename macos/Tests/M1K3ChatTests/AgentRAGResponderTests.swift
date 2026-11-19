@@ -977,6 +977,26 @@ struct AgentRAGResponderTests {
         }
     }
 
+    /// Kev, 2026-11-19: replies come back in the person's language. The clause reads the turn's own text, and an
+    /// English turn adds nothing.
+    @Test("a German turn carries the reply-language clause, an English one carries none")
+    func replyLanguageClauseFollowsTheTurn() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider([
+            "CONCLUSION: Die Dichtung ist ausgefallen. [Plant Notes §3.2 Seals]",
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+        ])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            replyLanguageClauseProvider: { ReplyLanguage.clause(for: $0, deviceLanguage: "en") }
+        )
+        _ = try await collect(responder.answerStreaming("Welche Hydraulikdichtung ist am Förderband unter Last ausgefallen?").stream)
+        _ = try await collect(responder.answerStreaming("What hydraulic seal failed on the conveyor under load?").stream)
+        #expect(provider.allPrompts.first?.contains("reply in German") == true)
+        #expect(provider.allPrompts.last?.contains("reply in") == false)
+    }
+
     /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.
     @Test("the voice clause rides the turn's grounding while it is set, and is gone once cleared")
     func voiceClauseInjected() async throws {

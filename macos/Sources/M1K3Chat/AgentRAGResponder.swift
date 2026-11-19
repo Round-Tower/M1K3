@@ -264,6 +264,9 @@
 //  own turn text; a follow-up ("and when I search?") carries no cue and gets no clause (known gap). The age
 //  clause is unchanged everywhere; a Home clause (`EgressDisclosure.ridesEveryTurn`) rides every turn.
 //  Confidence 0.75: the gate is unmeasured on the phone itself.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider`: the turn's reply-language line
+//  (`ReplyLanguage.clause`) joins `turnClauses` last, nearest the question, on every route. nil by default and for
+//  English, so an unwired or English prompt is byte-identical. Confidence 0.75 until the language arm reads it.
 
 import Foundation
 import M1K3Agent
@@ -351,6 +354,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// What the mic heard during a voice turn ("music (guitar)"), set by the voice shell for
     /// that turn only (TurnClauseSlot); nil for typed turns.
     private let voiceClauseProvider: @Sendable () -> String?
+    /// The turn's reply-language line (`ReplyLanguage.clause`, 2026-11-19), read from the turn's own text; nil
+    /// for English and wherever no shell wires it.
+    private let replyLanguageClauseProvider: @Sendable (String) -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -393,7 +399,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         ageClauseProvider: @escaping @Sendable () -> String? = { nil },
         egressClauseProvider: @escaping @Sendable () -> String? = { nil },
         styleClauseProvider: @escaping @Sendable () -> String? = { nil },
-        voiceClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
+        voiceClauseProvider: @escaping @Sendable () -> String? = { nil },
+        replyLanguageClauseProvider: @escaping @Sendable (String) -> String? = { _ in nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         appStateProvider: (@Sendable () -> String?)? = nil,
@@ -419,6 +426,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.egressClauseProvider = egressClauseProvider
         self.styleClauseProvider = styleClauseProvider
         self.voiceClauseProvider = voiceClauseProvider
+        self.replyLanguageClauseProvider = replyLanguageClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.appStateProvider = appStateProvider
@@ -1254,7 +1262,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         // #768: the turn straight after a look cannot see the picture, and is told so (that turn only).
         let afterLook = LookAftermath.withholdsWeb ? LookAftermath.clause : nil
-        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook]
+        // Last, nearest the question: the language the reply must come back in (nil for English).
+        let replyLanguage = replyLanguageClauseProvider(question)
+        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, replyLanguage]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
