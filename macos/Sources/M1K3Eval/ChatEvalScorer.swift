@@ -123,9 +123,14 @@
 //  every older document decodes (pinned). Confidence 0.85: the guard is the app's own, applied to the think-stripped text.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `EvalObservation.toolsOffered` (default true): a path
 //  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replies in <code>` for a fixture's `replyLanguage`: Apple's
+//  recogniser reads the answer's prose (fences, inline code and links dropped). Only the language kind sets it, so
+//  every other kind scores as before. Confidence 0.8 (the recogniser misreads very short answers; the fixtures ask
+//  for a sentence or more).
 
 import Foundation
 import M1K3Inference
+import NaturalLanguage
 import Synchronization
 
 public enum CheckOutcome: String, Sendable, Equatable, Codable {
@@ -740,6 +745,21 @@ public enum ChatEvalScorer {
         needle.hasPrefix("\n") ? "\n" + haystack : haystack
     }
 
+    /// The language an answer's prose is written in ("de", "pt", "zh-Hans"), or nil with no letters to read.
+    /// Fenced code, inline code and links are dropped; region tags fold to the language.
+    static func replyLanguage(of answer: String) -> String? {
+        var prose = RefusalHeuristic.proseOutsideFences(answer)
+        for pattern in [#"`[^`\n]*`"#, #"\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+"#] {
+            prose = prose.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
+        }
+        guard prose.unicodeScalars.contains(where: \.properties.isAlphabetic) else { return nil }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(prose)
+        guard let code = recognizer.dominantLanguage?.rawValue else { return nil }
+        if code.hasPrefix("zh") { return code }
+        return code.split(separator: "-").first.map(String.init)
+    }
+
     /// Score one observation against one fixture. Emits the two always-on
     /// checks (non-empty, no-think-leak) plus one per populated expectation.
     /// `latencyCeilingMS`: when set, a turn slower than the ceiling FAILS the
@@ -861,6 +881,17 @@ public enum ChatEvalScorer {
                     name: "spoken has no markup", outcome: .skip, detail: "no spoken text (swift test)"
                 ))
             }
+        }
+
+        // The language kind (2026-11-19): the reply's prose, read by Apple's recogniser, must be in the
+        // person's language. Code and links say nothing, so they are dropped first.
+        if let wanted = exp.replyLanguage {
+            let read = Self.replyLanguage(of: answer)
+            checks.append(EvalCheck(
+                name: "replies in \(wanted)",
+                outcome: read == wanted ? .pass : .fail,
+                detail: "read \(read ?? "nothing")"
+            ))
         }
 
         // Whole-word when the fixture opts in (vision, reasoning); raw substring otherwise,

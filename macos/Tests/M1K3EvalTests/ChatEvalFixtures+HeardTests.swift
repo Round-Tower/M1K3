@@ -6,6 +6,7 @@
 //  recovered, not read), each garble names its swap, the guards are there, and the kind sits last.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language kind now sits last; heard is pinned just before it.
 //
 
 @testable import M1K3Eval
@@ -38,11 +39,13 @@ struct ChatEvalFixturesHeardTests {
         }
     }
 
-    @Test("the kind sits last in all, so no earlier run's order moves")
-    func heardIsLast() throws {
-        let last = try #require(ChatEvalFixtures.all.last)
-        #expect(last.kind == .heard)
-        #expect(TaskKind.allCases.last == .heard)
+    @Test("the kind sits just before language (2026-11-19), so no earlier run's order moves")
+    func heardIsBeforeLanguage() throws {
+        let kinds = TaskKind.allCases
+        let heard = try #require(kinds.firstIndex(of: .heard))
+        #expect(kinds[kinds.index(after: heard)] == .language)
+        let lastHeard = try #require(ChatEvalFixtures.all.lastIndex { $0.kind == .heard })
+        #expect(ChatEvalFixtures.all[lastHeard...].dropFirst().allSatisfy { $0.kind == .language })
     }
 
     @Test("at least five guards: a real odd word, a clean turn and a tool turn stay as they are")

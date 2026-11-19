@@ -26,6 +26,8 @@ Review: Kev + claude-opus-5.5, 2026-10-27 — the search head defaults on under 
 `whenUnset: true`); --no-router-search is the off arm.
 Review: Kev + claude-fable-5.1, 2026-11-06 — the shipped column: `_shipped` reads `shippedChecks` (the leak guard's
 refusal, scored by the stage); the column and the summary figure appear only on a run that carries one.
+Review: Kev + claude-opus-5-5, 2026-11-19 — the reply-language switches: on by default on the live path, off on --bare,
+--device-language only with the clause on.
 """
 
 import json
@@ -1027,3 +1029,36 @@ def test_run_direct_relaunches_even_when_the_binary_is_missing(direct_rig):
     (direct_rig.app / "Contents/MacOS/M1K3").unlink()
     assert rc.run_direct(direct_rig.args(), direct_rig.app, direct_rig.trig, direct_rig.plan) == 2
     assert direct_rig.relaunched == [HOME_LIVE], "main quit the live app before run_direct looked"
+
+
+def test_reply_language_follows_the_app_on_the_live_path():
+    # 2026-11-19: the Mac and iPhone wire the reply-language clause on when unset, so a live-path run does too unless
+    # --no-reply-language asks for the baseline. The bare arm has no responder, so no clause rides there.
+    assert _trig()["M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE"] == "1"
+    assert "M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE" not in _trig(reply_language=False)
+    assert "M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE" not in _trig(live_path=False)
+
+
+def test_device_language_rides_only_with_the_clause():
+    assert _trig(device_language="de")["M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE"] == "de"
+    assert "M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE" not in _trig()
+    # A device language with the clause off would read as "the device language changes nothing".
+    with pytest.raises(ValueError):
+        _trig(reply_language=False, device_language="de")
+
+
+def test_main_threads_reply_language_to_the_trigger(tmp_path, monkeypatch, capsys):
+    app = tmp_path / "M1K3.app"
+    (app / "Contents").mkdir(parents=True)
+    with open(app / "Contents/Info.plist", "wb") as handle:
+        plistlib.dump({"CFBundleIdentifier": rc.BUNDLE_ID}, handle)
+    monkeypatch.setattr(rc, "sh", lambda *cmd: BATT_AC if cmd[-1] == "batt" else PMSET_G)
+    monkeypatch.setattr(rc, "running_instances", list)
+    base = ["--name", "x", "--brains", "lil", "--app", str(app), "--dry-run", "--router", "dispatch"]
+    key = '"M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE"'
+    assert rc.main(base) == 0
+    assert f'{key}: "1"' in capsys.readouterr().out
+    assert rc.main([*base, "--no-reply-language"]) == 0
+    assert key not in capsys.readouterr().out
+    assert rc.main([*base, "--device-language", "pt-BR"]) == 0
+    assert '"M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE": "pt-BR"' in capsys.readouterr().out

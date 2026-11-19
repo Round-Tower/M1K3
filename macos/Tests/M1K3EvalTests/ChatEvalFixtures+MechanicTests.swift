@@ -12,6 +12,7 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.9 (pure). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — mechanic is no longer last: heard follows it, and the
 //  last-kind pin moved to ChatEvalFixtures+HeardTests. This one pins that mechanic's own place didn't move.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language kind follows heard; the place pin names both.
 //
 
 import Foundation
@@ -80,10 +81,10 @@ struct ChatEvalFixturesMechanicTests {
         #expect(!scenario(.critical, false).expectsNote)
     }
 
-    @Test("the kind keeps its place: after format, and only heard (#852) comes after it")
+    @Test("the kind keeps its place: after format, and only heard (#852) and language come after it")
     func mechanicKeepsItsPlace() throws {
         let index = try #require(TaskKind.allCases.firstIndex(of: .mechanic))
         #expect(TaskKind.allCases[index - 1] == .format)
-        #expect(Array(TaskKind.allCases[(index + 1)...]) == [.heard])
+        #expect(Array(TaskKind.allCases[(index + 1)...]) == [.heard, .language])
     }
 }
