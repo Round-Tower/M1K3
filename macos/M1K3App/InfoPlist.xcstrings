@@ -73,7 +73,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "M1K3 transcribes your speech on-device to let you ask questions by voice. Nothing is sent to Apple or any server."
+            "value" : "M1K3 uses Apple's on-device speech recognition, so your voice stays on this Mac. It is never sent to a server."
           }
         }
       }
