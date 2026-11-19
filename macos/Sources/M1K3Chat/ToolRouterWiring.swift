@@ -233,6 +233,8 @@ public enum ToolRouterWiring {
             pick: picker,
             staysLocal: staysLocal,
             // Mini keeps its plain turn: offered the palette, its native session overflowed its window (#427).
+            // LFM2.5 shown as Mini is MLX, so it counts here; where it serves, Apple's picker isn't ready and
+            // every tools verdict already takes the agent turn.
             noneTakesAgent: dispatch && noneToAgent && mini == nil
         )
     }
@@ -343,6 +345,8 @@ public enum PickStage: String, Sendable, Codable {
     case searchVeto = "search-veto"
     case pickedNone = "none-plain"
     case noneToAgent = "none-agent"
+    /// A lookup_fact the user's kept documents answer: a plain turn reads them (`documentCorrected`).
+    case documentPlain = "doc-plain"
 }
 
 /// An eval's ear on the cascade: the stages this task's tool turns took, in order.

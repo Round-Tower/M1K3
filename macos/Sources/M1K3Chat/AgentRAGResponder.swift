@@ -1089,6 +1089,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         var pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
         if pick != corrected {
             Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
+            ToolRouterWiring.pickRecorder?.record(.documentPlain)
             return await plain()
         }
         // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
@@ -1112,7 +1113,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
         }
         if pick.tool == ToolPick.noTool {
-            // The picker's own `none`, not a pick the search head emptied (the agent could search again).
+            // The picker's own `none`, not a pick the search head emptied (the agent could search again). A lookup the
+            // kept documents answer returned plain above, on purpose: the agent turn would look it up.
             if picked.tool == ToolPick.noTool {
                 if noneTakesAgent {
                     // 2026-11-19 route control: these turns scored 15/16 on the agent turn, 16/24 plain.

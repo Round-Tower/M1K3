@@ -40,7 +40,8 @@
 //  clause's quoted answer.
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `nonePickTakesTheAgent`, `nonePickPlainIsRecorded`,
 //  `vetoedPickStaysPlainUnderTheFlag`: a picker `none` takes the agent turn under `toolNoneToAgent` (the 11-19 route
-//  control), and the eval reads a none pick apart from a tool pick. Confidence 0.85.
+//  control), and the eval reads a none pick apart from a tool pick; `lookupOnTheUsersDocumentIsPlain` stays plain under
+//  the flag and records `doc-plain`. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -394,11 +395,17 @@ struct DispatchTurnTests {
         )
         let calls = Calls()
         let provider = Scripted(["145 Nm, in a star pattern."])
-        let text = try await run(
-            provider, tools: [Recording(name: "lookup_fact", output: "Typically 120–140 lb-ft.", calls: calls)],
-            pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"), question: question, store: store
-        )
+        let stages = PickStageRecorder()
+        // Under `noneTakesAgent` too: the kept chunk answers, so the turn stays plain (11-19 review fold).
+        let text = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            try await run(
+                provider, tools: [Recording(name: "lookup_fact", output: "Typically 120–140 lb-ft.", calls: calls)],
+                pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"), question: question, store: store,
+                noneTakesAgent: true
+            )
+        }
         #expect(text == "145 Nm, in a star pattern.")
+        #expect(stages.stages == [.documentPlain], "the eval reads it apart from a tool pick")
         #expect(calls.log.withLock { $0 }.isEmpty, "no lookup leaves the device")
         let prompt = try #require(provider.prompts.first)
         #expect(prompt.contains("145 Nm"), "the manual's chunk grounds the answer")
