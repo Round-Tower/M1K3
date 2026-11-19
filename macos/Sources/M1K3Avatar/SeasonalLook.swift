@@ -34,6 +34,8 @@
 //  only, Halloween checked first), `Override.flightClub`, and a REQUIRED `offline:` on active / resolve / now
 //  (no default, so the compiler finds every call site). Copy promises only what ships: flight colours + one
 //  greeting while offline. Confidence 0.85 (maths pinned; the look and real Airplane Mode are verify-on-device).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the costume lines resolve from M1K3Avatar's catalog
+//  (`bundle: .module`); they are card copy, never chat history. English unchanged.
 //
 
 import Foundation
@@ -101,11 +103,13 @@ public enum SeasonalLook: String, Sendable {
         case .halloween:
             String(
                 localized: "Happy Halloween! I carved the pumpkin; you bring the questions.",
+                bundle: .module,
                 comment: "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line."
             )
         case .flightClub:
             String(
                 localized: "Offline? I'm still right here, on your device.",
+                bundle: .module,
                 comment: "Seasonal greeting shown 3 Nov - 1 Dec, ONLY while the device is offline (Offline AI Flight Club). M1K3 is a theatrical villain who is entirely on the user's side; keep it playful, honest (it must be true when offline, even with no brain downloaded yet, so it promises presence, never answers) and family-safe, one short line of at most 70 characters."
             )
         case nil:

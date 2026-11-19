@@ -27,6 +27,8 @@
 //  view the glass-hosted kit card holds. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — WeightsUpdate: a brain whose previous weights serve shows Update
 //  available (fetch) or Update ready (switch), never Download or Remove for a brain that works.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: names and purposes resolve from M1K3Inference's
+//  catalog (`bundle: .module`); Lil, Big and Mini are marked never-translate there. English unchanged.
 
 import Foundation
 
@@ -285,25 +287,25 @@ public enum DownloadCatalogue {
 
     private static func name(of kind: DownloadKind) -> String {
         switch kind {
-        case .lil: String(localized: "Lil")
-        case .big: String(localized: "Big")
-        case .pocket: String(localized: "Mini")
-        case .semanticMemory: String(localized: "Semantic memory")
-        case .sharperEars: String(localized: "Sharper ears")
-        case .voice: String(localized: "M1K3 Voice")
+        case .lil: String(localized: "Lil", bundle: .module, comment: "Brain name: never translated.")
+        case .big: String(localized: "Big", bundle: .module, comment: "Brain name: never translated.")
+        case .pocket: String(localized: "Mini", bundle: .module, comment: "Brain name: never translated.")
+        case .semanticMemory: String(localized: "Semantic memory", bundle: .module)
+        case .sharperEars: String(localized: "Sharper ears", bundle: .module)
+        case .voice: String(localized: "M1K3 Voice", bundle: .module)
         }
     }
 
     private static func purpose(of kind: DownloadKind, context: Context) -> String {
         switch kind {
-        case .lil: String(localized: "My everyday brain. Quick, sees pictures, lives on this Mac.")
-        case .big: String(localized: "The deep thinker. Slower, sharper, for the hard questions.")
-        case .pocket: String(localized: "A small brain for this Mac, which can't run Apple Intelligence.")
+        case .lil: String(localized: "My everyday brain. Quick, sees pictures, lives on this Mac.", bundle: .module)
+        case .big: String(localized: "The deep thinker. Slower, sharper, for the hard questions.", bundle: .module)
+        case .pocket: String(localized: "A small brain for this Mac, which can't run Apple Intelligence.", bundle: .module)
         case .semanticMemory:
-            String(localized: "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes.")
+            String(localized: "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes.", bundle: .module)
         case .sharperEars:
-            String(localized: "Better dictation than Apple Speech (WhisperKit \(context.whisperVariantName)).")
-        case .voice: String(localized: "My own voice, instead of the built-in one.")
+            String(localized: "Better dictation than Apple Speech (WhisperKit \(context.whisperVariantName)).", bundle: .module)
+        case .voice: String(localized: "My own voice, instead of the built-in one.", bundle: .module)
         }
     }
 }

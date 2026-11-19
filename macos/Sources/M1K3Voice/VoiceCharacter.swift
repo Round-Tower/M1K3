@@ -25,6 +25,8 @@
 //  measured; that the 320 Hz high-pass is what Kev is HEARING is a physically
 //  reasoned hypothesis his ear settles in seconds now that there's a switch).
 //  Prior: VoiceEffectChain.m1k3Character (Kev + claude-sonnet-4-6, 2026-06-08).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the names and summaries resolve from M1K3Voice's
+//  catalog (`bundle: .module`); "M1K3" stays a plain brand name. English unchanged.
 //
 
 import Foundation
@@ -41,18 +43,19 @@ public enum VoiceCharacter: String, CaseIterable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .clean: "Clean"
+        case .clean: String(localized: "Clean", bundle: .module, comment: "Voice character name.")
         case .m1k3: "M1K3"
-        case .radio: "Radio"
+        case .radio: String(localized: "Radio", bundle: .module, comment: "Voice character name.")
         }
     }
 
     /// One line for a Settings footer — says what you gain and what you give up.
     public var summary: String {
         switch self {
-        case .clean: "Full range, nothing added. Clearest consonants."
-        case .m1k3: "The signature transmitted voice — a little radio, a little machine."
-        case .radio: "Heavier lo-fi. Character over clarity."
+        case .clean: String(localized: "Full range, nothing added. Clearest consonants.", bundle: .module)
+        case .m1k3:
+            String(localized: "The signature transmitted voice — a little radio, a little machine.", bundle: .module)
+        case .radio: String(localized: "Heavier lo-fi. Character over clarity.", bundle: .module)
         }
     }
 

@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 (pure; the shell's observation loop and the
 //  real ordering of the two downloads are verify-by-launch). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `startsAfterLine` resolves from M1K3Inference's
+//  catalog (`bundle: .module`). English unchanged.
 
 import Foundation
 
@@ -69,6 +71,6 @@ public enum SemanticMemoryQueue {
 
     /// The toggle's "when" line, e.g. "Starts after Lil is ready."
     public static func startsAfterLine(brainName: String) -> String {
-        String(localized: "Starts after \(brainName) is ready.")
+        String(localized: "Starts after \(brainName) is ready.", bundle: .module)
     }
 }

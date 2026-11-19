@@ -1,0 +1,85 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ can't remember photos. Switch to Lil to remember photos." : {
+      "comment" : "Shown when 'Remember this photo' is tapped on a brain that cannot caption"
+    },
+    "Finished reading" : {
+
+    },
+    "I couldn't make out that photo. Try again?" : {
+
+    },
+    "It's waiting in the chat." : {
+
+    },
+    "Kept “%@” (the first %@ characters) in Documents — %lld chunks (already kept)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks (already kept)."
+          }
+        }
+      }
+    },
+    "Kept “%@” (the first %@ characters) in Documents — %lld chunks." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks."
+          }
+        }
+      }
+    },
+    "Kept “%@” in Documents — %lld chunks (already kept)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” in Documents — %2$lld chunks (already kept)."
+          }
+        }
+      }
+    },
+    "Kept “%@” in Documents — %lld chunks." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” in Documents — %2$lld chunks."
+          }
+        }
+      }
+    },
+    "Open M1K3 to finish your answer." : {
+
+    },
+    "Please provide a query for M1K3." : {
+
+    },
+    "Please provide a question for M1K3." : {
+
+    },
+    "Please provide a text for M1K3." : {
+
+    },
+    "Please provide a title for M1K3." : {
+
+    },
+    "The answer is waiting in the chat." : {
+
+    },
+    "This brain can't read photos right now." : {
+
+    },
+    "Your answer paused" : {
+
+    },
+    "Your answer's ready" : {
+
+    }
+  },
+  "version" : "1.0"
+}

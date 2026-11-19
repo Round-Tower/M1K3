@@ -1,0 +1,39 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "A warm, natural neural voice that runs entirely on your Mac. One download, then offline forever. The voice M1K3 was meant to have." : {
+
+    },
+    "A warm, natural neural voice that runs entirely on your device. One download, then offline forever. The voice M1K3 was meant to have." : {
+
+    },
+    "Clean" : {
+      "comment" : "Voice character name."
+    },
+    "Full range, nothing added. Clearest consonants." : {
+
+    },
+    "Heavier lo-fi. Character over clarity." : {
+
+    },
+    "Neural voice · ~192 MB" : {
+
+    },
+    "Radio" : {
+      "comment" : "Voice character name."
+    },
+    "Ready now · no download" : {
+
+    },
+    "The signature transmitted voice — a little radio, a little machine." : {
+
+    },
+    "Your device's built-in speech. Works immediately, always on-device — clear, if a little robotic." : {
+
+    },
+    "macOS's built-in speech. Works immediately, always on-device — clear, if a little robotic." : {
+
+    }
+  },
+  "version" : "1.0"
+}

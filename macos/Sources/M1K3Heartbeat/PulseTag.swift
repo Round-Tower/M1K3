@@ -26,6 +26,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: three todo:* tags (open / overdue /
 //  proposed) with labels.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the filter-chip labels resolve from M1K3Heartbeat's
+//  catalog (`bundle: .module`); the brain names (Big, Lil, Mini) and the raw-value fallback stay as they are. English
+//  unchanged.
 
 import Foundation
 
@@ -92,26 +95,26 @@ public struct PulseTag: RawRepresentable, Hashable, Sendable, Comparable {
     /// vocabulary read by an older build) fall back to the value half.
     public var displayLabel: String {
         switch self {
-        case .firstToday: return "First today"
-        case .quiet: return "Quiet"
-        case .active: return "Active"
-        case .machineCool: return "Ran cool"
-        case .machineWarm: return "Ran warm"
-        case .machineHot: return "Ran hot"
-        case .lowPower: return "Low power"
-        case .charging: return "Charging"
-        case .onBattery: return "On battery"
-        case .memoryLearned: return "Learned"
-        case .memoryCorrected: return "Corrected"
-        case .chatTouched: return "We talked"
-        case .agentVisited: return "Agent visit"
+        case .firstToday: return String(localized: "First today", bundle: .module)
+        case .quiet: return String(localized: "Quiet", bundle: .module)
+        case .active: return String(localized: "Active", bundle: .module)
+        case .machineCool: return String(localized: "Ran cool", bundle: .module)
+        case .machineWarm: return String(localized: "Ran warm", bundle: .module)
+        case .machineHot: return String(localized: "Ran hot", bundle: .module)
+        case .lowPower: return String(localized: "Low power", bundle: .module)
+        case .charging: return String(localized: "Charging", bundle: .module)
+        case .onBattery: return String(localized: "On battery", bundle: .module)
+        case .memoryLearned: return String(localized: "Learned", bundle: .module)
+        case .memoryCorrected: return String(localized: "Corrected", bundle: .module)
+        case .chatTouched: return String(localized: "We talked", bundle: .module)
+        case .agentVisited: return String(localized: "Agent visit", bundle: .module)
         case .brainBig: return "Big"
         case .brainLil: return "Lil"
         case .brainMini: return "Mini"
-        case .toldByDigest: return "Digest-told"
-        case .todosOpen: return "Todos open"
-        case .todoOverdue: return "Overdue"
-        case .todoProposed: return "Suggested"
+        case .toldByDigest: return String(localized: "Digest-told", bundle: .module)
+        case .todosOpen: return String(localized: "Todos open", bundle: .module)
+        case .todoOverdue: return String(localized: "Overdue", bundle: .module)
+        case .todoProposed: return String(localized: "Suggested", bundle: .module)
         default:
             let value = rawValue.split(separator: ":").dropFirst().joined(separator: ":")
             guard !value.isEmpty else { return rawValue }

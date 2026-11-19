@@ -1,0 +1,140 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ are each a switch in Settings." : {
+
+    },
+    "%@ is a switch in Settings." : {
+
+    },
+    "A small brain for this Mac, which can't run Apple Intelligence." : {
+
+    },
+    "A small brain for this Mac." : {
+
+    },
+    "Also get semantic memory (%@)" : {
+
+    },
+    "Besides model downloads, the one capability that sends anything off this Mac: every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way." : {
+
+    },
+    "Better dictation than Apple Speech (WhisperKit %@)." : {
+
+    },
+    "Better dictation than Apple Speech." : {
+
+    },
+    "Better recall of your notes." : {
+
+    },
+    "Better recall of your notes. Starts after %@ is ready." : {
+
+    },
+    "Big" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "Couldn't download — try again from Settings ▸ Brains & downloads" : {
+
+    },
+    "Couldn't reach the download server. Check your connection and try again." : {
+
+    },
+    "Couldn't start just now — try again from Settings ▸ Brains & downloads" : {
+
+    },
+    "Download stopped." : {
+
+    },
+    "Downloading…" : {
+
+    },
+    "Every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way." : {
+
+    },
+    "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes." : {
+
+    },
+    "Finds your notes by meaning. Re-indexes them once." : {
+
+    },
+    "Getting it ready…" : {
+
+    },
+    "Lil" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "M1K3 Voice" : {
+
+    },
+    "Mini" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "My everyday brain. Quick, sees pictures, lives on this Mac." : {
+
+    },
+    "My everyday brain: quick, and it sees pictures." : {
+
+    },
+    "My own voice, instead of the built-in one." : {
+
+    },
+    "Not enough space on this device. Remove a download you don't use, or free some space, then try again." : {
+
+    },
+    "Ready" : {
+
+    },
+    "Semantic memory" : {
+
+    },
+    "Sharper ears" : {
+
+    },
+    "Starts after %@ is ready." : {
+
+    },
+    "The deep thinker. Slower, sharper, for the hard questions." : {
+
+    },
+    "The deep thinker: slower, sharper." : {
+
+    },
+    "The download didn't finish (%@). Try again in a moment." : {
+
+    },
+    "Web search" : {
+      "comment" : "A switch name, listed with \"Private Cloud Compute\" in \"… is a switch in Settings.\""
+    },
+    "Your local AI companion. Runs on this Mac — no account. It goes online only to %@. %@" : {
+      "comment" : "First-run privacy line: a list of infinitive phrases, then the Settings-switch sentence.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your local AI companion. Runs on this Mac — no account. It goes online only to %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "download the models you choose (brains, speech, voice)" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to" : {
+      "comment" : "One way M1K3 goes online (an infinitive phrase). Round Tower is the developer's name."
+    },
+    "search the web and look things up" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "update" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "use the optional Private Cloud Compute brain" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    }
+  },
+  "version" : "1.0"
+}

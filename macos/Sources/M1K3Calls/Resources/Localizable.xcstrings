@@ -1,0 +1,21 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone." : {
+
+    },
+    "No audio was captured." : {
+
+    },
+    "The audio format isn’t available." : {
+
+    },
+    "The microphone isn’t ready yet — try again in a moment." : {
+
+    },
+    "The recording couldn’t be saved." : {
+
+    }
+  },
+  "version" : "1.0"
+}

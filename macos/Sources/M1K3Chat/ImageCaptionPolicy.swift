@@ -18,6 +18,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.75 (the rules are
 //  pinned; whether the captions are GOOD is verify-by-launch and eval work).
 //  Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the refusal resolves from M1K3Chat's catalog (`bundle:
+//  .module`). English unchanged.
 
 import Foundation
 import M1K3Inference
@@ -45,6 +47,7 @@ public enum ImageCaptionPolicy {
         case .mini, .pocket:
             .refused(String(
                 localized: "\(tier.displayName) can't remember photos. Switch to Lil to remember photos.",
+                bundle: .module,
                 comment: "Shown when 'Remember this photo' is tapped on a brain that cannot caption"
             ))
         }

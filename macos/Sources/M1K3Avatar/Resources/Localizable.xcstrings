@@ -1,0 +1,12 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Happy Halloween! I carved the pumpkin; you bring the questions." : {
+      "comment" : "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line."
+    },
+    "Offline? I'm still right here, on your device." : {
+      "comment" : "Seasonal greeting shown 3 Nov - 1 Dec, ONLY while the device is offline (Offline AI Flight Club). M1K3 is a theatrical villain who is entirely on the user's side; keep it playful, honest (it must be true when offline, even with no brain downloaded yet, so it promises presence, never answers) and family-safe, one short line of at most 70 characters."
+    }
+  },
+  "version" : "1.0"
+}

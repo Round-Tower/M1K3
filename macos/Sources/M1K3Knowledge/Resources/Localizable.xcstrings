@@ -1,0 +1,27 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Call" : {
+
+    },
+    "Conversation" : {
+
+    },
+    "Document" : {
+
+    },
+    "Memory" : {
+
+    },
+    "Note" : {
+
+    },
+    "Photo" : {
+
+    },
+    "internal" : {
+
+    }
+  },
+  "version" : "1.0"
+}

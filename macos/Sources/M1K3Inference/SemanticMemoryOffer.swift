@@ -13,6 +13,8 @@
 //  verify-by-launch). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O2/O4: `toggleDetail(brainName:)` says when it
 //  starts; `slot(...)` reserves the toggle's space before the first disk scan. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the copy resolves from M1K3Inference's catalog
+//  (`bundle: .module`); `toggleDetail(brainName:)` is one key, not two sentences joined in code. English unchanged.
 
 import Foundation
 
@@ -41,16 +43,17 @@ public enum SemanticMemoryOffer {
 
     /// "Also get semantic memory (1.3 GB)": `size` is the caller's formatted size.
     public static func toggleTitle(size: String) -> String {
-        String(localized: "Also get semantic memory (\(size))")
+        String(localized: "Also get semantic memory (\(size))", bundle: .module)
     }
 
     public static var toggleDetail: String {
-        String(localized: "Better recall of your notes.")
+        String(localized: "Better recall of your notes.", bundle: .module)
     }
 
     /// The detail line beside a brain download: the benefit, then when it starts (it waits for the brain).
+    /// One key, not two sentences joined in code (it reads `toggleDetail` + `startsAfterLine` in English).
     public static func toggleDetail(brainName: String) -> String {
-        "\(toggleDetail) \(SemanticMemoryQueue.startsAfterLine(brainName: brainName))"
+        String(localized: "Better recall of your notes. Starts after \(brainName) is ready.", bundle: .module)
     }
 
     /// What the toggle's layout slot does. The slot is RESERVED before the first disk scan (invisible, not

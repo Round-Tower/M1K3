@@ -16,6 +16,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.75 (decisions pinned in TurnNoticePolicyTests;
 //  the banner and the prompt are verify-on-device), Prior: TurnNotificationPolicy (Kev + claude-opus-4-8,
 //  2026-06-14), the Mac's version of the same ping.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the notice's title and body resolve from M1K3Chat's
+//  own catalog (`bundle: .module`). English unchanged.
 
 import Foundation
 
@@ -30,17 +32,17 @@ public enum TurnNoticePolicy {
         /// A title never names the app: the banner already does (the Mac's rule, Kev 2026-08-30).
         public var title: String {
             switch self {
-            case .answerReady: String(localized: "Your answer's ready")
-            case .readFinished: String(localized: "Finished reading")
-            case .paused: String(localized: "Your answer paused")
+            case .answerReady: String(localized: "Your answer's ready", bundle: .module)
+            case .readFinished: String(localized: "Finished reading", bundle: .module)
+            case .paused: String(localized: "Your answer paused", bundle: .module)
             }
         }
 
         public var body: String {
             switch self {
-            case .answerReady: String(localized: "It's waiting in the chat.")
-            case .readFinished: String(localized: "The answer is waiting in the chat.")
-            case .paused: String(localized: "Open M1K3 to finish your answer.")
+            case .answerReady: String(localized: "It's waiting in the chat.", bundle: .module)
+            case .readFinished: String(localized: "The answer is waiting in the chat.", bundle: .module)
+            case .paused: String(localized: "Open M1K3 to finish your answer.", bundle: .module)
             }
         }
     }

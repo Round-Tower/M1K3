@@ -16,6 +16,8 @@
 //  appears is a real recording. Channels are filled directly here — no interleaver.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85, Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the error text resolves from M1K3Calls' catalog
+//  (`bundle: .module`). English unchanged.
 //
 
 // NOT @preconcurrency (dropped 2026-07-16, proven dead by full-SIL compile on all
@@ -35,11 +37,11 @@ public enum CallAudioWriterError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .emptyCapture:
-            String(localized: "No audio was captured.")
+            String(localized: "No audio was captured.", bundle: .module)
         case .formatUnavailable:
-            String(localized: "The audio format isn’t available.")
+            String(localized: "The audio format isn’t available.", bundle: .module)
         case .writeFailed:
-            String(localized: "The recording couldn’t be saved.")
+            String(localized: "The recording couldn’t be saved.", bundle: .module)
         }
     }
 }
