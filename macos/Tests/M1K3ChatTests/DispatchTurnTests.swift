@@ -41,7 +41,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `nonePickTakesTheAgent`, `nonePickPlainIsRecorded`,
 //  `vetoedPickStaysPlainUnderTheFlag`: a picker `none` takes the agent turn under `toolNoneToAgent` (the 11-19 route
 //  control), and the eval reads a none pick apart from a tool pick; `lookupOnTheUsersDocumentIsPlain` stays plain under
-//  the flag and records `doc-plain`. Confidence 0.85.
+//  the flag and records `doc-plain`; `nonePickAgentStaysOffTheWeb`: the none pick's agent gets no web tools.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -286,6 +287,36 @@ struct DispatchTurnTests {
         #expect(!prompt.contains(AgentRAGResponder.plainRules))
         #expect(prompt.contains("calendar_peek"), "the agent keeps the whole palette")
         #expect(stages.stages == [.noneToAgent])
+    }
+
+    /// 2026-11-19 A/B (on-r1): a none pick handed to the agent turn fetched a page for "build a landing page" (131 s,
+    /// failed). Apple's picker said no tool: the agent keeps the local reads, never the web.
+    @Test("a none pick's agent turn gets no web tools; with nothing else on offer it stays plain")
+    func nonePickAgentStaysOffTheWeb() async throws {
+        let provider = Scripted(["CONCLUSION: done"])
+        _ = try await run(
+            provider, tools: [
+                Recording(name: "calendar_peek", output: "x", calls: Calls()),
+                Recording(name: "fetch_page", output: "x", calls: Calls()),
+            ],
+            pick: ToolPick(tool: ToolPick.noTool, query: ""), question: "build me a landing page", noneTakesAgent: true
+        )
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("calendar_peek"))
+        #expect(!prompt.contains("fetch_page"), "a web tool reached the none pick's agent turn")
+
+        let webOnly = Scripted(["Here's a page."])
+        let stages = PickStageRecorder()
+        let text = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            try await run(
+                webOnly, tools: [Recording(name: "web_search", output: "x", calls: Calls())],
+                pick: ToolPick(tool: ToolPick.noTool, query: ""), question: "build me a landing page",
+                noneTakesAgent: true
+            )
+        }
+        #expect(text == "Here's a page.")
+        #expect(webOnly.prompts.first?.contains(AgentRAGResponder.plainRules) == true)
+        #expect(stages.stages == [.pickedNone])
     }
 
     @Test("without the flag a none pick stays plain, and the eval reads it apart from a tool pick")

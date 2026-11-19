@@ -265,7 +265,8 @@
 //  clause is unchanged everywhere; a Home clause (`EgressDisclosure.ridesEveryTurn`) rides every turn.
 //  Confidence 0.75: the gate is unmeasured on the phone itself.
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `runDispatchedTurn` hands the picker's own `none` to the agent turn when the
-//  route says `noneTakesAgent`; a pick the search head emptied stays plain. Confidence 0.8: the gain is the 11-19
+//  route says `noneTakesAgent`, with the palette off the web (`offlinePalette`; nothing left = plain); a pick the
+//  search head emptied stays plain. Confidence 0.8: the gain is the 11-19
 //  route control's, re-measured by the arm in the PR.
 
 import Foundation
@@ -1116,11 +1117,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // The picker's own `none`, not a pick the search head emptied (the agent could search again). A lookup the
             // kept documents answer returned plain above, on purpose: the agent turn would look it up.
             if picked.tool == ToolPick.noTool {
-                if noneTakesAgent {
-                    // 2026-11-19 route control: these turns scored 15/16 on the agent turn, 16/24 plain.
-                    Self.log.notice("tool dispatch: none — the agent turn answers")
+                // The agent works the question (2026-11-19 route control: 15/16 there, 16/24 plain) with no web
+                // reads: the picker said no tool, and one such turn fetched a page. Nothing left = plain (#427).
+                let offline = ToolDispatch.offlinePalette(tools)
+                if noneTakesAgent, !offline.isEmpty {
+                    Self.log.notice("tool dispatch: none — the agent turn answers, off the web")
                     ToolRouterWiring.pickRecorder?.record(.noneToAgent)
-                    return .agent(tools)
+                    return .agent(offline)
                 }
                 ToolRouterWiring.pickRecorder?.record(.pickedNone)
             }
