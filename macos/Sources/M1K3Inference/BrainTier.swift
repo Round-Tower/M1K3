@@ -71,6 +71,11 @@
 //  catalog (`bundle: .module`); rg shows only views and accessibility labels read them. Each card line is one key
 //  (no `+` join); `HostPlatform.yourDevice` stays an English argument. `displayName`, `heartbeatDescriptor` untouched.
 //  English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — review fold: the Pocket and Lil card lines are now one whole sentence per
+//  platform (`#if os`, the VoiceTier pattern), so a translator writes the device noun in the sentence instead of
+//  receiving `HostPlatform.yourDevice` as an English argument ("Läuft vollständig auf your machine."). `detail` is
+//  display-only (rg: OnboardingCards and OnboardingScreen); `HostPlatform` stays the prompt surface's English.
+//  English bytes unchanged, pinned against `HostPlatform.yourDevice` in BrainTierTests.
 
 import Foundation
 
@@ -187,11 +192,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
                 comment: "Brain card copy for Mini (Apple's on-device model)."
             )
         case .pocket:
-            String(
-                localized: "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on \(HostPlatform.yourDevice).",
-                bundle: .module,
-                comment: "Brain card copy for Mini without Apple Intelligence. M1K3 is the app's name. The argument is \"your machine\" / \"your device\" / \"your Vision Pro\", in English."
-            )
+            Self.pocketDetail
         case .lil:
             Self.lilDetail
         case .big:
@@ -206,14 +207,53 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// Platform-honest wording: the same card renders in the iOS/visionOS shell,
     /// where "your Mac" would be a lie on an iPhone (caught on-simulator,
     /// 2026-07-18; consolidated onto HostPlatform same-day — macOS bytes frozen,
-    /// pinned in BrainTierTests). `HostPlatform.yourDevice` stays an argument: it is
-    /// prompt-surface English the persona reads too.
+    /// pinned in BrainTierTests). One whole sentence per platform, so a translation
+    /// carries its own device noun; the English matches `HostPlatform.yourDevice`,
+    /// which stays the prompt surface's English.
     private static var lilDetail: String {
-        String(
-            localized: "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on \(HostPlatform.yourDevice).",
-            bundle: .module,
-            comment: "Brain card copy for Lil. The argument is \"your machine\" / \"your device\" / \"your Vision Pro\", in English."
-        )
+        #if os(macOS)
+            String(
+                localized: "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.",
+                bundle: .module,
+                comment: "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac)."
+            )
+        #elseif os(visionOS)
+            String(
+                localized: "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.",
+                bundle: .module,
+                comment: "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated."
+            )
+        #else
+            String(
+                localized: "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.",
+                bundle: .module,
+                comment: "Brain card copy for Lil, on an iPhone or iPad (\"your device\")."
+            )
+        #endif
+    }
+
+    /// Pocket's card (shown as Mini where Apple Intelligence is unavailable), one sentence
+    /// per platform for the same reason as `lilDetail`.
+    private static var pocketDetail: String {
+        #if os(macOS)
+            String(
+                localized: "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your machine.",
+                bundle: .module,
+                comment: "Brain card copy for Mini without Apple Intelligence, on a Mac (\"your machine\" is the Mac). M1K3 is the app's name."
+            )
+        #elseif os(visionOS)
+            String(
+                localized: "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your Vision Pro.",
+                bundle: .module,
+                comment: "Brain card copy for Mini without Apple Intelligence, on Apple Vision Pro. M1K3 is the app's name; Vision Pro is Apple's product name: keep both untranslated."
+            )
+        #else
+            String(
+                localized: "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your device.",
+                bundle: .module,
+                comment: "Brain card copy for Mini without Apple Intelligence, on an iPhone or iPad (\"your device\"). M1K3 is the app's name."
+            )
+        #endif
     }
 
     /// SF Symbol for the brain card. Mini wears Apple Intelligence's own mark

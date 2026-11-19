@@ -14,7 +14,7 @@
       "comment" : "Voice character name."
     },
     "End with “%@” and M1K3 will take its turn" : {
-      "comment" : "Voice mode hint while listening. %@ is the English word please: the listener only hears English, so it stays English in every language."
+      "comment" : "Voice mode hint while listening. %@ is the spoken submit word, already translated (the key “please” in this catalog). Use this language's quotation marks."
     },
     "Full range, nothing added. Clearest consonants." : {
 
@@ -46,6 +46,9 @@
     },
     "macOS's built-in speech. Works immediately, always on-device — clear, if a little robotic." : {
 
+    },
+    "please" : {
+      "comment" : "Spoken word that ends a voice turn (“tell me a story, please”). ONE lowercase word, as speech recognition spells it: M1K3 matches the last word said against it."
     }
   },
   "version" : "1.0"

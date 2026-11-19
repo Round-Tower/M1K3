@@ -2,10 +2,10 @@
   "sourceLanguage" : "en",
   "strings" : {
     "%@ answers. Web search is off." : {
-      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
     },
     "%@ answers. Web search is on." : {
-      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
     },
     "%@ can't remember photos. Switch to Lil to remember photos." : {
       "comment" : "Shown when 'Remember this photo' is tapped on a brain that cannot caption"

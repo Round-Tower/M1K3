@@ -18,6 +18,8 @@
 //  state with the brain name as its argument, never a nested "on"/"off" fragment. Display-only (rg: only
 //  the Mac toolbar, the iPhone status line and tests read it; nothing model-facing). English unchanged;
 //  `brainText` stays the untranslated brain/PCC name. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — review fold: the VoiceOver label's translator comment names "Brain at Home"
+//  (what the iPhone passes when Home fronts, `AppCore.answeringBrainName`), not "Home". Comment only.
 //
 
 import Foundation
@@ -68,12 +70,12 @@ public struct ChatStatusLine: Equatable, Sendable {
             ? String(
                 localized: "\(brainText) answers. Web search is on.",
                 bundle: .module,
-                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
             )
             : String(
                 localized: "\(brainText) answers. Web search is off.",
                 bundle: .module,
-                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Home) or Private Cloud Compute; keep it untranslated"
+                comment: "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
             )
     }
 }
