@@ -22,4 +22,6 @@ FEITO PARA SUA MÁQUINA
 • Um servidor local para seus outros apps: ligue a Local API e qualquer ferramenta que fale a OpenAI API pode usar o cérebro que você carregou. Só neste Mac, desligada por padrão e com a própria chave.
 • A nuvem privada da Apple também para esses apps, se você ligar: um cérebro maior quando o trabalho pede. Só sai o que o app envia, e os Ajustes contam cada chamada.
 
+Por enquanto, a interface e a voz estão em inglês.
+
 Inteligência punk: sua, privada, nos seus termos.

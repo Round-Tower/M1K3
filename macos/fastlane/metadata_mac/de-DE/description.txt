@@ -22,4 +22,6 @@ FÜR DEINEN MAC GEBAUT
 • Ein lokaler Server für deine anderen Apps: Schalte die Local API ein, und jedes Werkzeug, das die OpenAI API spricht, kann das Hirn nutzen, das du geladen hast. Nur auf diesem Mac, standardmäßig aus, mit eigenem Schlüssel.
 • Apples private Cloud auch für diese Apps, wenn du sie einschaltest: ein größeres Hirn, wenn die Aufgabe eins braucht. Es geht nur hinaus, was die App sendet, und die Einstellungen zählen jeden Aufruf.
 
+Die Oberfläche und die Stimme sind vorerst auf Englisch.
+
 Punk-Intelligenz: deine, privat, zu deinen Bedingungen.
