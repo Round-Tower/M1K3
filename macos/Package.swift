@@ -43,6 +43,8 @@
 //  edge (and one M1K3AnswerBlocks target, not a split UI target). No manifest change.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — M1K3LiveActivity leaf (+ tests): the iPhone Live Activity's phase-only
 //  state, dependency-free; M1K3Chat depends on it for TurnActivityPolicy. No package dependency moves. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-19 — M1K3ChatTests copies its Resources folder (the reply-language blind sets
+//  read by ReplyLanguageBlindSetTests). Test-only; no dependency moves. Confidence 0.9.
 
 import Foundation
 import PackageDescription
@@ -445,7 +447,9 @@ let package = Package(
             // and asserts every marker still matches, so a wording pass fails
             // loudly instead of silently zeroing a section in the report.
             dependencies: ["M1K3Chat", "M1K3KnowledgeTools", "M1K3AgentTools", "M1K3Eval", "M1K3LanguageModel"],
-            path: "Tests/M1K3ChatTests"
+            path: "Tests/M1K3ChatTests",
+            // The reply-language blind sets (ReplyLanguageBlindSetTests): a ratchet on Apple's recogniser.
+            resources: [.copy("Resources")]
         ),
         // Leaf bridge (Chat + Memory only): DistilledFactGraphAdapter, the
         // Chat→graph dual-write. Nothing depends back on it but the two app
