@@ -36,6 +36,11 @@
 //  Batch 1 holds at 137, every turn read the same as before.
 //  Review: claude-opus-5-5, 2026-11-19 — blind batch 3 (125 turns) joins the ratchet at its blind-measured 101,
 //  with its three English false positives (b3-pa-40, b3-op-08, b3-op-30) allowlisted as undiagnosed, not fixed.
+//  Review: claude-opus-5-5, 2026-11-19 (review fold) — batch 3's floor 101 → 103: an English question beside a short
+//  non-Latin line that does not ask now reads English, which clears b3-op-08 and b3-op-30 (both leave the known-miss
+//  list). The rule came from the reviewer's lines, not batch 3's, and batch 2 shaped it (b2-cj-23 regressed until only
+//  an English question may dismiss the other line). Batches 1 and 2 hold at 137 and 89. b3-pa-40 stays: neither of its
+//  lines asks, so nothing tells the English frame from the caption.
 //
 
 import Foundation
@@ -66,15 +71,13 @@ struct ReplyLanguageBlindSetTests {
     /// Batch 3's three arrived with it, measured blind; each is still a bug, pinned so a fourth can't hide among them.
     private static let knownEnglishMisses: [String: String] = [
         "b3-pa-40": "blind on arrival 2026-11-19, undiagnosed", // English question over an Arabic caption, read ar
-        "b3-op-08": "blind on arrival 2026-11-19, undiagnosed", // Japanese thanks line, English question; read ja
-        "b3-op-30": "blind on arrival 2026-11-19, undiagnosed", // Korean thanks line, English question; read ko
     ]
 
     /// The correct count each file must keep (≥), measured on macOS 27 on 2026-11-19 when the floor was set.
     private static let correctFloor: [String: Int] = [
         "reply-language-blind-1": 137, // of 150; wrong 1, missed 12 (tuned against: a regression set)
         "reply-language-blind-2": 89, // of 105; wrong 2, missed 14 (tuned against in round 2: a regression set now)
-        "reply-language-blind-3": 101, // of 125; wrong 8 (3 English false positives), missed 16 (blind when measured)
+        "reply-language-blind-3": 103, // of 125; wrong 6 (1 English false positive), missed 16 (blind measure was 101)
     ]
 
     /// The macOS major the floors were measured on. They bind there and on every later OS (an update that moves

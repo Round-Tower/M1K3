@@ -19,6 +19,10 @@
 //  read as Indonesian says nothing), the Arabizi guard and the digits it must not trip on, a native question over a
 //  short English paste, the Latin opener line and the two-line weight rule that keep that from naming a wrong
 //  language, and the comma split. Every line is new, none copied from a blind set. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 (review fold) — pins a declined turn (Arabizi, off-list) falling back to
+//  nothing, the device fallback's allowlist, an English question beside a non-Latin line that does not ask, a Han
+//  piece not vetoing a Japanese turn, and consonant-flanked initialisms not tripping the Arabizi guard. Lines are the
+//  reviewer's or new, none from a blind set. Confidence 0.75.
 //
 
 import Foundation
@@ -311,5 +315,53 @@ struct ReplyLanguageTests {
     @Test func aTurnWithCommasInOneLanguageKeepsIt() {
         let turn = "Ich habe Hunger, aber der Kühlschrank ist leer, was soll ich heute kochen?"
         #expect(ReplyLanguage.detect(turn) == "de")
+    }
+
+    /// A turn the read deliberately declines (romanised, or a language off the allowlist) is not a short turn: the
+    /// device's language never stands in for it, and neither does an older turn's (review fold, 2026-11-19: Arabizi on
+    /// a German Mac was told "This device is set to German").
+    @Test func aDeclinedTurnFallsBackToNothing() {
+        let arabizi = "3ayza a3raf azay a7ot el sora 3ala el telefon bta3y"
+        #expect(code(arabizi, device: "de-DE") == nil)
+        #expect(ReplyLanguage.clause(for: arabizi, deviceLanguage: "de-DE") == nil)
+        let indonesian = "Bagaimana cara membuat nasi goreng yang enak di rumah?"
+        #expect(code(indonesian, device: "fr") == nil)
+        let earlier = ["Wie hoch ist der höchste Berg Europas?", arabizi]
+        #expect(code("ok", earlier: earlier, device: "en") == nil)
+    }
+
+    /// The device fallback names only allowlisted languages: an Indonesian Mac adds no clause.
+    @Test(arguments: ["id-ID", "ms", "tl", "ca-ES"])
+    func aDeviceLanguageOffTheAllowlistSaysNothing(device: String) {
+        #expect(code("ok", device: device) == nil)
+        #expect(ReplyLanguage.clause(for: "ok", deviceLanguage: device) == nil)
+    }
+
+    /// An English line that asks, beside a short non-Latin line that does not, is the person's question: the other
+    /// line is what they are asking about or a thank-you (review fold, 2026-11-19: "reply in Arabic" on an English
+    /// question about a Slack message).
+    @Test(arguments: [
+        "A colleague sent me this message on Slack and I can't read it, what does it say?\nمرحبا بكم في المطار الدولي",
+        "정말 고마워요!\nWhat time does the sun set in Dublin in December?",
+        "どうもありがとう！\nCould you also suggest a good name for the new puppy?",
+    ])
+    func anEnglishQuestionBesideANonLatinLineIsEnglish(turn: String) {
+        #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
+    }
+
+    /// Short Han pieces are ambiguous between Japanese and the two Chinese scripts, so one reading another Han
+    /// language does not veto a Japanese or Chinese turn (review fold, 2026-11-19).
+    @Test func aHanPieceDoesNotVetoAHanTurn() {
+        #expect(ReplyLanguage.detect("量子力学. 相対性理論. 熱力学 について簡単に説明してください") == "ja")
+    }
+
+    /// Initialisms with a digit between consonants ("p2p", "k8s", "mp3s") and the "e2e" numeronym are not Arabizi,
+    /// whose digits stand for consonants beside a vowel (review fold, 2026-11-19).
+    @Test(arguments: [
+        ("Wie richte ich e2e-Tests für p2p-Apps ein?", "de"),
+        ("Kann ich k8s und mp3s auf meinem Server mischen?", "de"),
+    ])
+    func techInitialismsAreNotArabizi(turn: String, code: String) {
+        #expect(ReplyLanguage.detect(turn) == code)
     }
 }

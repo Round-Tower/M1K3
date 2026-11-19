@@ -48,6 +48,17 @@
 //  wrong reads 11 → 0 (all now no clause); batch 1 unchanged at 137/150, turn for turn; the 48 fixtures all read
 //  right. Both batches are now tuned against. Confidence 0.7 (the two-line doubling rule is a judgment call, and a
 //  native question heavier than a short English line it asks about is still read English: no clause, missed).
+//  Review: claude-opus-5-5, 2026-11-19 (review fold) — four fixes. (1) A declined turn (romanised, or read off the
+//  allowlist) stops `resolve`: no older turn and no device stands in for it, and the device names only listed
+//  languages (Arabizi on a German Mac was told "This device is set to German"; an Indonesian Mac named Indonesian).
+//  (2) Under the paste threshold a non-Latin edge that does not ask loses to an English line that does ("…what does it
+//  say?" above an Arabic greeting read Arabic); only an English question dismisses, so the rule can only remove a
+//  clause. (3) A Han piece no longer vetoes a Han whole ("相対性理論" read Chinese inside a Japanese turn). (4) The
+//  Arabizi guard counts a digit only beside a vowel and never in "X2X" ("e2e", "p2p", "k8s", "mp3s" tripped it).
+//  Skipped, with the reasons in the fold's report: short pieces from "3.12"-style splits (six probes all read right),
+//  and an English sign-off line on a short foreign turn (same shape as an English question without "?" over a
+//  foreign paste, b2-cj-13; a fix there would name a wrong language). Batches 137/150, 89/105, 103/125 (was 101).
+//  Confidence 0.7 (the question-mark signal is cheap and only ever removes a clause; b3-pa-40, with no "?", stays).
 //
 
 import Foundation
@@ -85,10 +96,25 @@ public enum ReplyLanguage {
     /// The language a turn is written in, as a language code ("de", "pt", "ja", "zh-Hans"), or nil when
     /// the turn is too short, too mixed, or only a frame around someone else's words.
     public static func detect(_ turn: String) -> String? {
+        if case let .language(code) = reading(turn) { return code }
+        return nil
+    }
+
+    /// What a read of one turn found: a language the clause may name, nothing (too short, too mixed, only a frame),
+    /// or a language the read declines to name (romanised, or off `replyLanguages`). A declined turn is a signal, not
+    /// silence: the device or an older turn must not stand in for it.
+    enum Reading: Equatable {
+        case language(String)
+        case unreadable
+        case declined
+    }
+
+    static func reading(_ turn: String) -> Reading {
         let prose = proseOnly(turn)
         // Arabizi reads as Spanish or Polish with confidence: its digits-for-letters say it is not either.
-        guard !isRomanised(prose), let read = read(prose) else { return nil }
-        return replyLanguages.contains(read) ? read : nil
+        guard !isRomanised(prose) else { return .declined }
+        guard let read = read(prose) else { return .unreadable }
+        return replyLanguages.contains(read) ? .language(read) : .declined
     }
 
     /// The read before the allowlist.
@@ -110,12 +136,22 @@ public enum ReplyLanguage {
         // line whose language differs from the body's: "Fasse das zusammen:" above an English email is German, and
         // so is a Japanese question under a two-line English notice (read whole, the English won 14 of 15 times).
         let body = readable(bodyText(of: prose, lines: lines)).flatMap(recognise)
-        for line in [lines[0], lines[lines.count - 1]] {
+        for (index, line) in [(0, lines[0]), (lines.count - 1, lines[lines.count - 1])] {
             guard let edge = readable(line).flatMap(recognise), edge != body else { continue }
+            if isPaste || edge == "en" { return edge }
             // Under the paste threshold, a Latin-script edge wins only when it reads English (which adds no clause):
             // the recogniser confuses Latin-script languages on one short line ("Merci beaucoup!" above an English
-            // question is an opener, not an instruction), while another script anchors its read.
-            if isPaste || edge == "en" || !isMostlyLatin(line) { return edge }
+            // question is an opener, not an instruction), while another script anchors its read. A non-Latin edge
+            // that does not ask, beside an English line that does, is what the person is asking about or a thank-you,
+            // not the instruction: "…what does it say?" above an Arabic greeting is English (review fold, 2026-11-19).
+            // Only an English question dismisses it, so the dismissal can only ever remove a clause, never name one,
+            // and a Japanese question at the other end keeps its Japanese opener's read.
+            guard !isMostlyLatin(line) else { continue }
+            let englishAsks = lines.indices.contains { other in
+                other != index && asks(lines[other]) && readable(lines[other]).flatMap(recognise) == "en"
+            }
+            if englishAsks, !asks(line) { continue }
+            return edge
         }
         // Nothing differs: a paste is its body, a short turn is read whole under the agreement rule.
         return isPaste ? body : agreed(prose)
@@ -149,7 +185,12 @@ public enum ReplyLanguage {
         guard whole != "en" else { return whole }
         let pieces = text.components(separatedBy: CharacterSet(charactersIn: "—–:;,.!?\n"))
         for piece in pieces where letterWeight(of: piece) >= minimumLetters {
-            if let read = recognise(piece), read != whole { return nil }
+            // A few Han characters cannot tell Japanese from either Chinese ("相対性理論" read Chinese inside a
+            // Japanese turn), so a Han piece only vetoes a Han whole by a different script family, never by another
+            // Han read; the whole's read, with its kana, is the better one.
+            if let read = recognise(piece), read != whole, !(isHanLanguage(read) && isHanLanguage(whole)) {
+                return nil
+            }
         }
         return whole
     }
@@ -173,14 +214,21 @@ public enum ReplyLanguage {
 
     /// The turn's language when it can be read, else the person's last readable turn's, else, on a chat's
     /// first turn only, the device's. `earlierTurns` are the person's own earlier turns, oldest first.
+    /// A declined turn (romanised, or a language off the list) stops the search: the person is writing something the
+    /// clause will not name, so neither an older turn nor the device speaks for them (review fold, 2026-11-19: Arabizi
+    /// on a German Mac was told the device is set to German). The device names only listed languages too.
     static func resolve(
         turn: String, earlierTurns: [String] = [], deviceLanguage: String?
     ) -> (code: String, source: Source)? {
-        if let read = detect(turn) { return (read, .person) }
-        for earlier in earlierTurns.suffix(carryLookback).reversed() {
-            if let read = detect(earlier) { return (read, .person) }
+        for candidate in [turn] + earlierTurns.suffix(carryLookback).reversed() {
+            switch reading(candidate) {
+            case let .language(code): return (code, .person)
+            case .declined: return nil
+            case .unreadable: continue
+            }
         }
-        guard earlierTurns.isEmpty, let device = deviceLanguage.flatMap(fold) else { return nil }
+        guard earlierTurns.isEmpty, let device = deviceLanguage.flatMap(fold), replyLanguages.contains(device)
+        else { return nil }
         return (device, .device)
     }
 
@@ -260,14 +308,20 @@ public enum ReplyLanguage {
     /// Arabizi: a mostly Latin-script turn where at least two words, and `romanisedShare` of them, carry a single
     /// digit between two lowercase letters ("a3raf", "ta2s", "bta3y"). Narrow on purpose: a word-initial digit
     /// ("7aga") is not counted, since "3rd" and "4K" look the same, and a run of digits ("i18n", "l10n") never counts.
+    /// Arabizi's digits stand for consonants, so one sits beside a vowel; a digit between two consonants ("p2p",
+    /// "k8s", "mp3s") is an initialism, and "e2e" (the same letter either side of a 2: "end to end") a numeronym.
     static func isRomanised(_ text: String) -> Bool {
         guard isMostlyLatin(text) else { return false }
         let words = text.split { !($0.isLetter || $0.isNumber) }
         let romanised = words.filter { word in
             let chars = Array(word)
             return chars.indices.dropFirst().dropLast().contains { index in
-                chars[index].isASCII && chars[index].isNumber
-                    && chars[index - 1].isLowercase && chars[index + 1].isLowercase
+                let before = chars[index - 1], after = chars[index + 1]
+                guard chars[index].isASCII, chars[index].isNumber, before.isLowercase, after.isLowercase else {
+                    return false
+                }
+                let isNumeronym = chars.count == 3 && before == after
+                return !isNumeronym && (isVowel(before) || isVowel(after))
             }
         }
         return romanised.count >= 2 && Double(romanised.count) >= romanisedShare * Double(words.count)
@@ -291,6 +345,19 @@ public enum ReplyLanguage {
             guard scalar.properties.isAlphabetic else { return total }
             return total + (isIdeographic(scalar) ? ideographWeight : 1)
         }
+    }
+
+    /// Whether the text carries a question mark in any script: "?", "？" or Arabic "؟".
+    static func asks(_ text: String) -> Bool {
+        text.contains { "?？؟".contains($0) }
+    }
+
+    private static func isVowel(_ letter: Character) -> Bool {
+        "aeiouy".contains(letter)
+    }
+
+    private static func isHanLanguage(_ code: String) -> Bool {
+        code == "ja" || code.hasPrefix("zh-")
     }
 
     private static func isKana(_ scalar: Unicode.Scalar) -> Bool {
