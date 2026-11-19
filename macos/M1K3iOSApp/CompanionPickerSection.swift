@@ -43,6 +43,8 @@
 //  the skin picker: the halo is a CustomMaterial shell). Confidence 0.7 (not yet seen on a phone).
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the face names and footer lines are String(localized:);
+//  English unchanged.
 //
 
 import M1K3Avatar
@@ -68,13 +70,13 @@ struct CompanionPickerSection: View {
     }
 
     private var choices: [FaceChoice] {
-        [FaceChoice(id: "", name: "Pixel face")]
+        [FaceChoice(id: "", name: String(localized: "Pixel face"))]
             + CompanionSpec.all.filter(CompanionAssets.isInstalled).map {
                 FaceChoice(id: $0.id, name: $0.displayName)
             }
             + (offersConstellation
-                ? [FaceChoice(id: CompanionDefaults.constellationID, name: "Constellation")] : [])
-            + [FaceChoice(id: CompanionDefaults.noneID, name: "None")]
+                ? [FaceChoice(id: CompanionDefaults.constellationID, name: String(localized: "Constellation"))] : [])
+            + [FaceChoice(id: CompanionDefaults.noneID, name: String(localized: "None", comment: "Face choice: no face at all"))]
     }
 
     private var offersConstellation: Bool {
@@ -103,21 +105,24 @@ struct CompanionPickerSection: View {
 
     private var footerText: String {
         if noneChosen {
-            return "No face — just the conversation."
+            return String(localized: "No face — just the conversation.")
         }
         if constellationShown {
-            return "Your memories as a star field that grows."
+            return String(localized: "Your memories as a star field that grows.")
         }
         if constellationChosen {
-            return "Constellation needs a bigger screen. The pixel face stands in for now."
+            return String(localized: "Constellation needs a bigger screen. The pixel face stands in for now.")
         }
         guard creatureChosen else {
-            return "M1K3's face in chat."
+            return String(localized: "M1K3's face in chat.")
         }
         #if os(visionOS)
-            return "The creature shows its own textures."
+            return String(localized: "The creature shows its own textures.")
         #else
-            return "Phosphor glows with M1K3's mood. Cel toon-shades the creature."
+            return String(
+                localized: "Phosphor glows with M1K3's mood. Cel toon-shades the creature.",
+                comment: "Phosphor and Cel are the Skin picker's choices: use the same words as those options."
+            )
         #endif
     }
 

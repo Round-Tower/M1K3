@@ -193,6 +193,11 @@
 //  brain on the old weights is released before the new ones load; the warm's download check reads .complete.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — recentMemoryTitles (the chips' only reader) is gone.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: brainNote and the Documents ingest status lines are
+//  String(localized:) (the ingest line as whole sentences, not a joined fragment). English unchanged. The brainLoad
+//  .failed message and "Brain at Home" stay English: AppStateLine renders them into the model's prompt.
+//  Review: claude-opus-5-5, 2026-11-19 — build stage: Int arguments go in as String, because a localized Int
+//  interpolation groups digits ("3,060") where the old plain String did not.
 
 import AVFoundation
 #if os(iOS)
@@ -995,10 +1000,18 @@ final class AppCore {
         // (#227). The rows render locked; this is the belt for a stale tap.
         if !Self.isSelectableOnThisDevice(tier), let floor = tier.minimumPhysicalMemoryGB(platform: .mobile) {
             selectBrain(.mini)
+            let name = tier.displayName
+            let has = Int(Self.physicalMemoryGB.rounded(.down))
+            // Int(floor) only on the finite branch: an infinite floor (never runs here) would trap.
             brainNote = floor.isFinite
-                ? "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
-                + "\(Int(Self.physicalMemoryGB.rounded(.down))) GB. Staying on Mini."
-                : "\(tier.displayName) doesn't run on this device. Staying on Mini."
+                ? String(
+                    localized: "\(name) needs \(Int(floor)) GB of memory — this device has \(has) GB. Staying on Mini.",
+                    comment: "%1$@ is a brain's name (Lil, Big): keep it and Mini untranslated"
+                )
+                : String(
+                    localized: "\(name) doesn't run on this device. Staying on Mini.",
+                    comment: "%@ is a brain's name (Lil, Big): keep it and Mini untranslated"
+                )
             return
         }
         brainNote = nil
@@ -1097,7 +1110,7 @@ final class AppCore {
         guard let brain = homeBrain, let credential = brainLinkStore.credential() else {
             // Metadata without a Keychain row (restore/migration edge): honest
             // note, never a half-paired ghost.
-            brainNote = "This device’s pairing key is missing — pair with your Mac again."
+            brainNote = String(localized: "This device’s pairing key is missing — pair with your Mac again.")
             return
         }
         warmTask?.cancel()
@@ -1580,14 +1593,18 @@ final class AppCore {
                 result = try await ingester.ingest(title: title, text: content, sourceRef: url.absoluteString)
             }
             if ingestingToken == token { ingestingToken = nil }
-            let dedup = result.wasDeduped ? " (already indexed)" : ""
             let scans = IngestStatusCopy.scanNote(result.scans).map { " " + $0 } ?? ""
-            lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(scans)"
+            // String, not Int: a localized Int interpolation groups digits ("1,234"), the old line did not.
+            let chunks = String(result.chunkCount)
+            // Whole sentences, not a joined fragment, so each one can be translated; %@ at the end is the scan note.
+            lastIngestStatus = result.wasDeduped
+                ? String(localized: "Indexed “\(title)” — \(chunks) chunks (already indexed).\(scans)")
+                : String(localized: "Indexed “\(title)” — \(chunks) chunks.\(scans)")
             refreshCounts()
             scheduleIngestStatusClear()
         } catch {
             if ingestingToken == token { ingestingToken = nil }
-            lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
+            lastIngestStatus = String(localized: "Couldn’t index “\(title)”: \(error.localizedDescription)")
         }
     }
 
@@ -1602,7 +1619,7 @@ final class AppCore {
             scheduleIngestStatusClear()
             return true
         } catch {
-            lastIngestStatus = "Couldn’t keep “\(source.title)”: \(error.localizedDescription)"
+            lastIngestStatus = String(localized: "Couldn’t keep “\(source.title)”: \(error.localizedDescription)")
             return false
         }
     }

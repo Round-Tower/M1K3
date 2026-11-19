@@ -12,6 +12,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — one read off the main actor
 //  (`loadAnswerRatings`), Clear ratings behind a confirmation, and a footer that says the file
 //  holds each question and answer, not only the thumbs. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footer's `+` join is one literal (extractable).
+//  English unchanged.
 //  TDD_SKIP: view body.
 //
 
@@ -52,8 +54,10 @@ struct AnswerRatingsSection: View {
         } header: {
             Text("Answer ratings")
         } footer: {
-            Text("Your thumbs up and down, with any notes, and the question and answer each one rates. "
-                + "They stay on this device unless you export them.")
+            // One literal, not a `+` join: a joined Text is a plain String, which the catalog never sees.
+            Text(
+                "Your thumbs up and down, with any notes, and the question and answer each one rates. They stay on this device unless you export them."
+            )
         }
         .task { ratings = await core.chat.loadAnswerRatings() }
     }

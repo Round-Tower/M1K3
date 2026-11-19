@@ -61,6 +61,11 @@
 //  SettingsChoiceRow, whose whole row takes the touch; before, only the words did (Kev, on the 17 Pro).
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — Brain gets the weights-update rows (WeightsRefresh): Update with its
 //  progress, Switch, then Remove the old weights, each a tap.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the Grounding, spoken-look and Content Controls footers
+//  are single literals (no `+` join), and the Update row's detail is two whole sentences (with and without the size).
+//  English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — build stage: the weights-update rows, the Home and Private Cloud rows' details
+//  and the Mini hint are String(localized:) too (SettingsChoiceRow and updateRow stay String-typed). English unchanged.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -173,11 +178,13 @@ struct SettingsScreen: View {
                 Text("Grounding")
             } footer: {
                 if privateCloudRow != .hidden {
-                    Text("Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, "
-                        + "sends your messages to Apple. " + PrivateCloudTurn.appleGuarantee)
+                    // One key each, not a `+` join (a joined Text is a plain String the catalog never sees).
+                    Text("""
+                    Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, sends your \
+                    messages to Apple. \(PrivateCloudTurn.appleGuarantee)
+                    """)
                 } else {
-                    Text("The only thing that sends your conversation to the internet. "
-                        + "Every search shows in the reply as it happens.")
+                    Text("The only thing that sends your conversation to the internet. Every search shows in the reply as it happens.")
                 }
             }
             .id(Self.groundingID)
@@ -186,9 +193,10 @@ struct SettingsScreen: View {
                 Section {
                     Toggle("Open the camera when I ask aloud", isOn: $spokenLook)
                 } footer: {
-                    Text("In voice mode, saying “what am I looking at?” takes one picture and answers on this "
-                        + "device. Voice mode hears the room, so turn this off if someone else might say it. "
-                        + "The eye button always works.")
+                    Text("""
+                    In voice mode, saying “what am I looking at?” takes one picture and answers on this device. Voice \
+                    mode hears the room, so turn this off if someone else might say it. The eye button always works.
+                    """)
                 }
             }
 
@@ -262,9 +270,10 @@ struct SettingsScreen: View {
             } header: {
                 Text("Content Controls")
             } footer: {
-                Text("Uses Apple's Declared Age Range to adjust content for younger users. "
-                    + "Web search is disabled for under 16; the assistant's tone adjusts for all minors. "
-                    + "Declining gives full capability.")
+                Text("""
+                Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for under \
+                16; the assistant's tone adjusts for all minors. Declining gives full capability.
+                """)
             }
         }
 
@@ -311,11 +320,19 @@ struct SettingsScreen: View {
             Button {
                 core.fetchWeightsUpdate()
             } label: {
+                // Two whole sentences (with and without the size), not a fragment glued on.
                 updateRow(
-                    title: "Update \(name)",
-                    detail: "New weights for \(name)"
-                        + (core.selectedBrain.approxDownloadMB.map { ", \(BrainTier.downloadSizeLabel(megabytes: $0))" } ?? "")
-                        + ". \(name) keeps working meanwhile; keep M1K3 open until it's done.",
+                    title: String(localized: "Update \(name)", comment: "%@ is a brain's name (Lil, Big): keep it untranslated"),
+                    detail: core.selectedBrain.approxDownloadMB.map { megabytes in
+                        let size = BrainTier.downloadSizeLabel(megabytes: megabytes)
+                        return String(
+                            localized: "New weights for \(name), \(size). \(name) keeps working meanwhile; keep M1K3 open until it's done.",
+                            comment: "%1$@ is a brain's name (Lil, Big): keep it untranslated; %2$@ is a download size"
+                        )
+                    } ?? String(
+                        localized: "New weights for \(name). \(name) keeps working meanwhile; keep M1K3 open until it's done.",
+                        comment: "%@ is a brain's name (Lil, Big): keep it untranslated"
+                    ),
                     systemImage: "arrow.down.circle"
                 )
             }
@@ -325,8 +342,11 @@ struct SettingsScreen: View {
                 core.useWeightsUpdate()
             } label: {
                 updateRow(
-                    title: "Switch \(name) to its update",
-                    detail: "Downloaded. Takes a moment to load.",
+                    title: String(
+                        localized: "Switch \(name) to its update",
+                        comment: "%@ is a brain's name (Lil, Big): keep it untranslated"
+                    ),
+                    detail: String(localized: "Downloaded. Takes a moment to load."),
                     systemImage: "arrow.triangle.2.circlepath"
                 )
             }
@@ -338,8 +358,14 @@ struct SettingsScreen: View {
                 core.removeLeftoverWeights()
             } label: {
                 updateRow(
-                    title: "Remove \(name)'s old weights",
-                    detail: "Nothing uses them now. Frees \(leftover.bytes.formatted(.byteCount(style: .file))).",
+                    title: String(
+                        localized: "Remove \(name)'s old weights",
+                        comment: "%@ is a brain's name (Lil, Big): keep it untranslated"
+                    ),
+                    detail: String(
+                        localized: "Nothing uses them now. Frees \(leftover.bytes.formatted(.byteCount(style: .file))).",
+                        comment: "%@ is a file size, already formatted"
+                    ),
                     systemImage: "trash"
                 )
             }
@@ -369,7 +395,7 @@ struct SettingsScreen: View {
         SettingsChoiceRow(
             glyph: "house",
             title: "Home",
-            detail: "\(brain.name)’s brain, over your Wi-Fi",
+            detail: String(localized: "\(brain.name)’s brain, over your Wi-Fi", comment: "%@ is the paired Mac's name"),
             isChosen: core.homeBrainActive && !core.privateCloudArming.isOn
         ) {
             core.pickPrivateCloud(false)
@@ -407,12 +433,15 @@ struct SettingsScreen: View {
         switch core.miniAvailability {
         case .available: return nil
         case .notReady:
-            return "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on."
+            return String(
+                localized: "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on."
+            )
         case let .blocked(userFixable):
-            let alternative = menu.localFallbackPhrase(verb: "choose") ?? "use Home"
+            let alternative = menu.localFallbackPhrase(verb: "choose")
+                ?? String(localized: "use Home", comment: "Ends \"…, or %@.\"; Home is Brain at Home: keep it untranslated")
             return userFixable
-                ? "Turn on Apple Intelligence in Settings, or \(alternative)."
-                : "This device can't run Apple Intelligence — \(alternative)."
+                ? String(localized: "Turn on Apple Intelligence in Settings, or \(alternative).")
+                : String(localized: "This device can't run Apple Intelligence — \(alternative).")
         }
     }
 
@@ -427,7 +456,7 @@ struct SettingsScreen: View {
         SettingsChoiceRow(
             glyph: PrivateCloudLabel.symbolName,
             title: PrivateCloudRung.menuTitle(privateCloudRow),
-            detail: "Answers on Apple's servers — asks before your first message goes",
+            detail: String(localized: "Answers on Apple's servers — asks before your first message goes"),
             isChosen: core.privateCloudArming.isOn
         ) {
             core.pickPrivateCloud(true)

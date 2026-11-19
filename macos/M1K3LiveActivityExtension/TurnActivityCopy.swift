@@ -10,6 +10,9 @@
 //  phone is verify-on-device), Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — `isStale`: a working card past its stale date says "Open M1K3 to
 //  check" / "This card stopped updating." with the eyes-shut face. Words by feel; owed on a phone.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the compact words carry a translator comment (five
+//  letters at most). Bundle.main here is the extension's own bundle, so these resolve from
+//  M1K3LiveActivityExtension/Localizable.xcstrings. English unchanged.
 
 import M1K3LiveActivity
 import SwiftUI
@@ -53,14 +56,14 @@ struct TurnActivityCopy {
 
     /// The compact Dynamic Island's trailing word: short, so it never crowds the camera cut-out.
     var short: String {
-        if stopped { return String(localized: "Open") }
+        if stopped { return String(localized: "Open", comment: "Dynamic Island word in the wide pixel font: five letters at most") }
         return switch phase {
         // Silkscreen is wide (about 8 pt a letter at 12 pt): five letters at most.
-        case .thinking: String(localized: "Think")
-        case .reading: String(localized: "Read")
-        case .answering: String(localized: "Reply")
-        case .ready: String(localized: "Ready")
-        case .paused: String(localized: "Pause")
+        case .thinking: String(localized: "Think", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .reading: String(localized: "Read", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .answering: String(localized: "Reply", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .ready: String(localized: "Ready", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .paused: String(localized: "Pause", comment: "Dynamic Island word in the wide pixel font: five letters at most")
         }
     }
 

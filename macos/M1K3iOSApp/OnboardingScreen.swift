@@ -40,6 +40,10 @@
 //  (ReadableSecondary.swift), as on the Mac in #831. The cards' footnote is `.caption` (the phone audit flagged
 //  `.caption2` as not scaling). Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the brain cards take a touch anywhere on the glass (contentShape).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the String-typed card copy and face names are
+//  String(localized:) at the call sites; "Home" stays English (Brain at Home's short name). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — build stage: Int arguments go in as String, because a localized Int
+//  interpolation groups digits ("3,060") where the old plain String did not.
 
 import M1K3Avatar
 import M1K3Inference
@@ -213,8 +217,8 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: "cloud.fill",
                 title: PrivateCloudRung.menuTitle(privateCloudCard),
-                detail: "Answers on Apple's servers. Asks before your first message leaves this device.",
-                footnote: "No download — needs the internet"
+                detail: String(localized: "Answers on Apple's servers. Asks before your first message leaves this device."),
+                footnote: String(localized: "No download — needs the internet")
             )
         }
         .buttonStyle(.plain)
@@ -233,7 +237,8 @@ struct OnboardingScreen: View {
                 glyph: tier.glyph,
                 title: tier.displayName,
                 detail: tier.detail,
-                footnote: tier.approxDownloadMB.map { "~\($0) MB download on first use" } ?? "No download — instant"
+                footnote: tier.approxDownloadMB.map { String(localized: "~\(String($0)) MB download on first use") }
+                    ?? String(localized: "No download — instant")
             )
         }
         .buttonStyle(.plain)
@@ -253,9 +258,12 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: "house.fill",
                 title: "Home",
-                detail: core.homeBrain.map { "\($0.name)’s brain, over your Wi‑Fi." }
-                    ?? "Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair.",
-                footnote: core.homeBrain == nil ? "Needs M1K3 on your Mac" : "Paired"
+                detail: core.homeBrain.map {
+                    String(localized: "\($0.name)’s brain, over your Wi‑Fi.", comment: "%@ is the paired Mac's name")
+                }
+                    ?? String(localized: "Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair."),
+                footnote: core.homeBrain == nil
+                    ? String(localized: "Needs M1K3 on your Mac") : String(localized: "Paired")
             )
         }
         .buttonStyle(.plain)
@@ -318,7 +326,12 @@ struct OnboardingScreen: View {
 
     private var faces: [FaceChoice] {
         CompanionSpec.all.filter(CompanionAssets.isInstalled).map { FaceChoice(id: $0.id, name: $0.displayName) }
-            + [FaceChoice(id: "", name: "Pixel face"), FaceChoice(id: CompanionDefaults.noneID, name: "None")]
+            + [
+                FaceChoice(id: "", name: String(localized: "Pixel face")),
+                FaceChoice(
+                    id: CompanionDefaults.noneID, name: String(localized: "None", comment: "Face choice: no face at all")
+                ),
+            ]
     }
 
     private var faceStep: some View {

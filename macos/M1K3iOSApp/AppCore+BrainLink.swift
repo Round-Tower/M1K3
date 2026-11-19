@@ -10,6 +10,7 @@
 //  Signed: Kev + claude-fable-5, 2026-08-24, Confidence 0.85 (flow glue
 //  over the TDD'd ceremony; the live pairing against a real Mac is the
 //  Phase C hardware verify). Prior: BRAIN_AT_HOME_SPEC §4.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the two pairing errors are String(localized:); English unchanged.
 //
 
 import Foundation
@@ -27,7 +28,10 @@ extension AppCore {
     ) async -> String? {
         guard let payload = PairingPayload.parse(payloadString.trimmingCharacters(in: .whitespacesAndNewlines))
         else {
-            return "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home."
+            return String(
+                localized: "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home.",
+                comment: "Pairing error. Keep M1K3 and Brain at Home untranslated; match the Mac's Settings names."
+            )
         }
         let ceremony = PairingCeremony()
         let outcome = await ceremony.pair(
@@ -41,7 +45,7 @@ extension AppCore {
         switch outcome {
         case let .paired(brain, _):
             guard adoptPairedBrain(brain, key: payload.psk) else {
-                return "Paired, but this device couldn’t store the key — try again."
+                return String(localized: "Paired, but this device couldn’t store the key — try again.")
             }
             return nil
         case let .failed(message):
