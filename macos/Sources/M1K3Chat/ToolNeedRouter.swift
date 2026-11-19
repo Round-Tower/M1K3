@@ -55,6 +55,10 @@
 //  sets a timer, todo or calendar entry, and the acting palette carries reads and delegate_deep). Four blind sets
 //  (290 rows, refined on once seen): every content-free chat reply goes to chat, every reply with content keeps
 //  master's route. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 (the 11-18 wide eval read: two checklists frozen at "## ⚙" / "### ⏱" after
+//  441 / 410 decoded tokens) — `PlainTurnStream.ingest` gates on scalars (`StreamFold.extends`), not
+//  `String.hasPrefix`: a U+FE0F completing an emoji rewrote its grapheme cluster, the gate refused every later
+//  yield, and the bubble kept half the document. Confidence 0.9 (pinned by delta and snapshot tests).
 //
 
 import Foundation
@@ -298,7 +302,10 @@ public struct PlainTurnStream {
     /// One provider chunk in; the cleaned answer so far when it grew, else nil.
     public mutating func ingest(_ chunk: String) -> String? {
         raw = StreamFold.fold(current: raw, chunk: chunk)
-        guard let clean = Self.clean(raw), clean.count > sent.count, clean.hasPrefix(sent) else { return nil }
+        // Scalars, not graphemes: a U+FE0F completing an emoji must not read as a rewrite (StreamFold.extends).
+        guard let clean = Self.clean(raw),
+              clean.unicodeScalars.count > sent.unicodeScalars.count,
+              StreamFold.extends(clean, sent) else { return nil }
         sent = clean
         return clean
     }
