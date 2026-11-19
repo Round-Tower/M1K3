@@ -100,6 +100,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — conforms to `TextReading` (the read: the look's shape for text,
 //  instructions only, no persona, no tools, `readContextTokens` = `MiniContextWindow.current`); failures logged by
 //  class only. Confidence 0.75: compile- and seam-tested; the live answers are the blind set's job.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `generateRawStreaming` turns snapshots into deltas through
+//  `RawChatPrompt.delta` (scalar lengths) instead of its own grapheme copy, which dropped an emoji's U+FE0F and
+//  re-sent text after a shrink. Confidence 0.85: the rule is test-pinned; the live stream is not re-run.
 import Foundation
 import M1K3LogCore
 import os
@@ -842,22 +845,13 @@ extension AppleFoundationModelsProvider: RawCompletionProviding {
             )
             let task = Task { [self] in
                 do {
-                    var previous = ""
+                    // Snapshots become deltas through the one tested rule (scalar lengths: an emoji's
+                    // U+FE0F is never dropped; a revision or shrink never re-sends text, PR #139 review).
+                    var sent = ""
                     for try await snapshot in session.streamResponse(to: prompt, options: options) {
-                        let content = snapshot.content
-                        if content.hasPrefix(previous) {
-                            let delta = String(content.dropFirst(previous.count))
-                            if !delta.isEmpty { continuation.yield(delta) }
-                        } else if content.count > previous.count {
-                            // Diverged mid-stream (a revision). A token wire
-                            // can't retract what's sent, so NEVER re-emit the
-                            // whole content (the client would assemble
-                            // duplicated text — PR #139 review); emit only the
-                            // length-based tail and accept the revision loss.
-                            continuation.yield(String(content.dropFirst(previous.count)))
+                        if let piece = RawChatPrompt.delta(sent: &sent, snapshot: snapshot.content) {
+                            continuation.yield(piece)
                         }
-                        // Shrank: nothing safe to emit — just track it.
-                        previous = content
                     }
                     continuation.finish()
                 } catch is CancellationError {

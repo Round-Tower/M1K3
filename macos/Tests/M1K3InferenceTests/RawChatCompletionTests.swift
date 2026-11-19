@@ -7,6 +7,7 @@
 //  that both façades forward the capability.
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `variationSelectorSnapshot` pins scalar lengths in `RawChatPrompt.delta`.
 //
 
 import Foundation
@@ -104,6 +105,17 @@ struct RawChatCompletionTests {
         #expect(feed("Hello world") == nil)
         #expect(feed("Jello world!") == "!", "a revision cannot be retracted: only the extra length is sent")
         #expect(sent.count == "Hello world!".count)
+    }
+
+    /// A U+FE0F completing an emoji joins the emoji's grapheme, so a grapheme count and `hasPrefix` see
+    /// "## ⚙" → "## ⚙\u{FE0F} During" as a revision and drop the selector (2026-11-19 wide eval read).
+    @Test("a snapshot that completes an emoji (U+FE0F) sends the selector, and the text stays exact")
+    func variationSelectorSnapshot() {
+        var sent = ""
+        #expect(RawChatPrompt.delta(sent: &sent, snapshot: "## ⚙") == "## ⚙")
+        #expect(RawChatPrompt.delta(sent: &sent, snapshot: "## ⚙\u{FE0F}") == "\u{FE0F}")
+        #expect(RawChatPrompt.delta(sent: &sent, snapshot: "## ⚙\u{FE0F} During") == " During")
+        #expect(sent == "## ⚙\u{FE0F} During")
     }
 
     @Test("an Apple-model failure becomes a reason a client can act on, never an empty answer")

@@ -22,6 +22,9 @@
 //  Context: Kev, 2026-11-11: "1 more release before then with our current
 //  work, and the server. Swiss army Mike!" The design was challenged first:
 //  raw brains only, its own listener and token, failures surfaced.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 (the 11-18 wide eval read: streamed answers frozen at an emoji +
+//  U+FE0F) — `RawChatPrompt.delta` counts and compares Unicode scalars, so the Local API no longer drops the
+//  selector; Mini's raw stream now goes through it too. Confidence 0.9.
 //
 
 import Foundation
@@ -166,11 +169,14 @@ public enum RawChatPrompt {
     /// One cumulative snapshot as a delta, for a runtime that streams the whole answer so far (Apple's).
     /// A token wire cannot retract, so only text that EXTENDS what was sent is emitted: a snapshot that
     /// shrinks sends nothing and is not remembered, and a revised one sends just its extra length.
-    /// `sent` is what the client has, in length if not always in letters.
+    /// `sent` is what the client has, in length if not always in letters. Lengths are Unicode scalars,
+    /// never graphemes: a U+FE0F completing an emoji joins its grapheme, which a grapheme count reads
+    /// as no growth and a grapheme `hasPrefix` as a revision (2026-11-19).
     public static func delta(sent: inout String, snapshot: String) -> String? {
-        guard snapshot.count > sent.count else { return nil }
-        let piece = String(snapshot.dropFirst(sent.count))
-        sent = snapshot.hasPrefix(sent) ? snapshot : sent + piece
+        let have = sent.unicodeScalars.count
+        guard snapshot.unicodeScalars.count > have else { return nil }
+        let piece = String(String.UnicodeScalarView(snapshot.unicodeScalars.dropFirst(have)))
+        sent = StreamFold.extends(snapshot, sent) ? snapshot : sent + piece
         return piece
     }
 

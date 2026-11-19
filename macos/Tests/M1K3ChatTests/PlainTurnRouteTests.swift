@@ -36,6 +36,9 @@
 //  nothing between the identity line and the rules.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — the starter-chip profile-ask pin goes with StarterPrompts.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 (the 11-18 wide eval read: two checklists frozen at "## ⚙" / "### ⏱" after
+//  441 / 410 decoded tokens) — `variationSelectorDelta` / `variationSelectorSnapshot`
+//  pin that an emoji completed by U+FE0F never freezes the stream.
 //
 
 import Foundation
@@ -775,6 +778,21 @@ struct PlainTurnStreamDeltaTests {
         for (earlier, later) in zip(out, out.dropFirst()) {
             #expect(later.hasPrefix(earlier))
         }
+    }
+
+    /// The 2026-11-18 wide eval: two checklists stopped at "## ⚙" and "### ⏱" after 441 and 410 decoded
+    /// tokens. The detokenizer sends the emoji's U+FE0F on its own, which joins the emoji's grapheme
+    /// cluster, so a grapheme `hasPrefix` gate refused every later yield and the bubble froze mid-document.
+    @Test("deltas: an emoji completed by U+FE0F does not freeze the stream")
+    func variationSelectorDelta() {
+        let out = run(["## ⚙", "\u{FE0F}", " During", "\n- check the logs"])
+        #expect(out.last == "## ⚙\u{FE0F} During\n- check the logs")
+    }
+
+    @Test("snapshots: an emoji completed by U+FE0F does not freeze the stream")
+    func variationSelectorSnapshot() {
+        let out = run(["### ⏱", "### ⏱\u{FE0F}", "### ⏱\u{FE0F} After", "### ⏱\u{FE0F} After the release"])
+        #expect(out.last == "### ⏱\u{FE0F} After the release")
     }
 }
 
