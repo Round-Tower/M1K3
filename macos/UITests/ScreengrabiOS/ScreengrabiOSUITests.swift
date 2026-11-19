@@ -28,6 +28,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — documents / memories / privacy plates wait for the screen the app now
 //  pushes itself (`phoneRoute`, `memoryQuery`) instead of tapping to it: `openSettings` waited on a toolbar that was
 //  gone and the memories query was typed twice (#478 review). Confidence 0.75 (not re-run: the sim AX handshake times out).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the launch appends `M1K3_SCREENGRAB_EXTRA_ARGS`
+//  (capture.sh's pseudo / right-to-left / LOCALE pass) after the recipe; unset changes nothing. Not run.
 
 import M1K3Screengrab
 import XCTest
@@ -159,7 +161,10 @@ final class ScreengrabiOSUITests: XCTestCase {
         let app = XCUIApplication()
         let recipe = plate.launchRecipe
         app.launchEnvironment = recipe.environment
-        app.launchArguments = recipe.flatArguments
+        // capture.sh's PSEUDO= / RTL= / LOCALE= pass (tools/screengrab/l10n-args.zsh): appended after the
+        // recipe; unset = exactly the recipe, as before.
+        let l10nArgs = ProcessInfo.processInfo.environment["M1K3_SCREENGRAB_EXTRA_ARGS"] ?? ""
+        app.launchArguments = recipe.flatArguments + l10nArgs.split(separator: " ").map(String.init)
         addTeardownBlock { app.terminate() } // a failed wait must not leave the app running
         app.launch()
         XCTAssert(app.wait(for: .runningForeground, timeout: 60), "\(plate.rawValue): app never came foreground")
