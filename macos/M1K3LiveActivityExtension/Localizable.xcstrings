@@ -1,7 +1,54 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Answer ready" : {
 
+    },
+    "Leaving M1K3 stopped this answer." : {
+
+    },
+    "M1K3 is answering…" : {
+
+    },
+    "M1K3 is reading…" : {
+
+    },
+    "M1K3 is thinking…" : {
+
+    },
+    "Open" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "Open M1K3 to check" : {
+
+    },
+    "Pause" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "Paused — open M1K3 to finish" : {
+
+    },
+    "Read" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "Ready" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "Reply" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "Tap to open the chat." : {
+
+    },
+    "Tap to read it." : {
+
+    },
+    "Think" : {
+      "comment" : "Dynamic Island word in the wide pixel font: five letters at most"
+    },
+    "This card stopped updating." : {
+
+    }
   },
   "version" : "1.0"
 }
