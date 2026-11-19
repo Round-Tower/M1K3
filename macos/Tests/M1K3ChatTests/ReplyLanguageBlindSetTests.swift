@@ -24,6 +24,10 @@
 //
 //  Signed: claude-opus-5-5, 2026-11-19, Confidence 0.8 (the floors are one machine's reads on macOS 27; the sets are
 //  one author's lines). Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — review fold: the correct-count floors hold only from the macOS they were
+//  measured on (27) upward. PR CI runs on macos-26, whose recogniser nobody has measured, so a floor from 27 is not a
+//  claim about it. A newer OS still trips the floor (the tripwire this file exists for). The English false-positive
+//  check runs on every OS: macOS 26 is a supported target, so a wrong clause there is a real bug, not noise.
 //
 
 import Foundation
@@ -62,6 +66,15 @@ struct ReplyLanguageBlindSetTests {
         "reply-language-blind-1": 137, // of 150; wrong 1, missed 12 (tuned against: a regression set)
         "reply-language-blind-2": 78, // of 105; wrong 25, missed 2 (blind on arrival)
     ]
+
+    /// The macOS major the floors were measured on. They bind there and on every later OS (an update that moves
+    /// the reads must trip them); an earlier OS (PR CI's macos-26) has an unmeasured recogniser, so it only prints.
+    private static let floorMeasuredOnMajor = 27
+
+    /// Whether the floors bind on an OS of this major version.
+    static func floorBinds(onMajor major: Int) -> Bool {
+        major >= floorMeasuredOnMajor
+    }
 
     private func load(_ name: String) throws -> [Turn] {
         let url = try #require(
@@ -117,9 +130,20 @@ struct ReplyLanguageBlindSetTests {
             "English turns given a wrong-language clause: \(unexpected). \(summary)\n\(failures)"
         )
         let floor = try #require(Self.correctFloor[file])
+        let major = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        guard Self.floorBinds(onMajor: major) else {
+            print("\(file): floor \(floor) measured on macOS \(Self.floorMeasuredOnMajor), not enforced on \(major)")
+            return
+        }
         #expect(
             tally.correct >= floor,
             "correct fell below the floor \(floor). \(summary)\n\(failures)"
         )
+    }
+
+    @Test func floorBindsFromTheMeasuredOSUpward() {
+        #expect(!Self.floorBinds(onMajor: 26)) // PR CI's macos-26: unmeasured
+        #expect(Self.floorBinds(onMajor: 27))
+        #expect(Self.floorBinds(onMajor: 28)) // an OS update must still trip the ratchet
     }
 }
