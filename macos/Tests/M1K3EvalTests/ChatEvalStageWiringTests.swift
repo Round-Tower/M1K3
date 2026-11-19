@@ -24,8 +24,8 @@
 //  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #728's master merge: the bare arm hands in the spoken text AND says no
 //  tool was offered (`toolsOffered: false`, #713), so its pin names both. Confidence 0.85.
-//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language kind shares heard's live-path arm and warms the embedder; the
-//  reply-language clause is wired from `M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE`.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language kind shares heard's live-path arm and warms the
+//  embedder; the reply-language clause is wired from `M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE`.
 //
 
 import Foundation

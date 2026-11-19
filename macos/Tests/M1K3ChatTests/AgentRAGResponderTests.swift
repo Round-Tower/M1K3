@@ -993,8 +993,10 @@ struct AgentRAGResponderTests {
             toolsProvider: { [] },
             replyLanguageClauseProvider: { ReplyLanguage.clause(for: $0, earlierTurns: $1, deviceLanguage: "en") }
         )
-        _ = try await collect(responder.answerStreaming("Welche Hydraulikdichtung ist am Förderband unter Last ausgefallen?").stream)
-        _ = try await collect(responder.answerStreaming("What hydraulic seal failed on the conveyor under load?").stream)
+        let german = "Welche Hydraulikdichtung ist am Förderband unter Last ausgefallen?"
+        let english = "What hydraulic seal failed on the conveyor under load?"
+        _ = try await collect(responder.answerStreaming(german).stream)
+        _ = try await collect(responder.answerStreaming(english).stream)
         #expect(provider.allPrompts.first?.contains("reply in German") == true)
         #expect(provider.allPrompts.last?.contains("reply in") == false)
     }

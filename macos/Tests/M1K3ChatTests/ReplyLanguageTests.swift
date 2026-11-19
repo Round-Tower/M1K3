@@ -44,7 +44,8 @@ struct ReplyLanguageTests {
     ])
     func englishTurnQuotingAnotherLanguageStaysEnglish(turn: String) {
         #expect(ReplyLanguage.clause(for: turn, deviceLanguage: "en") == nil)
-        #expect(ReplyLanguage.clause(for: turn, earlierTurns: ["Hi there, quick question for you."], deviceLanguage: "de") == nil)
+        let earlier = ["Hi there, quick question for you."]
+        #expect(ReplyLanguage.clause(for: turn, earlierTurns: earlier, deviceLanguage: "de") == nil)
     }
 
     /// A short frame beside a quote is unreadable, never read as the quote (pre-push review, 2026-11-19).
@@ -123,7 +124,8 @@ struct ReplyLanguageTests {
     }
 
     @Test func clauseNamesTheLanguageInEnglish() throws {
-        let german = try #require(ReplyLanguage.clause(for: "Wie hoch ist der höchste Berg Europas?", deviceLanguage: "en"))
+        let turn = "Wie hoch ist der höchste Berg Europas?"
+        let german = try #require(ReplyLanguage.clause(for: turn, deviceLanguage: "en"))
         #expect(german.contains("German"))
         let portuguese = try #require(ReplyLanguage.clause(for: "ok", deviceLanguage: "pt-BR"))
         #expect(portuguese.contains("Portuguese"))
