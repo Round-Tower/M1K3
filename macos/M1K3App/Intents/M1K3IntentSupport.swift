@@ -13,6 +13,8 @@
 //  (M1K3Chat); the answer/speak/remember logic is AppEnvironment+Intelligence.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.78, Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: the "isn't ready yet" error is String(localized:);
+//  an MCPVoiceError's text stays English (the same text is MCP wire output an agent reads).
 //
 
 import Foundation
@@ -38,7 +40,10 @@ enum M1K3IntentSupport {
     @MainActor
     static func environment() async throws -> AppEnvironment {
         guard let env = await AppEnvironment.current(waitingUpTo: environmentWait) else {
-            throw M1K3IntentError(message: "M1K3 isn’t ready yet. Open M1K3 once, then try again.")
+            throw M1K3IntentError(message: String(
+                localized: "M1K3 isn’t ready yet. Open M1K3 once, then try again.",
+                comment: "Siri/Shortcuts error when the app is not running in time. M1K3 is the app name."
+            ))
         }
         return env
     }

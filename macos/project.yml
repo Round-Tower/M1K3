@@ -63,18 +63,27 @@
 # Review: Kev + claude-opus-5.5, 2026-11-15 — MARKETING_VERSION 1.4.0 → 1.5.0 (chore(release): v1.5.0), Kev's call ("Let's
 # get everything to TestFlight under build 1.5"): 1.4.0 is live on both stores since 11-13 (train closed); new surfaces since
 # (the read, Mac + iOS #833; the accessibility audit and fixes #829/#831/#832), so MINOR (VERSIONING.md). Confidence 0.85.
+# Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: developmentLanguage en; SWIFT_EMIT_LOC_STRINGS (was Mac-only) and
+# LOCALIZATION_PREFERS_STRING_CATALOGS in settings.base; iOS and visionOS each list their own InfoPlist.xcstrings (the
+# camera strings differ). English copy unchanged. Confidence 0.8 (Mac app builds; iOS/visionOS not built here).
 
 name: M1K3
 
 options:
   bundleIdPrefix: app.m1k3
   createIntermediateGroups: true
+  # Localisation Phase 0 (2026-11-19): the source copy is English written in en-GB spelling (Kev's call).
+  developmentLanguage: en
   deploymentTarget:
     macOS: "26.0"
 
 settings:
   base:
     SWIFT_VERSION: "6.2"
+    # Localisation Phase 0: every target emits its localisable strings (.stringsdata) and prefers a
+    # String Catalog (.xcstrings) over .strings. Was on the Mac target only.
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     # Versioning scheme: see /VERSIONING.md. This is the single source of truth
     # for the user-facing version on every Apple surface (TestFlight, MAS, the
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
@@ -127,6 +136,9 @@ targetTemplates:
   MobileShell:
     sources:
       - path: M1K3iOSApp
+        # iOS's permission texts; M1K3iOS lists the file itself (visionOS carries its own, its camera string differs).
+        excludes:
+          - InfoPlist.xcstrings
       # Shared, cross-platform look-and-feel lifted from the macOS app target:
       # the procedural pixel-face avatar (now #if-guarded for UIColor), its
       # emotion→colour map (pure SwiftUI), the reading modes (ReadingMode enum +
@@ -400,7 +412,6 @@ targets:
         M1K3_APP_PROFILE: ""
         PROVISIONING_PROFILE_SPECIFIER: $(M1K3_APP_PROFILE)
         ENABLE_HARDENED_RUNTIME: YES
-        SWIFT_EMIT_LOC_STRINGS: YES
     info:
       path: M1K3App/Info.generated.plist
       properties:
@@ -494,6 +505,9 @@ targets:
       # header and no CustomMaterial; the visionOS sibling shows baked textures.
       - path: M1K3App/PhosphorMaterial.swift
       - path: M1K3App/Phosphor.metal
+      # The iOS permission texts as a String Catalog (localisation Phase 0). iOS only: the MobileShell template
+      # excludes it, because visionOS's camera text differs and each shell carries its own InfoPlist.xcstrings.
+      - path: M1K3iOSApp/InfoPlist.xcstrings
     dependencies:
       # The Live Activity for a long answer or read (iPhone): the app starts and updates it through ActivityKit,
       # the extension below draws it. iOS only (ActivityKit is not on visionOS), so it lives on this target.
@@ -639,6 +653,8 @@ targets:
     # tools/icons/build_visionos_icon.py from the same wordmark art.
     sources:
       - path: M1K3visionOS/Assets.xcassets
+      # visionOS's own permission texts (its camera string differs from iOS's), localisation Phase 0.
+      - path: M1K3visionOS/InfoPlist.xcstrings
     settings:
       base:
         # Same universal record as the Mac + iOS targets — see M1K3iOS above.

@@ -18,6 +18,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the call-consent message and the empty state are single
+//  literals (no `+` join). English unchanged.
 
 import M1K3Calls
 import SwiftUI
@@ -70,8 +72,10 @@ struct CallsView: View {
             Button("Always allow") { Task { await env.affirmConsentAndRecord(scope: .remembered) } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You’re responsible for having consent from everyone on the call. "
-                + "Recording is on-device only — audio never leaves this Mac.")
+            Text("""
+            You’re responsible for having consent from everyone on the call. Recording is on-device only — audio \
+            never leaves this Mac.
+            """)
         }
         // Push, not a sheet: CallsView is a persistent sidebar destination now,
         // not a modal — a lone remaining sheet-of-a-non-modal-view would read
@@ -193,9 +197,10 @@ struct CallsView: View {
             ContentUnavailableView {
                 Label("No calls yet", systemImage: "phone.bubble")
             } description: {
-                Text("Tap Record to capture a call, or import a transcript (lines like "
-                    + "“Speaker: …”). M1K3 summarises it, encrypts it at rest, and makes it "
-                    + "searchable alongside your documents.")
+                Text("""
+                Tap Record to capture a call, or import a transcript (lines like “Speaker: …”). M1K3 summarises it, \
+                encrypts it at rest, and makes it searchable alongside your documents.
+                """)
             } actions: {
                 Button(action: triggerRecordAction) {
                     Label("Record a call", systemImage: "record.circle")

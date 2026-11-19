@@ -26,6 +26,8 @@
 //  are the named verify-owed). Prior: MCPHostController.swift (the shape).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the device registry is not read under the screengrab harness
 //  (the owner's paired devices, by name, would sit in the Brain at Home plate). Confidence now 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the serving status is one inflected line, not an English
+//  plural ternary. English unchanged.
 //
 
 import CoreImage.CIFilterBuiltins
@@ -138,7 +140,11 @@ final class BrainServeController {
             listener = host
             isRunning = true
             let bound = await host.boundPort ?? port
-            statusText = "Serving on :\(bound) to \(credentials.count) paired device\(credentials.count == 1 ? "" : "s")"
+            // Inflected for the count, not an English plural ternary; the port and count keep ungrouped digits.
+            statusText = String(AttributedString(localized: """
+            Serving on :\(String(bound)) to \
+            ^[\(credentials.count, format: .number.grouping(.never)) paired device](inflect: true)
+            """).characters)
             advertiser.start(name: Host.current().localizedName ?? "M1K3", port: bound)
         } catch {
             listener = nil

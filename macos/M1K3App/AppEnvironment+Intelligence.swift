@@ -46,6 +46,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `intelligenceSpeak` and a visitor's queued line pass the emotion
 //  to the voice too (a VoiceMood, #576 §1); the face still follows it as before. Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — an MCP ask that preempts remote streams preempts a Local API call too. Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: the App-Intent-only status lines (search, recall, todos) are
+//  String(localized:). Ask, speak and remember stay plain English: MCP clients (agents) read the same text.
+//  Review: claude-opus-5-5, 2026-11-19 — build stage: Int arguments go in as String, because a localized Int
+//  interpolation groups digits ("3,060") where the old plain String did not.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -359,7 +363,10 @@ extension AppEnvironment {
             store: store, embedder: embedder, query: query, limit: 5
         )
         guard !hits.isEmpty else {
-            return "Nothing relevant in M1K3's knowledge for \"\(query)\"."
+            return String(
+                localized: "Nothing relevant in M1K3's knowledge for \"\(query)\".",
+                comment: "Siri/Shortcuts reply when a knowledge search finds nothing. The argument is the user's query."
+            )
         }
         return hits.enumerated().map { index, hit -> String in
             let heading = hit.heading.map { " \u{00A7}\($0)" } ?? ""
@@ -374,12 +381,18 @@ extension AppEnvironment {
     /// `recall_memory` tool uses.
     func intelligenceRecallMemory(_ query: String) async throws -> String {
         guard let memoryStore else {
-            return "M1K3's memory isn't available right now."
+            return String(
+                localized: "M1K3's memory isn't available right now.",
+                comment: "Siri/Shortcuts reply when the memory graph is not open."
+            )
         }
         let vector = try await embedder.embed(query)
         let hits = try memoryStore.recall(query: query, queryVector: vector)
         guard !hits.isEmpty else {
-            return "Nothing in M1K3's memory matches \"\(query)\"."
+            return String(
+                localized: "Nothing in M1K3's memory matches \"\(query)\".",
+                comment: "Siri/Shortcuts reply when a memory recall finds nothing. The argument is the user's query."
+            )
         }
         return hits.enumerated().map { index, hit -> String in
             let kind = hit.memory.kind.rawValue
@@ -393,16 +406,27 @@ extension AppEnvironment {
     /// List open todos — the core behind the ListTodos App Intent.
     func intelligenceListTodos() async throws -> String {
         guard let todoStore else {
-            return "M1K3's todo list isn't available right now."
+            return Self.todoListUnavailable
         }
         let todos = try todoStore.list(states: [.open])
         guard !todos.isEmpty else {
-            return "No open todos."
+            return String(localized: "No open todos.", comment: "Siri/Shortcuts reply when the todo list is empty.")
         }
         return todos.enumerated().map { index, todo -> String in
-            let due = todo.due.map { " (due \(Self.todoDateFormatter.string(from: $0)))" } ?? ""
-            return "\(index + 1). \(todo.title)\(due)"
+            guard let due = todo.due else { return "\(index + 1). \(todo.title)" }
+            let dueDate = Self.todoDateFormatter.string(from: due)
+            return String(
+                localized: "\(String(index + 1)). \(todo.title) (due \(dueDate))",
+                comment: "One line of a Siri/Shortcuts todo list: number, todo title, due date."
+            )
         }.joined(separator: "\n")
+    }
+
+    private static var todoListUnavailable: String {
+        String(
+            localized: "M1K3's todo list isn't available right now.",
+            comment: "Siri/Shortcuts reply when the todo store is not open."
+        )
     }
 
     private static let todoDateFormatter: DateFormatter = {
@@ -421,13 +445,16 @@ extension AppEnvironment {
     /// and the next chat turn both see the new item.
     func intelligenceProposeTodo(title: String, note: String?) async throws -> String {
         guard let todoStore else {
-            return "M1K3's todo list isn't available right now."
+            return Self.todoListUnavailable
         }
         let todo = Todo(title: title, note: note, source: .user, state: .open)
         try todoStore.add(todo)
         await refreshTodoGrounding()
         todosRevision += 1
-        return "Added \"\(title)\" to the todo list."
+        return String(
+            localized: "Added \"\(title)\" to the todo list.",
+            comment: "Siri/Shortcuts confirmation after adding a todo. The argument is the todo's title."
+        )
     }
 
     // MARK: - Voice Mode

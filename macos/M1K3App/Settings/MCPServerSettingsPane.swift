@@ -23,6 +23,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
@@ -69,10 +72,14 @@ struct MCPServerSettingsPane: View {
         } header: {
             SettingsHeader("Agent conversation log", systemImage: "list.bullet.rectangle")
         } footer: {
-            Text("Off by default. When on, M1K3 keeps the last 500 tool calls a "
-                + "connected agent makes — see them in Window → Agent Log, or the "
-                + "Heartbeat timeline.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                Off by default. When on, M1K3 keeps the last 500 tool calls a \
+                connected agent makes — see them in Window → Agent Log, or the \
+                Heartbeat timeline.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -144,12 +151,14 @@ struct MCPServerSettingsPane: View {
             SettingsHeader("Local API", systemImage: "server.rack")
         } footer: {
             Text(
-                "Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions: "
-                    + "no M1K3 personality, memory, knowledge or tools, and nothing they send is kept. "
-                    + "Point any OpenAI-compatible tool at the base URL and use the API key. "
-                    + "Loopback-only, one call at a time, and you always go first. "
-                    + "M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's "
-                    + "instructions is for you to judge."
+                """
+                Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions: \
+                no M1K3 personality, memory, knowledge or tools, and nothing they send is kept. \
+                Point any OpenAI-compatible tool at the base URL and use the API key. \
+                Loopback-only, one call at a time, and you always go first. \
+                M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's \
+                instructions is for you to judge.
+                """
             )
             .font(.callout).foregroundStyle(.readableSecondary)
         }

@@ -99,6 +99,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the Full-experience caption is two whole lines (no
+//  joined list + " — all on."), and the download disclosure is one String(localized:) (no `+` join). English unchanged.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -355,12 +357,11 @@ struct HelloView: View {
         return false
     }
 
+    /// Two whole lines, with and without the Private Cloud Compute rung: not a list glued to " — all on.".
     private var fullExperienceCaption: String {
-        var parts = ["Notch HUD", "heartbeat", "senses"]
-        if AppEnvironment.privateCloudBackend != nil {
-            parts.append("Private Cloud Compute (asks per message)")
-        }
-        return parts.joined(separator: ", ") + " — all on."
+        AppEnvironment.privateCloudBackend != nil
+            ? String(localized: "Notch HUD, heartbeat, senses, Private Cloud Compute (asks per message) — all on.")
+            : String(localized: "Notch HUD, heartbeat, senses — all on.")
     }
 
     private var disclosureCaption: String {
@@ -370,8 +371,10 @@ struct HelloView: View {
         case .useMini, .waitForMini:
             return "Runs on Mini, Apple's on-device model · change anytime in Settings."
         case let .downloadFallback(tier, _):
-            return "Apple Intelligence isn't available here, so I'll fetch my own brain — "
-                + "\(tier.displayName) M1K3, a one-time \(Self.downloadSize(tier)) download. Still fully on this Mac."
+            return String(localized: """
+            Apple Intelligence isn't available here, so I'll fetch my own brain — \(tier.displayName) M1K3, a \
+            one-time \(Self.downloadSize(tier)) download. Still fully on this Mac.
+            """)
         }
     }
 

@@ -20,6 +20,11 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: the header is `SettingsHeader(verbatim:)`, so the Brain at
+//  Home brand stays out of the string catalog. English renders unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import M1K3BrainServe
 import SwiftUI
@@ -63,7 +68,7 @@ struct BrainAtHomeSection: View {
                 }
             }
         } header: {
-            SettingsHeader("Brain at Home", systemImage: "house")
+            SettingsHeader(verbatim: "Brain at Home", systemImage: "house")
         } footer: {
             Text("""
             Serves raw generation to devices you pair by QR code — local \
@@ -109,11 +114,15 @@ struct BrainPairingSheet: View {
                         .frame(width: 220, height: 220)
                         .accessibilityLabel("Pairing QR code")
                 }
-                Text("Scan this in M1K3 on the other device. The code lives for a "
-                    + "minute and commits nothing until you approve.")
-                    .font(.callout)
-                    .foregroundStyle(.readableSecondary)
-                    .multilineTextAlignment(.center)
+                Text(
+                    """
+                    Scan this in M1K3 on the other device. The code lives for a \
+                    minute and commits nothing until you approve.
+                    """
+                )
+                .font(.callout)
+                .foregroundStyle(.readableSecondary)
+                .multilineTextAlignment(.center)
                 // Camera-less clients (desktops, emulators, a paired agent on
                 // this Mac) paste the same payload the QR encodes. Same
                 // security shape: the code is only the UNCOMMITTED candidate —

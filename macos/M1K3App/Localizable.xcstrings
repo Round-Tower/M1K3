@@ -1,0 +1,2122 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "shouldTranslate" : false
+    },
+    " " : {
+      "shouldTranslate" : false
+    },
+    " ago" : {
+
+    },
+    " ago · told by %@" : {
+
+    },
+    "\"%@\" isn't a link or a readable file. Paste an http(s) link, or drop / choose a file." : {
+
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ download" : {
+
+    },
+    "%@ downloaded" : {
+      "comment" : "Notification title. The argument is a brain name (Lil, Big or a model id), never translated."
+    },
+    "%@ is ready" : {
+      "comment" : "Notification title. The argument is a brain name (Lil, Big or a model id), never translated."
+    },
+    "%@ is sharper — a %@ one-time fetch, grabbed in the background while we keep talking." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is sharper — a %2$@ one-time fetch, grabbed in the background while we keep talking."
+          }
+        }
+      }
+    },
+    "%@ is thinking · private by design" : {
+
+    },
+    "%@ isn’t available here" : {
+
+    },
+    "%@ settings" : {
+      "comment" : "A Settings pane row's tooltip; %@ is the pane's name."
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · ^[%lld chunk](inflect: true)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · ^[%2$lld chunk](inflect: true)"
+          }
+        }
+      }
+    },
+    "%@ · one-time download" : {
+
+    },
+    "%@ · one-time download · needs %lldGB+ memory" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · one-time download · needs %2$lldGB+ memory"
+          }
+        }
+      }
+    },
+    "%@ →" : {
+
+    },
+    "%@, %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@. %3$@"
+          }
+        }
+      }
+    },
+    "%@. %@ (due %@)" : {
+      "comment" : "One line of a Siri/Shortcuts todo list: number, todo title, due date.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@ (due %3$@)"
+          }
+        }
+      }
+    },
+    "%@: off" : {
+
+    },
+    "%@: on" : {
+
+    },
+    "%lld" : {
+      "shouldTranslate" : false
+    },
+    "%lld lines" : {
+
+    },
+    "%lld ms" : {
+
+    },
+    "%lld percent" : {
+
+    },
+    "%lld." : {
+
+    },
+    "A line about you seeds my memory — \"I teach primary school\", \"short answers, please\". It stays on this Mac, and you can edit it any time in Settings → You." : {
+
+    },
+    "A quick note — e.g. \"should have searched the web\" — so this can be fixed later. Optional." : {
+
+    },
+    "A serif face; some readers find the strokes easier to track." : {
+
+    },
+    "A small pill under your menu bar shows your companion and what M1K3 is saying — even with the window closed. Off by default." : {
+
+    },
+    "A soft halo around the creature while M1K3's voice is speaking. It holds still when Reduce Motion is on." : {
+
+    },
+    "A testing aid: shows context tokens and tokens/sec under each answer from Lil or Big. Mini (Apple's on-device model) doesn't report generation metrics." : {
+
+    },
+    "API key" : {
+
+    },
+    "About you" : {
+
+    },
+    "Accept" : {
+
+    },
+    "Access token" : {
+
+    },
+    "Accuracy" : {
+
+    },
+    "Active engine" : {
+
+    },
+    "Active voice" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add ${todoTitle} to M1K3's todos" : {
+
+    },
+    "Add Todo" : {
+
+    },
+    "Add a PDF or text file" : {
+
+    },
+    "Add a Todo with M1K3" : {
+
+    },
+    "Add a todo — try “by Friday” or “in 3 days”" : {
+
+    },
+    "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so." : {
+
+    },
+    "Added \"%@\" to the todo list." : {
+      "comment" : "Siri/Shortcuts confirmation after adding a todo. The argument is the todo's title."
+    },
+    "Advanced" : {
+
+    },
+    "Agent Log" : {
+
+    },
+    "Agent Log — MCP tool calls captured from connected agents (opt-in)" : {
+
+    },
+    "Agent activity" : {
+
+    },
+    "Agent conversation log" : {
+
+    },
+    "All of this lives in Settings too — skip anything." : {
+
+    },
+    "Already re-indexing your notes. Try again when it's done." : {
+
+    },
+    "Also send this conversation" : {
+
+    },
+    "Also serve MCP tools to paired devices" : {
+
+    },
+    "Always" : {
+
+    },
+    "Always allow" : {
+
+    },
+    "Always think" : {
+
+    },
+    "Answer stopped early" : {
+
+    },
+    "Anything I should know? (optional)" : {
+
+    },
+    "App Store" : {
+
+    },
+    "Apple Intelligence isn't available here, so I'll fetch my own brain — %@ M1K3, a one-time %@ download. Still fully on this Mac." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apple Intelligence isn't available here, so I'll fetch my own brain — %1$@ M1K3, a one-time %2$@ download. Still fully on this Mac."
+          }
+        }
+      }
+    },
+    "Apple Intelligence isn’t available on this Mac. M1K3’s own Mini runs here after a one-time download." : {
+
+    },
+    "Apple Speech works by default; WhisperKit is higher accuracy after a one-time download and applies on the next launch. Echo cancellation stops M1K3 hearing itself, at some cost to accuracy in a quiet room." : {
+
+    },
+    "Approve" : {
+
+    },
+    "Approve in System Settings…" : {
+
+    },
+    "Approved" : {
+
+    },
+    "As M1K3 remembers things, they appear here as a constellation that grows over time." : {
+
+    },
+    "Ask M1K3" : {
+
+    },
+    "Ask M1K3 ${question}" : {
+
+    },
+    "Ask M1K3 a question and get a grounded answer from your local knowledge." : {
+
+    },
+    "Ask M1K3…" : {
+
+    },
+    "Ask me about it" : {
+
+    },
+    "Ask more" : {
+
+    },
+    "Ask more about this text" : {
+
+    },
+    "Ask this" : {
+
+    },
+    "Ask what I know" : {
+
+    },
+    "Ask what I know…" : {
+
+    },
+    "Ask: %@" : {
+
+    },
+    "Asking about “%@”" : {
+
+    },
+    "Attach" : {
+
+    },
+    "Attach a file as context for this message" : {
+
+    },
+    "Attach an image or a file — %@ can see images" : {
+
+    },
+    "Attached image" : {
+
+    },
+    "Auto" : {
+
+    },
+    "Auto-route (M1K3 picks the brain)" : {
+
+    },
+    "Auto-speak answers" : {
+
+    },
+    "Auto-speak is on — M1K3 reads answers aloud" : {
+
+    },
+    "Auto-speak — M1K3 reads answers aloud as they arrive" : {
+
+    },
+    "Back to the chat (⌘⇧V)" : {
+
+    },
+    "Back." : {
+
+    },
+    "Background" : {
+
+    },
+    "Background %@ fetch failed. Use “Change brain…” to download directly." : {
+
+    },
+    "Background %@ fetch paused — will retry." : {
+
+    },
+    "Base URL" : {
+
+    },
+    "Battery" : {
+
+    },
+    "Bionic reader" : {
+
+    },
+    "Bolds the start of each word to guide the eye." : {
+
+    },
+    "Brain" : {
+
+    },
+    "Brain at Home — serving ^[%lld device](inflect: true)" : {
+
+    },
+    "Brains" : {
+
+    },
+    "Brains & downloads" : {
+
+    },
+    "Built-in is Apple's default voice. M1K3 Voice downloads a neural voice model and runs entirely offline. Character shapes the tone — Clean is the full range, M1K3 is the signature sound, Radio leans lo-fi. Hit “Hear a sample” to compare." : {
+
+    },
+    "Calendar (titles & times)" : {
+
+    },
+    "Call recording" : {
+
+    },
+    "Calls" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel %@ download" : {
+
+    },
+    "Card %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Card %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Change brain…" : {
+
+    },
+    "Changed since approval" : {
+
+    },
+    "Character" : {
+
+    },
+    "Chat" : {
+
+    },
+    "Check on them any time in Settings ▸ Brains & downloads." : {
+
+    },
+    "Checking…" : {
+
+    },
+    "Choose a file to review" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear every pulse (agent-call history is cleared in the Agent Log)" : {
+
+    },
+    "Clear log" : {
+
+    },
+    "Clear pulses" : {
+
+    },
+    "Clear resolved" : {
+
+    },
+    "Clear search" : {
+
+    },
+    "Close" : {
+
+    },
+    "Close page" : {
+
+    },
+    "Close page (Esc)" : {
+
+    },
+    "Closed." : {
+
+    },
+    "Companion" : {
+
+    },
+    "Companion face" : {
+
+    },
+    "Connect an agent" : {
+
+    },
+    "Connections" : {
+
+    },
+    "Constellation" : {
+
+    },
+    "Content Controls" : {
+
+    },
+    "Context" : {
+
+    },
+    "Continue in chat →" : {
+
+    },
+    "Conversation" : {
+
+    },
+    "Conversations" : {
+
+    },
+    "Copied" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy %@ setup" : {
+
+    },
+    "Copy API key" : {
+
+    },
+    "Copy Terminal command" : {
+
+    },
+    "Copy access token" : {
+
+    },
+    "Copy base URL" : {
+
+    },
+    "Copy code" : {
+
+    },
+    "Copy instead" : {
+
+    },
+    "Copy setup code" : {
+
+    },
+    "Copy this answer" : {
+
+    },
+    "Corrected — kept as history" : {
+
+    },
+    "Couldn't attach" : {
+
+    },
+    "Couldn't open that" : {
+
+    },
+    "Couldn't save that. Nothing changed." : {
+
+    },
+    "Couldn’t load %@" : {
+
+    },
+    "Couldn’t load the page" : {
+
+    },
+    "Couldn’t open your calls" : {
+
+    },
+    "Couldn’t save a new key to the Keychain. The current one still works." : {
+
+    },
+    "Couldn’t save a new token to the Keychain. The current one still works." : {
+
+    },
+    "Current conversation" : {
+
+    },
+    "Currently set to %@" : {
+
+    },
+    "Currently: %@" : {
+
+    },
+    "Decline" : {
+
+    },
+    "Deep dive finished" : {
+      "comment" : "Notification title: a delegated deep dive delivered its result."
+    },
+    "Default" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@" : {
+
+    },
+    "Delete this document" : {
+
+    },
+    "Diagnostics" : {
+
+    },
+    "Dial-up sound while loading" : {
+
+    },
+    "Dictate a message" : {
+
+    },
+    "Didn't start: %@ didn't download. Try again from Settings ▸ Brains & downloads." : {
+
+    },
+    "Didn't start: %@ didn't load. Try again from Settings ▸ Brains & downloads." : {
+
+    },
+    "Discard dictation" : {
+
+    },
+    "Discard dictation — nothing is sent" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Dismissed" : {
+
+    },
+    "Display" : {
+
+    },
+    "Documents" : {
+
+    },
+    "Done" : {
+
+    },
+    "Download" : {
+
+    },
+    "Download %@ (one-time, ~%lld MB)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Download %1$@ (one-time, ~%2$lld MB)"
+          }
+        }
+      }
+    },
+    "Download and re-index" : {
+
+    },
+    "Downloaded" : {
+
+    },
+    "Downloading M1K3 Voice" : {
+
+    },
+    "Downloading M1K3 Voice…" : {
+
+    },
+    "Downloading…" : {
+
+    },
+    "Downloading… %lld%%" : {
+
+    },
+    "Downloads come from huggingface.co (and github.com for the voice pack), once, and then run on this Mac. Nothing is removed without asking." : {
+
+    },
+    "Dress M1K3 up for the occasional holiday — Halloween, and flight colours while you are offline." : {
+
+    },
+    "Drop a PDF or text file on the window, or activate to pick one. Files are read on this Mac only." : {
+
+    },
+    "Drop a file on me." : {
+
+    },
+    "Drop another" : {
+
+    },
+    "Drop or import a PDF or text file and it'll appear here. Photos you ask me to remember appear too; their descriptions stay on this device." : {
+
+    },
+    "Drop to ingest" : {
+
+    },
+    "Dyslexia-friendly" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit this — the old wording is kept in its history" : {
+
+    },
+    "Email this one exchange to Round Tower — you see the exact text first" : {
+
+    },
+    "Embeddings" : {
+
+    },
+    "Enable WhisperKit (downloads model)" : {
+
+    },
+    "Enable call transcription (downloads model)" : {
+
+    },
+    "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token." : {
+
+    },
+    "Every app you’ve pointed at M1K3 stops working until you give it the new key." : {
+
+    },
+    "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only." : {
+
+    },
+    "Every couple of hours M1K3 takes stock and writes a short note. Kept on this machine, capped at a week, never remembered as facts." : {
+
+    },
+    "Export %@" : {
+
+    },
+    "Export Memories…" : {
+
+    },
+    "Exports every remembered fact as plain-text Markdown. Outside M1K3 this folder is not encrypted — it's yours to guard." : {
+
+    },
+    "Face" : {
+
+    },
+    "Fast answers" : {
+
+    },
+    "Fetch %@" : {
+
+    },
+    "Fetching %@ in the background… %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fetching %1$@ in the background… %2$lld%%"
+          }
+        }
+      }
+    },
+    "Fetching in the background. Carry on, or finish." : {
+
+    },
+    "Fetching your kit · %lld of %lld ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fetching your kit · %1$lld of %2$lld ready"
+          }
+        }
+      }
+    },
+    "Fetching your kit, %lld of %lld ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fetching your kit, %1$lld of %2$lld ready"
+          }
+        }
+      }
+    },
+    "Forget" : {
+
+    },
+    "Forget this photo" : {
+
+    },
+    "Forget this — removes it everywhere, no residue" : {
+
+    },
+    "Free up space" : {
+
+    },
+    "Full transcript in the Agent Log" : {
+
+    },
+    "General" : {
+
+    },
+    "Generation stats" : {
+
+    },
+    "Get M1K3 Voice" : {
+
+    },
+    "Get my kit" : {
+
+    },
+    "Get my kit (%@%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get my kit (%1$@%2$@)"
+          }
+        }
+      }
+    },
+    "Getting ready…" : {
+
+    },
+    "Glow when speaking" : {
+
+    },
+    "Good answer" : {
+
+    },
+    "Got it. “%@” is in my head now." : {
+
+    },
+    "Have M1K3 say something aloud in its voice." : {
+
+    },
+    "Hear a sample" : {
+
+    },
+    "Heartbeat" : {
+      "comment" : "Notification title for the ambient status pulse (the Heartbeat feature)."
+    },
+    "Heartbeat (status pulse every 2 hours)" : {
+
+    },
+    "Here it is." : {
+
+    },
+    "Hide M1K3's avatar behind the chat" : {
+
+    },
+    "Hide avatar" : {
+
+    },
+    "Hide corrected facts" : {
+
+    },
+    "Hide internal items" : {
+
+    },
+    "How Apple protects it" : {
+
+    },
+    "How I learned this" : {
+
+    },
+    "How M1K3's replies are typeset. Dyslexia-friendly uses OpenDyslexic; Bionic reader bolds the start of each word to guide the eye." : {
+
+    },
+    "How should I sound?" : {
+
+    },
+    "How should my replies read?" : {
+
+    },
+    "How you asked M1K3 to answer. The newest asks shape every answer on this Mac, as many as fit." : {
+
+    },
+    "I can't hear you yet." : {
+
+    },
+    "I can't open that one." : {
+
+    },
+    "I hit a snag last time. Send Round Tower a short report? You'll see it first." : {
+
+    },
+    "I noticed" : {
+
+    },
+    "I remember things — properly, on this Mac." : {
+
+    },
+    "Import" : {
+
+    },
+    "Import transcript" : {
+
+    },
+    "In use" : {
+
+    },
+    "Include on-device crash/hang summaries" : {
+
+    },
+    "Indexed items" : {
+
+    },
+    "Install" : {
+
+    },
+    "Install & Run" : {
+
+    },
+    "Intelligence" : {
+
+    },
+    "Internal — hidden from AI" : {
+
+    },
+    "Introduce yourself" : {
+
+    },
+    "It's waiting in the chat." : {
+      "comment" : "Notification body under \"Your answer's ready\". Never the answer text (privacy)."
+    },
+    "Keep it on this Mac" : {
+
+    },
+    "Keep other audio out of the mic" : {
+
+    },
+    "Keep this text in Documents" : {
+
+    },
+    "Keep this text in Documents, where M1K3 can search it later" : {
+
+    },
+    "Kept in Documents" : {
+
+    },
+    "Knowledge" : {
+
+    },
+    "Launch M1K3 at login" : {
+
+    },
+    "Learn from conversations" : {
+
+    },
+    "Leave voice mode" : {
+
+    },
+    "Leave voice mode (Esc)" : {
+
+    },
+    "Let M1K3 choose" : {
+
+    },
+    "Let M1K3 choose. Recommended for most people." : {
+
+    },
+    "Let agents delete memories" : {
+
+    },
+    "Let agents open links on screen" : {
+
+    },
+    "Let agents use the microphone" : {
+
+    },
+    "Lets M1K3 ground answers in the moment — battery, your next events, where you are (a coarse ~10 km area unless Precise is on). Snapshots only: never remembered, never mixed with web tools in a turn. macOS asks its own permission when you switch Calendar or Location on." : {
+
+    },
+    "Lets an agent on this Mac use M1K3's knowledge, memory and voice. Loopback-only, one client at a time. An agent needs the access token to connect. Listening, deleting memories and opening links stay off until you allow them." : {
+
+    },
+    "Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions: no M1K3 personality, memory, knowledge or tools, and nothing they send is kept. Point any OpenAI-compatible tool at the base URL and use the API key. Loopback-only, one call at a time, and you always go first. M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's instructions is for you to judge." : {
+
+    },
+    "List M1K3's Todos" : {
+
+    },
+    "List M1K3's todos" : {
+
+    },
+    "List Todos" : {
+
+    },
+    "List the open items on M1K3's todo list." : {
+
+    },
+    "Listening" : {
+
+    },
+    "Live preview of the chosen companion face" : {
+
+    },
+    "Loaded and ready to answer." : {
+      "comment" : "Notification body after a brain finished loading."
+    },
+    "Local API" : {
+
+    },
+    "Local API (OpenAI-compatible, localhost)" : {
+
+    },
+    "Location" : {
+
+    },
+    "Log agent conversations" : {
+
+    },
+    "Logging is off" : {
+
+    },
+    "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here." : {
+
+    },
+    "Looking at the photo" : {
+
+    },
+    "Looking at what's already on this Mac…" : {
+
+    },
+    "Looking…" : {
+
+    },
+    "M1K3" : {
+      "shouldTranslate" : false
+    },
+    "M1K3 IS TALKING" : {
+
+    },
+    "M1K3 couldn’t start" : {
+
+    },
+    "M1K3 doesn't capture agent conversations by default. Turn on “Log agent conversations” in Settings → Server to review what a connected agent asks for and hears back — on this Mac only." : {
+
+    },
+    "M1K3 extracts durable facts about you — preferences, decisions, people — from conversations, on-device. Review and erase anytime." : {
+
+    },
+    "M1K3 is built with open-source components. Everything runs on this Mac." : {
+
+    },
+    "M1K3 is speaking" : {
+
+    },
+    "M1K3 isn’t ready yet. Open M1K3 once, then try again." : {
+      "comment" : "Siri/Shortcuts error when the app is not running in time. M1K3 is the app name."
+    },
+    "M1K3 may suggest todos" : {
+
+    },
+    "M1K3 picks the best brain for this Mac and keeps adapting to power, memory and heat. Change it any time." : {
+
+    },
+    "M1K3 proposes a script" : {
+
+    },
+    "M1K3 settings (⌘,)" : {
+
+    },
+    "M1K3 won't open a page on this Mac or a private network." : {
+
+    },
+    "M1K3's \"hands\" — it can only propose a script; every install and approval is your click, and only the exact approved bytes ever run. Script output can't reach the web tools in the same turn and never becomes a remembered fact. An approved script can be re-run later with different input, so approve only scripts you trust with anything." : {
+
+    },
+    "M1K3's memory isn't available right now." : {
+      "comment" : "Siri/Shortcuts reply when the memory graph is not open."
+    },
+    "M1K3's todo list isn't available right now." : {
+      "comment" : "Siri/Shortcuts reply when the todo store is not open."
+    },
+    "M1K3…" : {
+      "shouldTranslate" : false
+    },
+    "MCP server" : {
+
+    },
+    "MCP server (HTTP, localhost)" : {
+
+    },
+    "MODEL REASONING" : {
+
+    },
+    "Make a new API key?" : {
+
+    },
+    "Make a new access token?" : {
+
+    },
+    "Manage downloads…" : {
+
+    },
+    "Mapping memory…" : {
+
+    },
+    "Mark done" : {
+
+    },
+    "Maybe later" : {
+
+    },
+    "Memories" : {
+
+    },
+    "Memory" : {
+
+    },
+    "Memory Constellation" : {
+
+    },
+    "Memory, ears & voice" : {
+
+    },
+    "Mini is answering while %@ downloads. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mini is answering while %1$@ downloads. %2$@"
+          }
+        }
+      }
+    },
+    "Mini’s answering while %@ arrives" : {
+
+    },
+    "Mode" : {
+
+    },
+    "Model" : {
+
+    },
+    "Model availability" : {
+
+    },
+    "Model unavailable" : {
+
+    },
+    "Modem muted" : {
+
+    },
+    "Mute dial-up sound" : {
+
+    },
+    "Mute microphone" : {
+
+    },
+    "Mute the dial-up connecting sound" : {
+
+    },
+    "Mute the modem" : {
+
+    },
+    "My full kit" : {
+
+    },
+    "Name" : {
+
+    },
+    "Narration HUD" : {
+
+    },
+    "Needs Private Cloud Compute on in Settings ▸ Privacy." : {
+
+    },
+    "Needs work" : {
+
+    },
+    "Needs work — add a note on why" : {
+
+    },
+    "New API key" : {
+
+    },
+    "New Key" : {
+
+    },
+    "New Key…" : {
+
+    },
+    "New Token" : {
+
+    },
+    "New Token…" : {
+
+    },
+    "New access token" : {
+
+    },
+    "New chat" : {
+
+    },
+    "Next card" : {
+
+    },
+    "No calls captured yet" : {
+
+    },
+    "No calls yet" : {
+
+    },
+    "No connections yet — related facts will appear here as M1K3 links them." : {
+
+    },
+    "No conversations yet" : {
+
+    },
+    "No longer used · %@" : {
+
+    },
+    "No memories match that" : {
+
+    },
+    "No memories yet" : {
+
+    },
+    "No open todos." : {
+      "comment" : "Siri/Shortcuts reply when the todo list is empty."
+    },
+    "No pulses yet" : {
+
+    },
+    "No response." : {
+
+    },
+    "No scripts installed yet — M1K3 can propose one in chat, or drop your own in the scripts folder and approve it here." : {
+
+    },
+    "No third-party licenses found." : {
+
+    },
+    "Not Now" : {
+
+    },
+    "Not now" : {
+
+    },
+    "Notch HUD, heartbeat, senses — all on." : {
+
+    },
+    "Notch HUD, heartbeat, senses, Private Cloud Compute (asks per message) — all on." : {
+
+    },
+    "Note" : {
+
+    },
+    "Note (optional)" : {
+
+    },
+    "Nothing in M1K3's memory matches \"%@\"." : {
+      "comment" : "Siri/Shortcuts reply when a memory recall finds nothing. The argument is the user's query."
+    },
+    "Nothing on the list" : {
+
+    },
+    "Nothing relevant in M1K3's knowledge for \"%@\"." : {
+      "comment" : "Siri/Shortcuts reply when a knowledge search finds nothing. The argument is the user's query."
+    },
+    "Nothing remembered about you yet" : {
+
+    },
+    "Nothing remembered yet" : {
+
+    },
+    "Nothing runs until you install it. Installed scripts live in M1K3's scripts folder, and only the exact bytes you approve can ever run — if the file changes, M1K3 refuses until you re-approve." : {
+
+    },
+    "Notifications" : {
+
+    },
+    "Notify me in the background" : {
+
+    },
+    "Notify on new pulses" : {
+
+    },
+    "OK" : {
+
+    },
+    "Off" : {
+
+    },
+    "Off by default. When on, M1K3 keeps the last 500 tool calls a connected agent makes — see them in Window → Agent Log, or the Heartbeat timeline." : {
+
+    },
+    "Off unless you turn it on. Then Private Cloud Compute joins the brain picker, and once you pick it, it stays picked until you choose a brain on this Mac. The first time, you see exactly what goes before it goes, and each answer is labelled." : {
+
+    },
+    "On" : {
+
+    },
+    "Once" : {
+
+    },
+    "One moment." : {
+
+    },
+    "One-time downloads. None of your data goes with them." : {
+
+    },
+    "Only approve a device you're holding right now." : {
+
+    },
+    "Open" : {
+
+    },
+    "Open M1K3" : {
+
+    },
+    "Open M1K3 in voice mode for a live conversation." : {
+
+    },
+    "Open Screen Saver Settings" : {
+
+    },
+    "Open Scripts Folder…" : {
+
+    },
+    "Open Settings" : {
+
+    },
+    "Open System Settings" : {
+
+    },
+    "Open a side panel to review links and files (⌥⌘R)" : {
+
+    },
+    "Open in browser" : {
+
+    },
+    "Open source: %@" : {
+
+    },
+    "OpenDyslexic — weighted letterforms + roomier spacing." : {
+
+    },
+    "Or from Terminal — it asks for the token, so Copy that first:" : {
+
+    },
+    "Or turn on Apple Intelligence in System Settings" : {
+
+    },
+    "PDF or text — read here, never uploaded." : {
+
+    },
+    "Pair a device" : {
+
+    },
+    "Pair a device…" : {
+
+    },
+    "Paired %@" : {
+
+    },
+    "Pairing QR code" : {
+
+    },
+    "Partly downloaded" : {
+
+    },
+    "Paste a link or path…" : {
+
+    },
+    "Paste a link, or drop a file here, to review it beside the conversation." : {
+
+    },
+    "Paused: Private Cloud Compute is off in Settings ▸ Privacy. Turning that on resumes this." : {
+
+    },
+    "Photo remembered. The caption stays on this device." : {
+
+    },
+    "Pick my face" : {
+
+    },
+    "Pings you when a long reply finishes or a brain loads — only while M1K3's in the background, never with the reply itself." : {
+
+    },
+    "Pixel face" : {
+
+    },
+    "Precise location" : {
+
+    },
+    "Previous card" : {
+
+    },
+    "Privacy" : {
+
+    },
+    "Private Cloud Compute" : {
+
+    },
+    "Propose a new item for M1K3's todo list." : {
+
+    },
+    "Purpose" : {
+
+    },
+    "Puts your document and call titles — never contents or memories — into Spotlight (⌘Space). Managed by macOS; turning off removes everything M1K3 donated." : {
+
+    },
+    "Quarantine %@" : {
+
+    },
+    "Quarantine (hidden from AI)" : {
+
+    },
+    "Query" : {
+
+    },
+    "Question" : {
+
+    },
+    "Quit" : {
+
+    },
+    "Rate M1K3 on the App Store…" : {
+
+    },
+    "Ratings are how other people find a small app. This opens the App Store's review sheet; M1K3 himself asks at most once per release, and only after a few days together." : {
+
+    },
+    "Re-approve" : {
+
+    },
+    "Re-indexing your notes…" : {
+
+    },
+    "Re-run onboarding…" : {
+
+    },
+    "Reading" : {
+
+    },
+    "Reading it now…" : {
+
+    },
+    "Reading mode" : {
+
+    },
+    "Ready to load." : {
+      "comment" : "Notification body after a brain finished downloading."
+    },
+    "Reasoning" : {
+
+    },
+    "Reasoning models think before answering — sharper on hard questions, slower on small talk. Auto decides per turn; voice mode has its own toggle and ignores this setting." : {
+
+    },
+    "Recall ${query} from M1K3's memory" : {
+
+    },
+    "Recall Memory" : {
+
+    },
+    "Recall Memory from M1K3" : {
+
+    },
+    "Recall a specific memory from M1K3's private memory graph." : {
+
+    },
+    "Recommended for most people" : {
+
+    },
+    "Record" : {
+
+    },
+    "Record a call" : {
+
+    },
+    "Record a call from the chat toolbar (consent-gated). With transcription enabled, a stopped recording is transcribed, summarised, encrypted, and indexed — on-device." : {
+
+    },
+    "Record call" : {
+
+    },
+    "Record once" : {
+
+    },
+    "Record this call?" : {
+
+    },
+    "Recording" : {
+
+    },
+    "Reindexed ^[%@ chunk](inflect: true) for the new embedder." : {
+
+    },
+    "Reindexed ^[%@ chunk](inflect: true) with %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reindexed ^[%1$@ chunk](inflect: true) with %2$@."
+          }
+        }
+      }
+    },
+    "Remember ${text} with M1K3" : {
+
+    },
+    "Remember this photo" : {
+
+    },
+    "Remember with M1K3" : {
+
+    },
+    "Remembered on this device" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove %@" : {
+
+    },
+    "Remove %@?" : {
+
+    },
+    "Remove attachment" : {
+
+    },
+    "Remove…" : {
+
+    },
+    "Removing…" : {
+
+    },
+    "Reopen" : {
+
+    },
+    "Report an issue…" : {
+
+    },
+    "Resolved (%lld)" : {
+
+    },
+    "Restore %@" : {
+
+    },
+    "Restore to documents" : {
+
+    },
+    "Resume" : {
+
+    },
+    "Review %@ in the side panel" : {
+
+    },
+    "Review link %@" : {
+
+    },
+    "Review panel" : {
+
+    },
+    "Revoke" : {
+
+    },
+    "Run approved scripts" : {
+
+    },
+    "Running %@…" : {
+
+    },
+    "Running self-test…" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save a fact to M1K3’s private memory." : {
+
+    },
+    "Say hello in the main window first" : {
+
+    },
+    "Say hi" : {
+
+    },
+    "Scan this in M1K3 on the other device. The code lives for a minute and commits nothing until you approve." : {
+
+    },
+    "Screen Saver" : {
+
+    },
+    "Scripts" : {
+
+    },
+    "Scrolling." : {
+
+    },
+    "Search Knowledge" : {
+
+    },
+    "Search M1K3's Knowledge" : {
+
+    },
+    "Search M1K3's knowledge for ${query}" : {
+
+    },
+    "Search M1K3's local knowledge base for documents, notes, and memories." : {
+
+    },
+    "Seasonal looks" : {
+
+    },
+    "See the report" : {
+
+    },
+    "See your memories as a 3D constellation" : {
+
+    },
+    "Semantic MLX embeddings improve retrieval but download a model on first use and re-embed every stored chunk." : {
+
+    },
+    "Send" : {
+
+    },
+    "Send a short report to Round Tower?" : {
+
+    },
+    "Send by email" : {
+
+    },
+    "Send this exchange to Round Tower?" : {
+
+    },
+    "Send this exchange…" : {
+
+    },
+    "Send to Private Cloud Compute" : {
+
+    },
+    "Send to Private Cloud Compute?" : {
+
+    },
+    "Serif" : {
+
+    },
+    "Serve my brain to my devices" : {
+
+    },
+    "Server" : {
+
+    },
+    "Serves raw generation to devices you pair by QR code — local network only, encrypted with a key that never travels the network; no persona, memory, or documents included. The MCP toggle adds read-only tools (search, documents, ask) — asks can reach the web when the web-search toggle allows. Off by default; revoking a device cuts it off immediately." : {
+
+    },
+    "Serving on :%@ to ^[%@ paired device](inflect: true)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Serving on :%1$@ to ^[%2$@ paired device](inflect: true)"
+          }
+        }
+      }
+    },
+    "Set up the room" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Settings…" : {
+
+    },
+    "Share %@" : {
+
+    },
+    "Share this answer" : {
+
+    },
+    "Shared from M1K3 · m1k3.app" : {
+
+    },
+    "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops." : {
+
+    },
+    "Show M1K3's avatar behind the chat" : {
+
+    },
+    "Show a heads-up display while M1K3 talks" : {
+
+    },
+    "Show a new code" : {
+
+    },
+    "Show avatar" : {
+
+    },
+    "Show corrected facts" : {
+
+    },
+    "Show corrected facts (kept as history)" : {
+
+    },
+    "Show documents & calls in Spotlight" : {
+
+    },
+    "Show exactly what that sends" : {
+
+    },
+    "Show generation stats" : {
+
+    },
+    "Show in menu bar only (hide Dock icon)" : {
+
+    },
+    "Show only pulses tagged %@" : {
+
+    },
+    "Show quarantined items" : {
+
+    },
+    "Show the Heartbeat" : {
+
+    },
+    "Show the page beside M1K3" : {
+
+    },
+    "Shows the page beside M1K3" : {
+
+    },
+    "Sidebar" : {
+
+    },
+    "Skin" : {
+
+    },
+    "Sound effects" : {
+
+    },
+    "Source page" : {
+
+    },
+    "Speak ${text} with M1K3" : {
+
+    },
+    "Speak this answer" : {
+
+    },
+    "Speak with M1K3" : {
+
+    },
+    "Speaking…" : {
+
+    },
+    "Spotlight" : {
+
+    },
+    "Start a fresh conversation — this one stays in Conversations (⌘N)" : {
+
+    },
+    "Start listening" : {
+
+    },
+    "Startup" : {
+
+    },
+    "Status" : {
+
+    },
+    "Stop" : {
+
+    },
+    "Stop asking about this text" : {
+
+    },
+    "Stop generating" : {
+
+    },
+    "Stop generating (⌘.)" : {
+
+    },
+    "Stop listening" : {
+
+    },
+    "Stop recording" : {
+
+    },
+    "Stop talking" : {
+
+    },
+    "Stopped" : {
+
+    },
+    "Stops listening without sending" : {
+
+    },
+    "Suggested — yours to accept" : {
+
+    },
+    "Suggestions from M1K3 and connected agents land in your inbox as pending. Only you can accept or close a todo." : {
+
+    },
+    "Switch" : {
+
+    },
+    "Switch %@ to its update" : {
+
+    },
+    "Switch to %@" : {
+
+    },
+    "Switch to Built-in voice" : {
+
+    },
+    "Switch to Lil (already downloaded)" : {
+
+    },
+    "THINKING…" : {
+
+    },
+    "Talk to M1K3" : {
+
+    },
+    "Talk with M1K3 — hands-free conversation (⌘⇧V)" : {
+
+    },
+    "Tap Record to capture a call, or import a transcript (lines like “Speaker: …”). M1K3 summarises it, encrypts it at rest, and makes it searchable alongside your documents." : {
+
+    },
+    "Tap the face or press Space to talk" : {
+
+    },
+    "Tap to start talking, or to interrupt" : {
+
+    },
+    "Tell M1K3 to remember something, or let it learn as you chat." : {
+
+    },
+    "Tell M1K3 who you are" : {
+
+    },
+    "Tell me a bit about yourself and I'll keep what matters in mind." : {
+
+    },
+    "Text" : {
+
+    },
+    "That isn't a web page M1K3 can open." : {
+
+    },
+    "That was my everyday voice. Want to hear my proper one?" : {
+
+    },
+    "That's the kit. Finish whenever you like." : {
+
+    },
+    "The background work is ready in the chat." : {
+      "comment" : "Notification body under \"Deep dive finished\". Never the result text (privacy)."
+    },
+    "The exact text that will be sent" : {
+
+    },
+    "The first pulse lands within a couple of hours of the machine being awake — sooner if something's already happened today." : {
+
+    },
+    "The heartbeat is off" : {
+
+    },
+    "The list couldn't be opened on this Mac." : {
+
+    },
+    "The pairing code expired." : {
+
+    },
+    "The system font — clean and familiar." : {
+
+    },
+    "These are already on their way, or need a retry." : {
+
+    },
+    "Thinking…" : {
+
+    },
+    "Third-Party Licenses" : {
+
+    },
+    "Third-party licenses" : {
+
+    },
+    "This Mac can’t run the selected brain. Choose a different one in Settings." : {
+
+    },
+    "This downloads the embedder, then re-indexes your notes so they can be found by meaning. It can take a few minutes, and I can't answer until it's done." : {
+
+    },
+    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {
+
+    },
+    "This is the whole message: your message, M1K3's answer, your note, the brain and the app version — nothing else from this Mac, though the answer may quote what M1K3 read to write it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a made-up test case, and deletes it if you ask. Change anything below first if you like." : {
+
+    },
+    "This one can't be stopped once it starts." : {
+
+    },
+    "This page tried to send the panel to a file on this Mac or a private-network address. M1K3 won’t open those on a page’s say-so." : {
+
+    },
+    "This replaces an existing script named %@." : {
+
+    },
+    "Title" : {
+
+    },
+    "Todos" : {
+
+    },
+    "Todos are unavailable" : {
+
+    },
+    "Toggle Review Panel" : {
+
+    },
+    "Tools" : {
+
+    },
+    "Transcribing call…" : {
+
+    },
+    "Transcribing…" : {
+
+    },
+    "Transcript" : {
+
+    },
+    "Transcription" : {
+
+    },
+    "Try again" : {
+
+    },
+    "Try different words, or clear the search to see everything." : {
+
+    },
+    "Turn on Semantic memory?" : {
+
+    },
+    "Turned off by your organisation" : {
+
+    },
+    "Unavailable — the Keychain couldn’t be read" : {
+
+    },
+    "Uninstall" : {
+
+    },
+    "Unmute dial-up sound" : {
+
+    },
+    "Unmute the dial-up connecting sound" : {
+
+    },
+    "Update" : {
+
+    },
+    "Update available: new weights for this brain" : {
+
+    },
+    "Update downloaded. Switch when you're ready." : {
+
+    },
+    "Upgrade to M1K3 Voice (downloads model)" : {
+
+    },
+    "Use Mini (built-in) instead" : {
+
+    },
+    "Use a downloaded brain instead (Lil, %@)" : {
+
+    },
+    "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for users under 16; the assistant's tone adjusts for all minors. Declining gives full capability." : {
+
+    },
+    "View memories…" : {
+
+    },
+    "View on GitHub" : {
+
+    },
+    "Voice" : {
+
+    },
+    "Voice input" : {
+
+    },
+    "Voice mode" : {
+
+    },
+    "Voice output" : {
+
+    },
+    "Wait for completion" : {
+
+    },
+    "Waking M1K3…" : {
+
+    },
+    "Warming up sharper voice…" : {
+
+    },
+    "Web search" : {
+
+    },
+    "Web search (DuckDuckGo)" : {
+
+    },
+    "Web search is off: M1K3 won't search the web. Click to turn it on." : {
+
+    },
+    "Web search is on: M1K3 can send a search to %@. Click to turn it off." : {
+
+    },
+    "Web search isn't available here." : {
+
+    },
+    "What M1K3 knows about you — it rides every conversation's system prompt. Stored on this machine only, never retrieved or cited, yours to edit or clear." : {
+
+    },
+    "What M1K3 should remember" : {
+
+    },
+    "What happened? (optional)" : {
+
+    },
+    "What memory should M1K3 recall?" : {
+
+    },
+    "What should M1K3 remember?" : {
+
+    },
+    "What should M1K3 say?" : {
+
+    },
+    "What should M1K3 search for?" : {
+
+    },
+    "What was off?" : {
+
+    },
+    "What would you like to ask M1K3?" : {
+
+    },
+    "What'll I call you? (optional)" : {
+
+    },
+    "What's the todo?" : {
+
+    },
+    "When the Agent Interaction Log is on, calls from connected agents fold into this timeline as visits — who called in, and what they used. Captured on this Mac only, newest 500 kept, off by default." : {
+
+    },
+    "While I wake — set up the room" : {
+
+    },
+    "WhisperKit ready" : {
+
+    },
+    "Write a short description of this photo and remember it. The description stays on this device." : {
+
+    },
+    "Writes a short description and remembers it on this device" : {
+
+    },
+    "You" : {
+
+    },
+    "You already have everything I can fetch here. Nothing to download." : {
+
+    },
+    "Your Mac is blocking Speech Recognition for M1K3. Flip it on in System Settings, then try me again." : {
+
+    },
+    "Your Mac is blocking the mic. Flip M1K3 on in System Settings, then try me again." : {
+
+    },
+    "Your answer's ready" : {
+      "comment" : "Notification title: a long answer finished while M1K3 was in the background."
+    },
+    "Your message" : {
+
+    },
+    "Your name, optional" : {
+
+    },
+    "Your next message is answered from this text again, on this Mac" : {
+
+    },
+    "You’re responsible for having consent from everyone on the call. Recording is on-device only — audio never leaves this Mac." : {
+
+    },
+    "^[%@ todo](inflect: true) open" : {
+
+    },
+    "^[%@ todo](inflect: true) open · %@ suggested" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "^[%1$@ todo](inflect: true) open · %2$@ suggested"
+          }
+        }
+      }
+    },
+    "^[%lld item](inflect: true)" : {
+
+    },
+    "^[%lld memory](inflect: true)" : {
+
+    },
+    "^[%lld source](inflect: true)" : {
+
+    },
+    "corrected %@" : {
+
+    },
+    "corrected · %@" : {
+
+    },
+    "macOS didn't get an answer, so %@ stayed off. Switch it on again to be asked." : {
+
+    },
+    "macOS has calendar access off for M1K3 — grant it in System Settings → Privacy & Security → Calendars, then switch this back on." : {
+
+    },
+    "macOS has location access off for M1K3 — grant it in System Settings → Privacy & Security → Location Services, then switch this back on." : {
+
+    },
+    "now" : {
+
+    },
+    "remembered" : {
+
+    },
+    "told by %@" : {
+
+    },
+    "you told me" : {
+
+    },
+    "· ^[%lld call](inflect: true)" : {
+
+    },
+    "· ^[%lld error](inflect: true)" : {
+
+    },
+    "“%@” wants to pair" : {
+
+    },
+    "“Menu bar only” hides the Dock icon and starts M1K3 quietly — open it anytime from the menu bar." : {
+
+    },
+    "•" : {
+      "shouldTranslate" : false
+    }
+  },
+  "version" : "1.0"
+}

@@ -18,6 +18,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import M1K3Inference
 import SwiftUI
@@ -54,9 +57,13 @@ struct YouSettingsPane: View {
             } header: {
                 SettingsHeader("Reading", systemImage: "text.book.closed")
             } footer: {
-                Text("How M1K3's replies are typeset. Dyslexia-friendly uses OpenDyslexic; "
-                    + "Bionic reader bolds the start of each word to guide the eye.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    How M1K3's replies are typeset. Dyslexia-friendly uses OpenDyslexic; \
+                    Bionic reader bolds the start of each word to guide the eye.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
         }
         .formStyle(.grouped)
@@ -88,10 +95,14 @@ struct YouSettingsPane: View {
         } header: {
             SettingsHeader("About you", systemImage: "person.crop.circle")
         } footer: {
-            Text("What M1K3 knows about you — it rides every conversation's "
-                + "system prompt. Stored on this machine only, never retrieved or "
-                + "cited, yours to edit or clear.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                What M1K3 knows about you — it rides every conversation's \
+                system prompt. Stored on this machine only, never retrieved or \
+                cited, yours to edit or clear.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .onAppear { profileDraft = M1K3Persona.userProfile ?? "" }
     }
@@ -105,9 +116,13 @@ struct YouSettingsPane: View {
         } header: {
             SettingsHeader("Memories", systemImage: "brain.head.profile")
         } footer: {
-            Text("M1K3 extracts durable facts about you — preferences, decisions, "
-                + "people — from conversations, on-device. Review and erase anytime.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                M1K3 extracts durable facts about you — preferences, decisions, \
+                people — from conversations, on-device. Review and erase anytime.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .sheet(isPresented: $showMemories) {
             MemoriesView().environment(env)
@@ -122,9 +137,13 @@ struct YouSettingsPane: View {
         } header: {
             SettingsHeader("Todos", systemImage: "checklist")
         } footer: {
-            Text("Suggestions from M1K3 and connected agents land in your inbox as pending. "
-                + "Only you can accept or close a todo.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                Suggestions from M1K3 and connected agents land in your inbox as pending. \
+                Only you can accept or close a todo.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 }

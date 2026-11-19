@@ -17,6 +17,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the Auto card's caption is a single literal (no `+`
+//  join), and a brain card's size line is whole with or without the memory note (no `+=` fragment). English unchanged.
 
 import M1K3Inference
 import SwiftUI
@@ -100,15 +102,14 @@ struct BrainCard: View {
         guard let megabytes = tier.approxDownloadMB else { return "Built-in · no download" }
         // Already fetched → say so, and don't imply another download is pending.
         if isDownloaded { return "On disk · ready" }
-        var label = if megabytes >= 1000 {
-            String(format: "~%.1f GB · one-time download", Double(megabytes) / 1000)
-        } else {
-            "~\(megabytes) MB · one-time download"
-        }
+        // The size keeps its exact digits; the line is whole, with or without the memory note (no `+=` fragment).
+        let size = megabytes >= 1000
+            ? String(format: "~%.1f GB", Double(megabytes) / 1000)
+            : "~\(megabytes) MB"
         if isLocked, let floor = tier.minimumPhysicalMemoryGB {
-            label += " · needs \(Int(floor))GB+ memory"
+            return String(localized: "\(size) · one-time download · needs \(Int(floor))GB+ memory")
         }
-        return label
+        return String(localized: "\(size) · one-time download")
     }
 }
 
@@ -136,8 +137,7 @@ struct AutoBrainCard: View {
                     Text("Recommended for most people")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.tint)
-                    Text("M1K3 picks the best brain for this Mac and keeps adapting to "
-                        + "power, memory and heat. Change it any time.")
+                    Text("M1K3 picks the best brain for this Mac and keeps adapting to power, memory and heat. Change it any time.")
                         .font(.callout)
                         .foregroundStyle(.readableSecondary)
                         .fixedSize(horizontal: false, vertical: true)
