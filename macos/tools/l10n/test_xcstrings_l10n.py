@@ -1,0 +1,309 @@
+"""Tests for xcstrings_l10n.py — the pure helpers (serialise, key → source regex,
+privacy hint, apply one translation). The file walk is verify-by-run."""
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.dirname(__file__))
+import xcstrings_l10n as l10n
+
+# --------------------------------------------------------------------------- #
+# dumps: Xcode's own JSON shape, so a re-sync leaves no diff
+# --------------------------------------------------------------------------- #
+
+def test_dumps_matches_xcode_spacing_and_empty_objects():
+    catalog = {"sourceLanguage": "en", "strings": {"Hi": {}, "Yo": {"comment": "c"}}, "version": "1.0"}
+    text = l10n.dumps(catalog)
+    assert text == (
+        '{\n  "sourceLanguage" : "en",\n  "strings" : {\n    "Hi" : {\n\n    },\n'
+        '    "Yo" : {\n      "comment" : "c"\n    }\n  },\n  "version" : "1.0"\n}\n'
+    )
+
+
+def test_dumps_keeps_non_ascii_unescaped():
+    assert "Grüß" in l10n.dumps({"strings": {"Grüß": {}}})
+
+
+def test_dumps_round_trips_a_real_shape():
+    catalog = {"sourceLanguage": "en", "strings": {
+        "%@ downloaded": {"comment": "Title", "localizations": {"en": {"stringUnit": {"state": "new", "value": "%@ downloaded"}}}}
+    }, "version": "1.0"}
+    assert json.loads(l10n.dumps(catalog)) == catalog
+
+
+# --------------------------------------------------------------------------- #
+# source_pattern: find the call site of a key in Swift source
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("key, line", [
+    ("Done", 'Button("Done") { dismiss() }'),
+    ("%@ is ready", 'String(localized: "\\(name) is ready")'),
+    ("Loaded %lld of %lld", 'Text("Loaded \\(done) of \\(total)")'),
+    ('"%@" isn\'t a link', 'message = "\\"\\(text)\\" isn\'t a link"'),
+    ("50%% done", 'Text("50% done")'),
+])
+def test_source_pattern_finds_the_literal(key, line):
+    assert re.search(l10n.source_pattern(key), line)
+
+
+def test_source_pattern_does_not_match_a_longer_literal():
+    assert not re.search(l10n.source_pattern("Done"), 'Text("Done editing")')
+
+
+# --------------------------------------------------------------------------- #
+# privacy_hint: the lines a native speaker must read (Kev, 2026-11-19, decision 3)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("text", [
+    "Web search is on.",
+    "The audio never leaves your Mac.",
+    "Private Cloud Compute answers this one.",
+    "Your notes stay on this device.",
+    "M1K3 sends the question to DuckDuckGo.",
+])
+def test_privacy_hint_flags_egress_copy(text):
+    assert l10n.privacy_hint(text)
+
+
+@pytest.mark.parametrize("text", ["Done", "Rename chat", "Lil is thinking…"])
+def test_privacy_hint_leaves_plain_ui_alone(text):
+    assert not l10n.privacy_hint(text)
+
+
+# --------------------------------------------------------------------------- #
+# apply_one: write a translation into an entry, refusing a bad one
+# --------------------------------------------------------------------------- #
+
+def test_apply_one_writes_a_translated_string_unit():
+    entry: dict = {}
+    l10n.apply_one(entry, "Rename chat", "de", {"value": "Chat umbenennen"}, review=False)
+    assert entry["localizations"]["de"] == {"stringUnit": {"state": "translated", "value": "Chat umbenennen"}}
+
+
+def test_apply_one_marks_privacy_copy_needs_review():
+    entry: dict = {}
+    l10n.apply_one(entry, "Web search is on.", "fr", {"value": "La recherche web est activée."}, review=True)
+    assert entry["localizations"]["fr"]["stringUnit"]["state"] == "needs_review"
+
+
+def test_apply_one_keeps_locales_sorted_and_english_untouched():
+    entry = {"localizations": {"en": {"stringUnit": {"state": "new", "value": "%@ %@"}}}}
+    l10n.apply_one(entry, "%@ %@", "pt-BR", {"value": "%1$@ %2$@"}, review=False)
+    l10n.apply_one(entry, "%@ %@", "de", {"value": "%1$@ %2$@"}, review=False)
+    assert list(entry["localizations"]) == ["de", "en", "pt-BR"]
+    assert entry["localizations"]["en"]["stringUnit"]["value"] == "%@ %@"
+
+
+def test_apply_one_writes_plural_variations():
+    entry: dict = {}
+    l10n.apply_one(entry, "%lld documents", "de",
+                   {"plural": {"one": "%lld Dokument", "other": "%lld Dokumente"}}, review=False)
+    plural = entry["localizations"]["de"]["variations"]["plural"]
+    assert plural["one"]["stringUnit"] == {"state": "translated", "value": "%lld Dokument"}
+    assert plural["other"]["stringUnit"]["value"] == "%lld Dokumente"
+
+
+def test_apply_one_refuses_a_plural_without_other():
+    with pytest.raises(ValueError, match="other"):
+        l10n.apply_one({}, "%lld documents", "de", {"plural": {"one": "%lld Dokument"}}, review=False)
+
+
+def _phrase_entry(key):
+    return {"localizations": {"en": {"stringSet": {"state": "new", "values": [key]}}}}
+
+
+def test_apply_one_writes_a_shortcut_phrase_set():
+    entry: dict = _phrase_entry("Ask ${applicationName}")
+    phrases = ["Frag ${applicationName}", "Stell ${applicationName} eine Frage"]
+    l10n.apply_one(entry, "Ask ${applicationName}", "de", {"values": phrases}, review=False)
+    assert entry["localizations"]["de"] == {"stringSet": {"state": "translated", "values": phrases}}
+
+
+def test_apply_one_refuses_a_phrase_without_the_app_name():
+    with pytest.raises(ValueError, match="lost the parameter"):
+        l10n.apply_one(_phrase_entry("Ask ${applicationName}"), "Ask ${applicationName}", "de",
+                       {"values": ["Frag M1K3"]}, review=False)
+
+
+def test_apply_one_refuses_a_dropped_argument():
+    with pytest.raises(ValueError, match="missing argument"):
+        l10n.apply_one({}, "%@ is ready", "de", {"value": "Fertig"}, review=False)
+
+
+def test_apply_one_refuses_a_rekinded_argument():
+    with pytest.raises(ValueError, match="int"):
+        l10n.apply_one({}, "%lld left", "fr", {"value": "%@ restants"}, review=False)
+
+
+def test_apply_one_allows_reordered_positional_arguments():
+    entry: dict = {}
+    l10n.apply_one(entry, "%1$@ of %2$@", "de", {"value": "%2$@: %1$@"}, review=False)
+    assert entry["localizations"]["de"]["stringUnit"]["value"] == "%2$@: %1$@"
+
+
+def test_apply_one_refuses_an_empty_value():
+    with pytest.raises(ValueError, match="empty"):
+        l10n.apply_one({}, "Done", "de", {"value": "  "}, review=False)
+
+
+def test_apply_one_refuses_a_locale_outside_the_wave():
+    with pytest.raises(ValueError, match="locale"):
+        l10n.apply_one({}, "Done", "en", {"value": "Done"}, review=False)
+
+
+# --------------------------------------------------------------------------- #
+# translatable: which keys a translator ever sees
+# --------------------------------------------------------------------------- #
+
+def test_translatable_skips_do_not_translate_blank_and_stale():
+    strings = {
+        "": {"shouldTranslate": False},
+        " ": {},
+        "M1K3": {"shouldTranslate": False},
+        "Gone": {"extractionState": "stale"},
+        "Done": {},
+    }
+    assert [key for key, _ in l10n.translatable(strings)] == ["Done"]
+
+
+def test_source_text_prefers_the_english_value():
+    entry = {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Mic access lets M1K3 hear you."}}}}
+    assert l10n.source_text("NSMicrophoneUsageDescription", entry) == "Mic access lets M1K3 hear you."
+    assert l10n.source_text("Done", {}) == "Done"
+
+
+def test_apply_one_refuses_a_lost_intent_parameter():
+    with pytest.raises(ValueError, match="todoTitle"):
+        l10n.apply_one({}, "Add ${todoTitle} to M1K3's todos", "de", {"value": "Zu den Todos hinzufügen"}, review=False)
+
+
+def test_apply_one_keeps_an_intent_parameter_anywhere_in_the_sentence():
+    entry: dict = {}
+    l10n.apply_one(entry, "Add ${todoTitle} to M1K3's todos", "de",
+                   {"value": "${todoTitle} zu M1K3s Todos hinzufügen"}, review=False)
+    assert "${todoTitle}" in entry["localizations"]["de"]["stringUnit"]["value"]
+
+
+# --------------------------------------------------------------------------- #
+# Review fold (2026-11-20): dumps never touches braces inside a string
+# --------------------------------------------------------------------------- #
+
+def test_dumps_leaves_braces_inside_strings_alone():
+    catalog = {"strings": {"Use {} here": {"localizations": {"de": {"stringUnit": {"state": "translated",
+                                                                                  "value": "Nimm {} hier"}}}},
+                           "Empty": {}}}
+    text = l10n.dumps(catalog)
+    assert json.loads(text) == catalog
+    assert '"Use {} here"' in text and '"Nimm {} hier"' in text
+
+
+# --------------------------------------------------------------------------- #
+# Review fold: the shape of a draft must match its entry
+# --------------------------------------------------------------------------- #
+
+def test_apply_one_checks_every_intent_token_in_a_phrase():
+    with pytest.raises(ValueError, match=r"lost the parameter \$\{question\}"):
+        l10n.apply_one(_phrase_entry("Ask ${applicationName} ${question}"), "Ask ${applicationName} ${question}", "de",
+                       {"values": ["Frag ${applicationName}"]}, review=False)
+
+
+def test_apply_one_refuses_a_plain_value_for_a_phrase_set():
+    entry = {"localizations": {"en": {"stringSet": {"state": "new", "values": ["Ask ${applicationName}"]}}}}
+    with pytest.raises(ValueError, match="does not fit the entry"):
+        l10n.apply_one(entry, "Ask ${applicationName}", "de", {"value": "Frag ${applicationName}"}, review=False)
+
+
+def test_apply_one_refuses_a_plural_for_a_key_without_one_integer():
+    with pytest.raises(ValueError, match="exactly one integer"):
+        l10n.apply_one({}, "%@ downloaded", "de", {"plural": {"one": "%@", "other": "%@"}}, review=False)
+
+
+def test_apply_one_refuses_a_draft_with_two_shapes():
+    with pytest.raises(ValueError, match="one of"):
+        l10n.apply_one({}, "Done", "de", {"value": "Fertig", "values": ["Fertig"]}, review=False)
+
+
+# --------------------------------------------------------------------------- #
+# Review fold: which lines a native speaker must read is the tool's call, not the draft's
+# --------------------------------------------------------------------------- #
+
+def test_needs_native_read_holds_privacy_sentences_and_permission_prompts():
+    assert l10n.needs_native_read("M1K3App/InfoPlist.xcstrings", "Mic")
+    assert l10n.needs_native_read("x/Localizable.xcstrings", "Your notes stay on this Mac, encrypted.")
+    assert not l10n.needs_native_read("x/Localizable.xcstrings", "Web search")  # a label names, never promises
+    assert not l10n.needs_native_read("x/Localizable.xcstrings", "Rename this chat for me later")
+
+
+# --------------------------------------------------------------------------- #
+# Review fold: apply() end to end on a scratch catalog
+# --------------------------------------------------------------------------- #
+
+def _catalog(tmp_path, strings):
+    folder = tmp_path / "App"
+    folder.mkdir(exist_ok=True)
+    path = folder / "Localizable.xcstrings"
+    path.write_text(l10n.dumps({"sourceLanguage": "en", "strings": strings, "version": "1.0"}), encoding="utf-8")
+    return "App/Localizable.xcstrings"
+
+
+def _drafts(tmp_path, rows, name="drafts.json"):
+    path = tmp_path / name
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    return str(path)
+
+
+PRIVACY = "Your notes stay on this Mac and never leave it."
+
+
+def test_apply_holds_privacy_even_when_the_draft_says_otherwise(tmp_path):
+    cat = _catalog(tmp_path, {"Rename chat": {}, PRIVACY: {}})
+    rows = [{"catalog": cat, "key": "Rename chat", "locale": "de", "value": "Chat umbenennen", "review": False},
+            {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben auf diesem Mac.",
+             "review": False}]
+    pending = tmp_path / "pending.json"
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, rows), None, str(pending)) == 0
+    strings = json.loads((tmp_path / cat).read_text())["strings"]
+    assert strings["Rename chat"]["localizations"]["de"]["stringUnit"]["state"] == "translated"
+    assert "localizations" not in strings[PRIVACY]
+    assert [r["key"] for r in json.loads(pending.read_text())] == [PRIVACY]
+
+
+def test_apply_merges_into_an_existing_pending_file(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending = tmp_path / "pending.json"
+    first = [{"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}]
+    second = [{"catalog": cat, "key": PRIVACY, "locale": "fr", "value": "Tes notes restent ici.", "review": True}]
+    l10n.apply(str(tmp_path), _drafts(tmp_path, first, "a.json"), None, str(pending))
+    l10n.apply(str(tmp_path), _drafts(tmp_path, second, "b.json"), None, str(pending))
+    assert sorted(r["locale"] for r in json.loads(pending.read_text())) == ["de", "fr"]
+
+
+def test_apply_refuses_privacy_rows_without_a_hold_or_an_approval(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    rows = [{"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}]
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, rows), None) == 1
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]
+
+
+def test_apply_approved_writes_translated_and_clears_the_pending_rows(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    row = {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}
+    pending = tmp_path / "pending.json"
+    l10n.apply(str(tmp_path), _drafts(tmp_path, [row]), None, str(pending))
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, [row], "ok.json"), None, str(pending), approved=True) == 0
+    unit = json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]["localizations"]["de"]["stringUnit"]
+    assert unit["state"] == "translated"
+    assert json.loads(pending.read_text()) == []
+
+
+def test_apply_rejects_rows_for_a_missing_catalog_without_touching_the_others(tmp_path):
+    cat = _catalog(tmp_path, {"Rename chat": {}})
+    rows = [{"catalog": "Nope/Localizable.xcstrings", "key": "x", "locale": "de", "value": "y"},
+            {"catalog": cat, "key": "Rename chat", "locale": "de", "value": "Chat umbenennen"}]
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, rows), None, str(tmp_path / "p.json")) == 1
+    assert json.loads((tmp_path / cat).read_text())["strings"]["Rename chat"]["localizations"]["de"]
