@@ -76,6 +76,8 @@
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the streaming turn begins the answer latch
+//  before anything awaits again; a page command re-begins it with the interface's language. Confidence 0.8.
 
 import AppKit
 import AVFoundation
@@ -647,14 +649,15 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 soundEffects.play(.endpointHeard) // got it — one soft tick down
+                // Begin before anything awaits, so a tail of the previous answer never reads a stale latch.
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
                 // A spoken page command is the person's, never the model's: answer it here (#839). Its reply is a
-                // catalog string, so it speaks the interface's language, not the speaker's.
+                // catalog string, so it speaks the interface's language, not the speaker's: re-begin with that.
                 if let reply = await handleVoicePageCommand(question) {
                     spokenAnswerLanguage.begin(seed: SpokenLanguage.interfaceLanguage())
                     onChunk(reply)
                     return .success(())
                 }
-                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
                 // StreamedAnswerFolder carries the fold-forward guard (only
                 // prefix-extending updates — a FOLLOWUPS/polish shrink must
                 // never re-speak the answer, the 2026-07-25 finding) as a

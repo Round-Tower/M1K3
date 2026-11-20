@@ -187,6 +187,10 @@ struct SpokenChunkLanguageTests {
         #expect(SpokenLanguage.interfaceLanguage(["en-GB"]) == SpokenLanguage.seed)
         #expect(SpokenLanguage.interfaceLanguage(["Base"]) == SpokenLanguage.seed)
         #expect(SpokenLanguage.interfaceLanguage([]) == SpokenLanguage.seed)
+        // The identifier passes through whole, and the voice ranking reads it the way it was written for.
+        #expect(SpokenLanguage.interfaceLanguage(["zh-Hans"]) == "zh-Hans")
+        #expect(BestSystemVoice.preferredRegion(for: "pt-BR") == "br")
+        #expect(BestSystemVoice.preferredRegion(for: "zh-Hans") == "cn")
     }
 
     @Test("narration is recognised exactly, never by a prefix inside an answer")
