@@ -4,6 +4,15 @@
     "Add a todo with ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Füge mit ${applicationName} ein To-do hinzu",
+              "Lass ${applicationName} ein To-do hinzufügen"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -12,12 +21,48 @@
               "Have ${applicationName} add a task"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Añade una tarea con ${applicationName}",
+              "Pídele a ${applicationName} que añada una tarea"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ajoute une tâche avec ${applicationName}",
+              "Demande à ${applicationName} d’ajouter une tâche"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Adicione uma tarefa no ${applicationName}",
+              "Peça ao ${applicationName} para adicionar uma tarefa"
+            ]
+          }
         }
       }
     },
     "Ask ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Frag ${applicationName}",
+              "Stell ${applicationName} eine Frage"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -26,12 +71,48 @@
               "Ask ${applicationName} a question"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Pregúntale a ${applicationName}",
+              "Hazle una pregunta a ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Demande à ${applicationName}",
+              "Pose une question à ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Pergunte ao ${applicationName}",
+              "Faça uma pergunta ao ${applicationName}"
+            ]
+          }
         }
       }
     },
     "Have ${applicationName} speak" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Lass ${applicationName} sprechen",
+              "Lass ${applicationName} etwas sagen"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -40,12 +121,48 @@
               "Tell ${applicationName} to speak"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Haz que ${applicationName} hable",
+              "Dile a ${applicationName} que hable"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Fais parler ${applicationName}",
+              "Demande à ${applicationName} de parler"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Faça o ${applicationName} falar",
+              "Peça ao ${applicationName} para falar"
+            ]
+          }
         }
       }
     },
     "List ${applicationName}'s todos" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Zeig die To-dos von ${applicationName}",
+              "Was steht auf der Liste von ${applicationName}"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -54,12 +171,48 @@
               "What's on ${applicationName}'s list"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Muestra las tareas de ${applicationName}",
+              "Qué hay en la lista de ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Affiche les tâches de ${applicationName}",
+              "Qu’y a-t-il sur la liste de ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Liste as tarefas do ${applicationName}",
+              "O que tem na lista do ${applicationName}"
+            ]
+          }
         }
       }
     },
     "Recall a memory from ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ruf eine Erinnerung aus ${applicationName} ab",
+              "Was hat sich ${applicationName} gemerkt"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -68,12 +221,48 @@
               "What does ${applicationName} remember about"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Recupera un recuerdo de ${applicationName}",
+              "Qué recuerda ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Retrouve un souvenir dans ${applicationName}",
+              "Qu’est-ce que ${applicationName} a retenu"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Recupere uma lembrança do ${applicationName}",
+              "O que o ${applicationName} lembra"
+            ]
+          }
         }
       }
     },
     "Remember this with ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Merk dir das mit ${applicationName}",
+              "Lass ${applicationName} sich etwas merken"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -82,12 +271,48 @@
               "Have ${applicationName} remember something"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Guarda esto en la memoria de ${applicationName}",
+              "Haz que ${applicationName} recuerde algo"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Mémorise ça avec ${applicationName}",
+              "Demande à ${applicationName} de mémoriser quelque chose"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Guarde isto na memória do ${applicationName}",
+              "Peça ao ${applicationName} para guardar algo na memória"
+            ]
+          }
         }
       }
     },
     "Search ${applicationName}'s knowledge" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Durchsuche das Wissen von ${applicationName}",
+              "Such in ${applicationName} nach etwas"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
@@ -96,18 +321,81 @@
               "Search ${applicationName} for something"
             ]
           }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Busca en el conocimiento de ${applicationName}",
+              "Busca algo en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Cherche dans les connaissances de ${applicationName}",
+              "Cherche quelque chose dans ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Busque no conhecimento do ${applicationName}",
+              "Busque algo no ${applicationName}"
+            ]
+          }
         }
       }
     },
     "Talk to ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Sprich mit ${applicationName}",
+              "Öffne den Sprachmodus von ${applicationName}"
+            ]
+          }
+        },
         "en" : {
           "stringSet" : {
             "state" : "new",
             "values" : [
               "Talk to ${applicationName}",
               "Open ${applicationName} voice mode"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Habla con ${applicationName}",
+              "Abre el modo de voz de ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Parle à ${applicationName}",
+              "Ouvre le mode vocal de ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Fale com o ${applicationName}",
+              "Abra o modo de voz do ${applicationName}"
             ]
           }
         }

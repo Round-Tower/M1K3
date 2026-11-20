@@ -1,0 +1,562 @@
+[
+ {
+  "en": "brain (Mini/Lil/Big; the model the app runs)",
+  "translation": "cérebro",
+  "note": "Masculine: o cérebro, os cérebros. From the glossary and store copy. 'Change brain…' becomes 'Trocar cérebro…'. Tier names (Mini, Lil, Big, Pocket) stay English and take the masculine article: o Mini, o Lil (store copy: 'O Mini responde')."
+ },
+ {
+  "en": "model (technical: language model, voice model, embedder model)",
+  "translation": "modelo",
+  "note": "Masculine. Use only where English says 'model'. Where English says 'brain', use cérebro."
+ },
+ {
+  "en": "memory (what M1K3 remembers, the store as a whole)",
+  "translation": "memória",
+  "note": "Feminine, mass noun. 'M1K3's memory' becomes 'a memória do M1K3'. 'Memory Constellation' becomes 'Constelação de memórias', after the iOS store copy ('uma constelação das suas memórias')."
+ },
+ {
+  "en": "a memory / memories (one remembered fact; counts, list titles)",
+  "translation": "lembrança / lembranças",
+  "note": "Feminine. From the glossary. Use it for 'Memories' (tab), 'Export Memories…' → 'Exportar lembranças…', '^[%lld memory]' → '^[%lld lembrança](inflect: true)', 'No memories yet' → 'Nenhuma lembrança ainda'."
+ },
+ {
+  "en": "remember (M1K3 speaking / verb)",
+  "translation": "lembrar (de)",
+  "note": "Store copy: 'Eu lembro o que importa para você'. Buttons that save something take 'guardar na memória' (store: 'um toque guarda na minha memória'): 'Remember this photo' → 'Guardar esta foto na memória'."
+ },
+ {
+  "en": "remembered (label / state)",
+  "translation": "guardado na memória",
+  "note": "Agrees with its noun: 'Foto guardada na memória'. 'Remembered on this device' becomes 'Guardado neste dispositivo'."
+ },
+ {
+  "en": "forget",
+  "translation": "esquecer",
+  "note": "Button 'Forget' → 'Esquecer'. Use this for M1K3's memory. 'Delete' and 'Remove' have their own rows."
+ },
+ {
+  "en": "recall (App Intent: recall a memory)",
+  "translation": "recuperar",
+  "note": "'Recall Memory' → 'Recuperar lembrança'. Keep '${query}' exactly as written."
+ },
+ {
+  "en": "fact (a remembered fact)",
+  "translation": "fato",
+  "note": "Brazilian spelling, never 'facto'. 'corrected facts' → 'fatos corrigidos'."
+ },
+ {
+  "en": "knowledge",
+  "translation": "conhecimento",
+  "note": "Store copy: 'Traga seu conhecimento'. 'knowledge base' → 'base de conhecimento'. 'knowledge graph' / 'memory graph' → 'grafo de conhecimento' / 'grafo de memória' (store copy)."
+ },
+ {
+  "en": "document / Documents (tab)",
+  "translation": "documento / Documentos",
+  "note": "Masculine. 'Keep this text in Documents' → 'Guardar este texto em Documentos'. Not Apple's Files app, which is Arquivos."
+ },
+ {
+  "en": "note(s) (the person's notes and text that M1K3 indexes)",
+  "translation": "notas",
+  "note": "Feminine, from the store copy ('notas e PDFs'). A feedback note ('Note (optional)', 'add a note on why') is a different thing: use 'comentário'."
+ },
+ {
+  "en": "chat (noun: the conversation surface, 'New chat', 'Chat' tab)",
+  "translation": "conversa",
+  "note": "Feminine. Never 'chat' or 'bate-papo' in the UI. 'New chat' → 'Nova conversa', 'Back to the chat' → 'Voltar à conversa'. The verb 'chat' is 'conversar'."
+ },
+ {
+  "en": "conversation / Conversations (list)",
+  "translation": "conversa / Conversas",
+  "note": "The same word as chat. 'Start a fresh conversation' → 'Começar uma conversa nova'."
+ },
+ {
+  "en": "message",
+  "translation": "mensagem",
+  "note": "Feminine. 'Your message' → 'Sua mensagem'."
+ },
+ {
+  "en": "answer / reply (noun)",
+  "translation": "resposta",
+  "note": "Feminine. The verb is 'responder'. 'Your answer's ready' → 'Sua resposta está pronta'. 'grounded answer' → 'resposta fundamentada'."
+ },
+ {
+  "en": "todo / Todos",
+  "translation": "tarefa / Tarefas",
+  "note": "Feminine, so participles agree: 'concluída', 'sugerida', 'aberta'. 'Add Todo' → 'Adicionar tarefa'. '^[%@ todo](inflect: true) open' → '^[%@ tarefa](inflect: true) aberta(s)': let inflect handle the noun and agree the adjective."
+ },
+ {
+  "en": "mark done",
+  "translation": "marcar como concluída",
+  "note": "Feminine because it agrees with tarefa."
+ },
+ {
+  "en": "suggested / suggestion",
+  "translation": "sugerida / sugestão",
+  "note": "'Suggested — yours to accept' → 'Sugerida — você decide se aceita'. 'pending' → 'pendente'."
+ },
+ {
+  "en": "inbox",
+  "translation": "caixa de entrada"
+ },
+ {
+  "en": "reminder (Apple Reminders item)",
+  "translation": "lembrete",
+  "note": "Masculine, Apple's word. Never use it for M1K3's todos (tarefa) or for a memory (lembrança)."
+ },
+ {
+  "en": "Heartbeat (the feature)",
+  "translation": "Pulsação",
+  "note": "Feminine, capitalised as a feature name: 'a Pulsação está desligada'. 'Show the Heartbeat' → 'Mostrar a Pulsação'."
+ },
+ {
+  "en": "pulse / heartbeat note (one entry the Heartbeat writes)",
+  "translation": "pulso",
+  "note": "Masculine. 'No pulses yet' → 'Nenhum pulso ainda'. 'Clear pulses' → 'Limpar pulsos'. The note itself is 'nota da Pulsação'."
+ },
+ {
+  "en": "companion (the 3D creature)",
+  "translation": "companheiro",
+  "note": "Masculine whatever the creature, from the glossary and store copy. Companion names (Fox, Inkfish, Sparrow…) stay English."
+ },
+ {
+  "en": "face (avatar face) / Pixel face",
+  "translation": "rosto / rosto de pixels",
+  "note": "From the iOS store copy ('um rosto de pixels'). 'Companion face' → 'Rosto do companheiro'. 'Pick my face' → 'Escolha meu rosto'."
+ },
+ {
+  "en": "avatar",
+  "translation": "avatar",
+  "note": "Masculine. 'Hide avatar' → 'Ocultar avatar'."
+ },
+ {
+  "en": "constellation",
+  "translation": "constelação",
+  "note": "Feminine."
+ },
+ {
+  "en": "voice (M1K3's spoken voice; 'Voice' settings tab)",
+  "translation": "voz",
+  "note": "Feminine. 'neural voice' → 'voz neural' (store copy)."
+ },
+ {
+  "en": "M1K3 Voice (the downloadable neural voice)",
+  "translation": "Voz do M1K3",
+  "note": "Read it as a name. Keep the capital V: 'Baixando a Voz do M1K3…'. 'Built-in' (Apple's default voice) → 'Integrada': 'Switch to Built-in voice' → 'Trocar para a voz integrada'."
+ },
+ {
+  "en": "voice mode",
+  "translation": "modo de voz",
+  "note": "Masculine. 'Leave voice mode' → 'Sair do modo de voz'."
+ },
+ {
+  "en": "voice input / voice output",
+  "translation": "entrada de voz / saída de voz"
+ },
+ {
+  "en": "speak / speaking (M1K3 talking aloud)",
+  "translation": "falar / falando",
+  "note": "'M1K3 is speaking' → 'O M1K3 está falando'. 'Speak this answer' → 'Falar esta resposta'. 'Auto-speak answers' → 'Falar respostas automaticamente'."
+ },
+ {
+  "en": "talk (person to M1K3)",
+  "translation": "conversar / falar",
+  "note": "Store copy: 'Fale comigo'. 'Talk to M1K3' → 'Fale com o M1K3'. 'Stop talking' → 'Parar de falar'."
+ },
+ {
+  "en": "listen / Listening",
+  "translation": "ouvir / Ouvindo…",
+  "note": "'Start listening' → 'Começar a ouvir'. 'Stop listening' → 'Parar de ouvir'."
+ },
+ {
+  "en": "microphone / mic",
+  "translation": "microfone",
+  "note": "Masculine. 'the mic' → 'o microfone'. Don't shorten it to 'mic'."
+ },
+ {
+  "en": "mute / unmute",
+  "translation": "silenciar / ativar o som",
+  "note": "Apple's verbs. 'Mute microphone' → 'Silenciar microfone'."
+ },
+ {
+  "en": "dictate / Dictation",
+  "translation": "ditar / Ditado",
+  "note": "Ditado is Apple's feature name (glossary). 'Discard dictation' → 'Descartar ditado'."
+ },
+ {
+  "en": "Speech Recognition (macOS permission) / speech recognition",
+  "translation": "Reconhecimento de Fala / reconhecimento de voz",
+  "note": "Use the capitalised Apple name for the system permission. The store copy says 'reconhecimento de voz no dispositivo' for M1K3's feature."
+ },
+ {
+  "en": "transcript",
+  "translation": "transcrição",
+  "note": "Feminine. 'Import transcript' → 'Importar transcrição'. 'Full transcript in the Agent Log' → 'Transcrição completa no Registro de agentes'."
+ },
+ {
+  "en": "transcribe / transcription",
+  "translation": "transcrever / transcrição",
+  "note": "'Transcribing call…' → 'Transcrevendo chamada…'."
+ },
+ {
+  "en": "caption (a photo's remembered description)",
+  "translation": "legenda",
+  "note": "Feminine, from the store copy ('uma legenda privada'). Where English says 'description', use 'descrição'."
+ },
+ {
+  "en": "call (phone call)",
+  "translation": "chamada",
+  "note": "Feminine, from the store copy ('Memória de chamadas'). Use 'Calls' for the section → 'Chamadas'. For an agent's tool call ('agent-call history'), use 'chamada' too, following the store copy ('os Ajustes contam cada chamada')."
+ },
+ {
+  "en": "record / recording (audio)",
+  "translation": "gravar / gravação",
+  "note": "'Record call' → 'Gravar chamada'. 'Call recording' → 'Gravação de chamadas'. 'Stop recording' → 'Parar gravação'."
+ },
+ {
+  "en": "consent",
+  "translation": "consentimento",
+  "note": "Store copy: 'com o seu consentimento'. This is privacy copy, so translate it literally."
+ },
+ {
+  "en": "reasoning / Reasoning (setting)",
+  "translation": "raciocínio / Raciocínio",
+  "note": "'MODEL REASONING' → 'RACIOCÍNIO DO MODELO'. 'Reasoning models' → 'Modelos de raciocínio'."
+ },
+ {
+  "en": "think / Thinking…",
+  "translation": "pensar / Pensando…",
+  "note": "'Always think' → 'Sempre pensar'. '%@ is thinking' → '%@ está pensando'. 'THINKING…' → 'PENSANDO…'."
+ },
+ {
+  "en": "persona / personality",
+  "translation": "personalidade",
+  "note": "Feminine. 'no M1K3 personality' → 'sem a personalidade do M1K3'. The persona prompt itself stays English and is not in the catalogs."
+ },
+ {
+  "en": "web search",
+  "translation": "busca na web",
+  "note": "Feminine, from the glossary and store copy. 'Web search is off' → 'A busca na web está desligada'. Privacy copy: translate it literally."
+ },
+ {
+  "en": "search (verb, button)",
+  "translation": "buscar",
+  "note": "Apple pt-BR and the store copy use 'buscar'. 'Search Knowledge' → 'Buscar no conhecimento'. 'Clear search' → 'Limpar busca'. Don't use 'pesquisar'."
+ },
+ {
+  "en": "download (noun)",
+  "translation": "download",
+  "note": "Masculine. Store copy: 'um download pequeno'. 'one-time download' → 'download único'. 'Brains & downloads' → 'Cérebros e downloads'."
+ },
+ {
+  "en": "download (verb, button) / downloaded / downloading",
+  "translation": "baixar / baixado / baixando",
+  "note": "Store copy: 'baixar um modelo'. 'Download' button → 'Baixar'. 'Downloading… %lld%%' → 'Baixando… %lld%%'. 'Partly downloaded' → 'Baixado em parte'."
+ },
+ {
+  "en": "fetch (download in the background)",
+  "translation": "baixar",
+  "note": "The same verb as download. Never use 'buscar', which means search. 'Fetching in the background' → 'Baixando em segundo plano'."
+ },
+ {
+  "en": "kit ('Get my kit', 'Fetching your kit')",
+  "translation": "kit",
+  "note": "Masculine. 'Get my kit' → 'Baixar meu kit'."
+ },
+ {
+  "en": "in the background",
+  "translation": "em segundo plano",
+  "note": "Apple's term. 'Background' as a settings label → 'Segundo plano'."
+ },
+ {
+  "en": "update (noun) / update (verb)",
+  "translation": "atualização / atualizar",
+  "note": "'Update available: new weights for this brain' → 'Atualização disponível: novos pesos para este cérebro'."
+ },
+ {
+  "en": "pair / paired / pairing",
+  "translation": "parear / pareado / pareamento",
+  "note": "From the store copy ('pareie seu iPhone'), not Apple's Bluetooth 'emparelhar'. 'Pair a device…' → 'Parear um dispositivo…'. '“%@” wants to pair' → '“%@” quer parear'."
+ },
+ {
+  "en": "device",
+  "translation": "dispositivo",
+  "note": "Masculine. 'on-device' → 'no dispositivo' (glossary). The store copy also uses 'aparelho'. The UI uses 'dispositivo' only. 'this device' → 'este dispositivo'. 'this Mac' → 'este Mac' / 'neste Mac'."
+ },
+ {
+  "en": "on-device",
+  "translation": "no dispositivo",
+  "note": "From the glossary. Privacy copy: keep the force exactly ('only on this Mac' → 'só neste Mac')."
+ },
+ {
+  "en": "private / private by design",
+  "translation": "privado / privado por design",
+  "note": "Agrees with its noun: 'uma legenda privada'. Store copy: 'Privada por design' (agreeing with 'IA')."
+ },
+ {
+  "en": "private cloud (generic, beside the Apple name)",
+  "translation": "nuvem privada",
+  "note": "Feminine, from the store copy. 'Private Cloud Compute' itself stays English."
+ },
+ {
+  "en": "by default / off by default",
+  "translation": "por padrão / desligado por padrão",
+  "note": "From the store copy. Agree the adjective: 'desligada por padrão' when the noun is feminine (busca, Local API). This is privacy copy, so keep the exact force."
+ },
+ {
+  "en": "turn on / turn off; On / Off (state)",
+  "translation": "ligar / desligar; Ligado / Desligado",
+  "note": "The store copy uses ligar/desligar ('ligue a Local API'). Use them in labels and sentences alike, and agree in gender. '%@: on' → '%@: ligado'."
+ },
+ {
+  "en": "switch (a toggle)",
+  "translation": "interruptor",
+  "note": "Masculine, from the store copy ('cada uma com seu interruptor'). To switch brains is 'trocar': 'Switch to %@' → 'Trocar para %@'."
+ },
+ {
+  "en": "Settings (M1K3's settings window)",
+  "translation": "Ajustes",
+  "note": "Masculine plural: 'nos Ajustes'. The release notes left 'Settings > Server' in English only because the UI was English. Localised paths are 'Ajustes ▸ Servidor', 'Ajustes ▸ Privacidade', 'Ajustes ▸ Cérebros e downloads'. Keep the ▸ / → separators as written."
+ },
+ {
+  "en": "Privacy",
+  "translation": "Privacidade",
+  "note": "The settings tab. The macOS path 'Privacy & Security' → 'Privacidade e Segurança'."
+ },
+ {
+  "en": "Server (settings tab) / MCP server",
+  "translation": "Servidor / servidor MCP",
+  "note": "Masculine. 'MCP server (HTTP, localhost)' → 'Servidor MCP (HTTP, localhost)'."
+ },
+ {
+  "en": "Local API",
+  "translation": "Local API",
+  "note": "Kept as a feature name, as the store copy does ('ligue a Local API'). Feminine article: 'a Local API'. 'OpenAI-compatible' → 'compatível com OpenAI'."
+ },
+ {
+  "en": "API key",
+  "translation": "chave de API",
+  "note": "Feminine. 'Make a new API key?' → 'Criar uma nova chave de API?'. 'Copy API key' → 'Copiar chave de API'."
+ },
+ {
+  "en": "access token",
+  "translation": "token de acesso",
+  "note": "Masculine. 'New Token…' → 'Novo token…'."
+ },
+ {
+  "en": "base URL",
+  "translation": "URL base",
+  "note": "Feminine: 'a URL base'."
+ },
+ {
+  "en": "Keychain",
+  "translation": "Chaves",
+  "note": "Apple pt-BR's name (as in 'Chaves do iCloud'). Feminine plural: 'não foi possível ler as Chaves'. Don't mix it up with 'chave de API'."
+ },
+ {
+  "en": "agent / connected agents / coding agents",
+  "translation": "agente / agentes conectados / agentes de código",
+  "note": "Masculine. 'agentes de código' is from the store copy."
+ },
+ {
+  "en": "Agent Log / log",
+  "translation": "Registro de agentes / registro",
+  "note": "'Clear log' → 'Limpar registro'. 'Log agent conversations' → 'Registrar conversas de agentes'. 'Logging is off' → 'O registro está desligado'."
+ },
+ {
+  "en": "tool",
+  "translation": "ferramenta",
+  "note": "Feminine, from the store copy ('18 ferramentas')."
+ },
+ {
+  "en": "script",
+  "translation": "script",
+  "note": "Masculine: 'o script'. 'scripts folder' → 'pasta de scripts'."
+ },
+ {
+  "en": "approve / approved / re-approve",
+  "translation": "aprovar / aprovado / aprovar de novo",
+  "note": "'Approve in System Settings…' → 'Aprovar nos Ajustes do Sistema…'."
+ },
+ {
+  "en": "revoke",
+  "translation": "revogar"
+ },
+ {
+  "en": "install / uninstall",
+  "translation": "instalar / desinstalar",
+  "note": "'Install & Run' → 'Instalar e executar'."
+ },
+ {
+  "en": "quarantine",
+  "translation": "quarentena",
+  "note": "'Quarantine %@' → 'Pôr %@ em quarentena'. 'Quarantine (hidden from AI)' → 'Quarentena (oculto da IA)'."
+ },
+ {
+  "en": "Delete",
+  "translation": "Apagar",
+  "note": "Apple pt-BR's verb, also the store copy's ('ver, buscar e apagar'). Not 'Excluir'."
+ },
+ {
+  "en": "Remove",
+  "translation": "Remover",
+  "note": "'Remove attachment' → 'Remover anexo'."
+ },
+ {
+  "en": "Clear",
+  "translation": "Limpar",
+  "note": "'Clear resolved' → 'Limpar resolvidas' (agrees with tarefas)."
+ },
+ {
+  "en": "Dismiss / Dismissed",
+  "translation": "Ignorar / Ignorado"
+ },
+ {
+  "en": "Done (button)",
+  "translation": "OK",
+  "note": "Apple pt-BR renders the Done button as 'OK'. 'Done' in the sense of a finished task is 'concluída'."
+ },
+ {
+  "en": "Not now / Maybe later",
+  "translation": "Agora não / Talvez depois"
+ },
+ {
+  "en": "Quit",
+  "translation": "Encerrar",
+  "note": "The macOS pt-BR menu verb."
+ },
+ {
+  "en": "Save / Send / Share / Copy / Edit / Open / Close",
+  "translation": "Salvar / Enviar / Compartilhar / Copiar / Editar / Abrir / Fechar",
+  "note": "Apple pt-BR. 'Copied' → 'Copiado'. 'Copy this answer' → 'Copiar esta resposta'."
+ },
+ {
+  "en": "Stop / Resume",
+  "translation": "Parar / Retomar",
+  "note": "'Stop generating' → 'Parar de gerar'."
+ },
+ {
+  "en": "export / import",
+  "translation": "exportar / importar",
+  "note": "'Export Memories…' → 'Exportar lembranças…'. Privacy copy ('not encrypted — it's yours to guard'): translate it literally."
+ },
+ {
+  "en": "attach / attachment",
+  "translation": "anexar / anexo",
+  "note": "Store copy: 'Anexe uma foto'. 'Attached image' → 'Imagem anexada'."
+ },
+ {
+  "en": "re-index / reindexed",
+  "translation": "reindexar / reindexado",
+  "note": "'Re-indexing your notes…' → 'Reindexando suas notas…'."
+ },
+ {
+  "en": "chunk (indexed piece of a document)",
+  "translation": "trecho",
+  "note": "Masculine. '^[%@ chunk](inflect: true)' → '^[%@ trecho](inflect: true)'."
+ },
+ {
+  "en": "embeddings / embedder",
+  "translation": "embeddings / modelo de embeddings",
+  "note": "Technical, so keep 'embeddings' in English (masculine plural). 'Semantic memory' → 'memória semântica'."
+ },
+ {
+  "en": "review panel / side panel",
+  "translation": "painel de revisão / painel lateral",
+  "note": "Masculine. 'Toggle Review Panel' → 'Mostrar/ocultar painel de revisão'. 'review (a link, a file)' → 'revisar'."
+ },
+ {
+  "en": "rate / review (App Store)",
+  "translation": "avaliar / avaliação",
+  "note": "'Rate M1K3 on the App Store…' → 'Avaliar o M1K3 na App Store…'. App Store is feminine: 'a App Store'."
+ },
+ {
+  "en": "report (send a report to Round Tower) / report an issue",
+  "translation": "relatório / relatar um problema",
+  "note": "'Send a short report to Round Tower?' → 'Enviar um relatório curto para a Round Tower?'. Round Tower stays English."
+ },
+ {
+  "en": "Good answer / Needs work (feedback)",
+  "translation": "Boa resposta / Precisa melhorar"
+ },
+ {
+  "en": "history (kept as history; corrected facts)",
+  "translation": "histórico",
+  "note": "Masculine. 'Corrected — kept as history' → 'Corrigido — mantido no histórico'."
+ },
+ {
+  "en": "onboarding",
+  "translation": "configuração inicial",
+  "note": "'Re-run onboarding…' → 'Refazer a configuração inicial…'."
+ },
+ {
+  "en": "About you / Introduce yourself",
+  "translation": "Sobre você / Apresente-se",
+  "note": "Use 'você' throughout (glossary register)."
+ },
+ {
+  "en": "menu bar / Dock",
+  "translation": "barra de menus / Dock",
+  "note": "From the glossary. 'Show in menu bar only' → 'Mostrar só na barra de menus'."
+ },
+ {
+  "en": "HUD (notch HUD, Narration HUD)",
+  "translation": "HUD",
+  "note": "Keep 'HUD' (masculine). 'Notch HUD' → 'HUD no notch'. 'Narration HUD' → 'HUD de narração'. 'heads-up display' → 'painel flutuante'."
+ },
+ {
+  "en": "System Settings / Screen Saver / Location Services / Precise location / Calendars",
+  "translation": "Ajustes do Sistema / Protetor de Tela / Serviços de Localização / Localização Precisa / Calendários",
+  "note": "Apple pt-BR names. Keep their capitalisation inside paths."
+ },
+ {
+  "en": "Reduce Motion",
+  "translation": "Reduzir Movimento",
+  "note": "The Apple accessibility setting name."
+ },
+ {
+  "en": "Startup / Launch at login",
+  "translation": "Inicialização / Abrir ao iniciar sessão"
+ },
+ {
+  "en": "Sound effects / dial-up sound / modem",
+  "translation": "Efeitos sonoros / som de conexão discada / modem",
+  "note": "'Mute the modem' → 'Silenciar o modem'."
+ },
+ {
+  "en": "Seasonal looks / Skin",
+  "translation": "Visuais sazonais / Visual"
+ },
+ {
+  "en": "Dyslexia-friendly / Bionic reader / Reading mode / Serif",
+  "translation": "Para dislexia / Leitura biônica / Modo de leitura / Serifada",
+  "note": "OpenDyslexic stays English."
+ },
+ {
+  "en": "Generation stats / tokens",
+  "translation": "Estatísticas de geração / tokens",
+  "note": "'tokens/sec' → 'tokens/s'."
+ },
+ {
+  "en": "Auto / Auto-route",
+  "translation": "Automático / Escolha automática",
+  "note": "'Let M1K3 choose' → 'Deixar o M1K3 escolher'. M1K3 takes the masculine article: o M1K3, do M1K3, no M1K3."
+ },
+ {
+  "en": "Free up space",
+  "translation": "Liberar espaço"
+ },
+ {
+  "en": "open source (components) / source-available",
+  "translation": "código aberto / source-available",
+  "note": "Use 'código aberto' only for third-party components. M1K3 itself is never 'código aberto': keep 'source-available' as the store copy does (FSL)."
+ },
+ {
+  "en": "Third-party licenses",
+  "translation": "Licenças de terceiros"
+ },
+ {
+  "en": "organisation (managed by your organisation)",
+  "translation": "organização",
+  "note": "'Turned off by your organisation' → 'Desligado pela sua organização'."
+ }
+]

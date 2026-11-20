@@ -2,7 +2,32 @@
   "sourceLanguage" : "en",
   "strings" : {
     "I didn't use the voice files: they don't match what this version of M1K3 expects. Try the download again, and tell us if it keeps happening." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich habe die Stimmdateien nicht verwendet, weil sie nicht zu dem passen, was diese Version von M1K3 erwartet. Versuch den Download noch einmal und sag uns Bescheid, falls das immer wieder passiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No he usado los archivos de voz: no coinciden con lo que espera esta versión de M1K3. Vuelve a intentar la descarga y avísanos si sigue pasando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je n’ai pas utilisé les fichiers de voix : ils ne correspondent pas à ce qu’attend cette version de M1K3. Relance le téléchargement, et dis-le-nous si ça se reproduit."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não usei os arquivos de voz: eles não correspondem ao que esta versão do M1K3 espera. Tente baixar de novo e nos avise se isso continuar acontecendo."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -200,6 +200,9 @@
 //  interpolation groups digits ("3,060") where the old plain String did not.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider`, the Mac's wiring mirrored: the reply
 //  comes back in the turn's language, else the device's. Confidence 0.7 until the language arm reads it.
+//  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
+//  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
+//  Phase 2). English locales unchanged. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
 //  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
@@ -296,7 +299,7 @@ final class AppCore {
     /// recognition is REQUIRED by the provider — no server fallback, by design.
     /// Under the screengrab harness the voice plates get the open mic instead
     /// (AppCore+Screengrab) — no TCC, the hero question as a live partial.
-    let transcriber: any TranscriptionProvider = AppCore.screengrabTranscriber() ?? AppleSpeechTranscriber()
+    let transcriber: any TranscriptionProvider = AppCore.screengrabTranscriber() ?? AppleSpeechTranscriber(locale: SpeechLocalePolicy.forThisApp)
     /// The live voice-first loop — non-nil while the mode is active (drives the
     /// full-screen VoiceScreen cover). Internal-set: AppCore+Voice owns entry/exit.
     var voiceLoop: VoiceLoopController?

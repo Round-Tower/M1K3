@@ -72,6 +72,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a turn that is a spoken page command ("show me that", "scroll
 //  down", "close it") is answered by `handleVoicePageCommand` before the chat sees it, and leaving voice mode closes
 //  the page. Both turn lanes (whole-answer and streaming) check first. Confidence 0.7 (verify-by-launch).
+//  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the polish pass transcribes in `SpeechLocalePolicy.forThisApp`, English
+//  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
+//  Phase 2). English locales unchanged. Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 
 import AppKit
@@ -458,7 +461,7 @@ extension AppEnvironment {
         // analyzer only and OFF unless `-voicePolishPass YES`. The audio is read when the listen
         // stops, like the room. A barge-in watch records nothing (its audio holds M1K3's own echo), so a
         // barge-in turn finds no audio and keeps its live text.
-        let polisher = VoicePolisher.apple()
+        let polisher = VoicePolisher.apple(locale: SpeechLocalePolicy.forThisApp)
         var lastAudio: UtteranceAudio?
         // One voice turn into the chat. The room line only counts as said once a turn really
         // carried it (a send that still finds the chat answering returns at once).

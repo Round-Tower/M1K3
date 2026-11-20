@@ -361,7 +361,7 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends zsh
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7' 'numpy>=1.26,<3'
           python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router tools/dev \
-            tools/screengrab/test_l10n_args.py
+            tools/screengrab/test_l10n_args.py tools/l10n
       # The Claude bundle's bridge and manifest (integrations/mcpb): Node's own test runner, no
       # dependencies. The manifest test reads the MCP kit's tool names, so a tool added to the app
       # without the bundle listing it fails here.
@@ -502,3 +502,5 @@ jobs:
 # Review: claude-opus-5-5, 2026-11-19 — review fold: the guards' pytest also runs tools/screengrab/test_l10n_args.py
 # (only that file: direct/test_hud_capture.py is a Mac lane), with zsh installed for it. Confidence 0.75: the
 # apt step and the test on ubuntu-24.04 are unproven until CI's own run.
+# Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the guards' pytest also runs tools/l10n (the
+# export / apply / review-sheet plumbing that refuses a translation with a dropped argument or a lost ${parameter}).

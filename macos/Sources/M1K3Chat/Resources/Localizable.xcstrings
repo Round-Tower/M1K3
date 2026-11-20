@@ -11,101 +11,654 @@
       "comment" : "Shown when 'Remember this photo' is tapped on a brain that cannot caption"
     },
     "Adult: no adjustments" : {
-      "comment" : "Settings ▸ Content Controls: an adult age range is stored, so nothing is adjusted"
+      "comment" : "Settings ▸ Content Controls: an adult age range is stored, so nothing is adjusted",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erwachsen: keine Anpassungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adulto: sin adaptaciones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adulte : aucun ajustement"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adulto: sem adaptações"
+          }
+        }
+      }
     },
     "Age-appropriate adjustments active" : {
-      "comment" : "Settings ▸ Content Controls: a minor's age range is stored, so content is adjusted"
+      "comment" : "Settings ▸ Content Controls: a minor's age range is stored, so content is adjusted",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Altersgerechte Anpassungen aktiv"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptaciones según la edad activadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustements adaptés à l’âge activés"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptações adequadas à idade ativas"
+          }
+        }
+      }
     },
     "Finished reading" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fertig gelesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectura terminada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture terminée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leitura concluída"
+          }
+        }
+      }
     },
     "I couldn't make out that photo. Try again?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich konnte auf dem Foto nichts erkennen. Noch mal versuchen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No he podido ver bien esa foto. ¿Lo intentas de nuevo?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je n’ai pas réussi à déchiffrer cette photo. Tu réessaies ?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não consegui entender essa foto. Tentar de novo?"
+          }
+        }
+      }
     },
     "It's waiting in the chat." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du findest sie im Chat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te espera en el chat."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elle t’attend dans la discussion."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Está esperando na conversa."
+          }
+        }
+      }
     },
     "Kept “%@” (the first %@ characters) in Documents — %lld chunks (already kept)." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%1$@“ in den Dokumenten abgelegt (die ersten %2$@ Zeichen) – %3$lld Abschnitte (bereits abgelegt)."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks (already kept)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha guardado “%1$@” (los primeros %2$@ caracteres) en Documentos: %3$lld fragmentos (ya estaba guardado)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les %2$@ premiers caractères de « %1$@ » gardés dans Documents — %3$lld fragments (déjà gardés)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardei “%1$@” (os primeiros %2$@ caracteres) em Documentos — %3$lld trechos (já estava lá)."
           }
         }
       }
     },
     "Kept “%@” (the first %@ characters) in Documents — %lld chunks." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%1$@“ in den Dokumenten abgelegt (die ersten %2$@ Zeichen) – %3$lld Abschnitte."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha guardado “%1$@” (los primeros %2$@ caracteres) en Documentos: %3$lld fragmentos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les %2$@ premiers caractères de « %1$@ » gardés dans Documents — %3$lld fragments."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardei “%1$@” (os primeiros %2$@ caracteres) em Documentos — %3$lld trechos."
           }
         }
       }
     },
     "Kept “%@” in Documents — %lld chunks (already kept)." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%1$@“ in den Dokumenten abgelegt – %2$lld Abschnitte (bereits abgelegt)."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Kept “%1$@” in Documents — %2$lld chunks (already kept)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha guardado “%1$@” en Documentos: %2$lld fragmentos (ya estaba guardado)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« %1$@ » gardé dans Documents — %2$lld fragments (déjà gardé)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardei “%1$@” em Documentos — %2$lld trechos (já estava lá)."
           }
         }
       }
     },
     "Kept “%@” in Documents — %lld chunks." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%1$@“ in den Dokumenten abgelegt – %2$lld Abschnitte."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Kept “%1$@” in Documents — %2$lld chunks."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha guardado “%1$@” en Documentos: %2$lld fragmentos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« %1$@ » gardé dans Documents — %2$lld fragments."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardei “%1$@” em Documentos — %2$lld trechos."
+          }
         }
       }
     },
     "No age range declared" : {
-      "comment" : "Settings ▸ Content Controls: no age range has been shared"
+      "comment" : "Settings ▸ Content Controls: no age range has been shared",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Altersgruppe angegeben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha declarado ningún rango de edad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune tranche d’âge déclarée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma faixa etária declarada"
+          }
+        }
+      }
     },
     "Open M1K3 to finish your answer." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne M1K3, damit deine Antwort fertig wird."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre M1K3 para que termine tu respuesta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre M1K3 pour terminer ta réponse."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o M1K3 para terminar sua resposta."
+          }
+        }
+      }
     },
     "Please provide a query for M1K3." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib bitte eine Anfrage für M1K3 an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indica una consulta para M1K3."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique une requête pour M1K3."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe uma busca para o M1K3."
+          }
+        }
+      }
     },
     "Please provide a question for M1K3." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib bitte eine Frage für M1K3 an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indica una pregunta para M1K3."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique une question pour M1K3."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe uma pergunta para o M1K3."
+          }
+        }
+      }
     },
     "Please provide a text for M1K3." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib bitte einen Text für M1K3 an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indica un texto para M1K3."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique un texte pour M1K3."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe um texto para o M1K3."
+          }
+        }
+      }
     },
     "Please provide a title for M1K3." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib bitte einen Titel für M1K3 an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indica un título para M1K3."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique un titre pour M1K3."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe um título para o M1K3."
+          }
+        }
+      }
     },
     "Set up" : {
-      "comment" : "Settings ▸ Content Controls button: share an age range for the first time"
+      "comment" : "Settings ▸ Content Controls button: share an age range for the first time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurer"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurar"
+          }
+        }
+      }
     },
     "The answer is waiting in the chat." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Antwort wartet im Chat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La respuesta te espera en el chat."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La réponse t’attend dans la discussion."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A resposta está esperando na conversa."
+          }
+        }
+      }
     },
     "This brain can't read photos right now." : {
 
     },
     "Update" : {
-      "comment" : "Settings ▸ Content Controls button: share the age range again"
+      "comment" : "Settings ▸ Content Controls button: share the age range again",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualisieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mettre à jour"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizar"
+          }
+        }
+      }
     },
     "Web off" : {
-      "comment" : "Chat status chip: web search is off for the next message"
+      "comment" : "Chat status chip: web search is off for the next message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web aus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web desactivada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web désactivé"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web desligada"
+          }
+        }
+      }
     },
     "Web on" : {
-      "comment" : "Chat status chip: web search can run for the next message"
+      "comment" : "Chat status chip: web search can run for the next message",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web an"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web activada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web activé"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web ligada"
+          }
+        }
+      }
     },
     "Your answer paused" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Antwort wurde pausiert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu respuesta está en pausa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta réponse est en pause"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua resposta foi pausada"
+          }
+        }
+      }
     },
     "Your answer's ready" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Antwort ist fertig"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu respuesta está lista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta réponse est prête"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua resposta está pronta"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

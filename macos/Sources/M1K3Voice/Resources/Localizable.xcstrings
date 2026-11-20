@@ -8,38 +8,267 @@
 
     },
     "Built-in" : {
-      "comment" : "Voice tier name: the device's own system speech voice (no download)."
+      "comment" : "Voice tier name: the device's own system speech voice (no download).",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Integriert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Integrada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intégrée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Integrada"
+          }
+        }
+      }
     },
     "Clean" : {
-      "comment" : "Voice character name."
+      "comment" : "Voice character name.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clean"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pure"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limpa"
+          }
+        }
+      }
     },
     "End with “%@” and M1K3 will take its turn" : {
-      "comment" : "Voice mode hint while listening. %@ is the spoken submit word, already translated (the key “please” in this catalog). Use this language's quotation marks."
+      "comment" : "Voice mode hint while listening. %@ is the spoken submit word, already translated (the key “please” in this catalog). Use this language's quotation marks.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag am Ende „%@“, dann ist M1K3 dran"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termina con “%@” y M1K3 tomará la palabra"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termine ta phrase par « %@ » et M1K3 prendra la parole"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termine com “%@” e será a vez do M1K3"
+          }
+        }
+      }
     },
     "Full range, nothing added. Clearest consonants." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voller Frequenzumfang, nichts hinzugefügt. Die klarsten Konsonanten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gama completa, sin añadidos. Las consonantes más nítidas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spectre complet, rien d’ajouté. Les consonnes les plus nettes."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faixa completa, nada acrescentado. Consoantes mais nítidas."
+          }
+        }
+      }
     },
     "Heavier lo-fi. Character over clarity." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr Lo-Fi. Charakter vor Klarheit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo-fi más marcado. Carácter antes que claridad."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo-fi plus prononcé. Le caractère avant la clarté."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo-fi mais pesado. Caráter acima da clareza."
+          }
+        }
+      }
     },
     "M1K3 Voice" : {
       "comment" : "Voice tier name: never translated.",
       "shouldTranslate" : false
     },
     "Neural voice · ~192 MB" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuronale Stimme · ~192 MB"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voz neuronal · ~192 MB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voix neuronale · ~192 Mo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voz neural · ~192 MB"
+          }
+        }
+      }
     },
     "Radio" : {
-      "comment" : "Voice character name."
+      "comment" : "Voice character name.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radio"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rádio"
+          }
+        }
+      }
     },
     "Ready now · no download" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofort bereit · kein Download"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lista ya · sin descarga"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prête à l’emploi · sans téléchargement"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pronta agora · sem download"
+          }
+        }
+      }
     },
     "Speech recognition isn't allowed — check Settings › Privacy & Security." : {
       "comment" : "Voice mode error. Settings › Privacy & Security must match the system's own localized names for the Settings app and that pane."
     },
     "The signature transmitted voice — a little radio, a little machine." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die charakteristische Funkstimme – ein bisschen Radio, ein bisschen Maschine."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La característica voz transmitida: un poco de radio, un poco de máquina."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La voix signature, transmise par les ondes — un peu radio, un peu machine."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A voz transmitida que é a marca registrada do M1K3 — um pouco de rádio, um pouco de máquina."
+          }
+        }
+      }
     },
     "Your device's built-in speech. Works immediately, always on-device — clear, if a little robotic." : {
 
@@ -48,7 +277,8 @@
 
     },
     "please" : {
-      "comment" : "Spoken word that ends a voice turn (“tell me a story, please”). ONE lowercase word, as speech recognition spells it: M1K3 matches the last word said against it."
+      "comment" : "Spoken word that ends a voice turn (“tell me a story, please”). Not translated while speech recognition is pinned to English (SpeechLocalePolicy): the recogniser hears English, so the hint must teach the English word.",
+      "shouldTranslate" : false
     }
   },
   "version" : "1.0"
