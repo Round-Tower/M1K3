@@ -101,6 +101,9 @@
 //  Not yet seen by Kev's eye.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the Full-experience caption is two whole lines (no
 //  joined list + " — all on."), and the download disclosure is one String(localized:) (no `+` join). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — the Mac pseudo pass showed the door titles, the Private caption and two
+//  disclosure lines single (plain Strings into `experienceButton` / `disclosureCaption`): now String(localized:).
+//  English unchanged.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -294,14 +297,18 @@ struct HelloView: View {
             VStack(spacing: 12) {
                 experienceButton(
                     .fullExperience,
-                    title: needsFallbackDownload ? "Full experience · download & go →" : "Full experience →",
+                    title: needsFallbackDownload
+                        ? String(localized: "Full experience · download & go →")
+                        : String(localized: "Full experience →"),
                     caption: fullExperienceCaption,
                     prominent: true
                 )
                 experienceButton(
                     .privateByDefault,
-                    title: needsFallbackDownload ? "Private · download & go →" : "Private →",
-                    caption: "All features off. Discover them one by one in Settings.",
+                    title: needsFallbackDownload
+                        ? String(localized: "Private · download & go →")
+                        : String(localized: "Private →"),
+                    caption: String(localized: "All features off. Discover them one by one in Settings."),
                     prominent: false
                 )
             }
@@ -367,9 +374,11 @@ struct HelloView: View {
     private var disclosureCaption: String {
         switch FirstRunBrainPolicy.resolve(afm: afm, currentBrain: env.selectedBrain) {
         case let .keepCurrent(tier):
-            return "Runs on \(tier.displayName), your chosen brain · change anytime in Settings."
+            return String(localized: "Runs on \(tier.displayName), your chosen brain · change anytime in Settings.",
+                          comment: "The brain name (Lil, Big, Mini, Home) is never translated.")
         case .useMini, .waitForMini:
-            return "Runs on Mini, Apple's on-device model · change anytime in Settings."
+            return String(localized: "Runs on Mini, Apple's on-device model · change anytime in Settings.",
+                          comment: "Mini is a brain name: never translated.")
         case let .downloadFallback(tier, _):
             return String(localized: """
             Apple Intelligence isn't available here, so I'll fetch my own brain — \(tier.displayName) M1K3, a \

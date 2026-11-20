@@ -210,6 +210,9 @@
     "Agent conversation log" : {
 
     },
+    "All features off. Discover them one by one in Settings." : {
+
+    },
     "All of this lives in Settings too — skip anything." : {
 
     },
@@ -748,6 +751,12 @@
 
     },
     "Free up space" : {
+
+    },
+    "Full experience · download & go →" : {
+
+    },
+    "Full experience →" : {
 
     },
     "Full transcript in the Agent Log" : {
@@ -1355,6 +1364,12 @@
     "Private Cloud Compute" : {
 
     },
+    "Private · download & go →" : {
+
+    },
+    "Private →" : {
+
+    },
     "Propose a new item for M1K3's todo list." : {
 
     },
@@ -1529,6 +1544,12 @@
     },
     "Running self-test…" : {
 
+    },
+    "Runs on %@, your chosen brain · change anytime in Settings." : {
+      "comment" : "The brain name (Lil, Big, Mini, Home) is never translated."
+    },
+    "Runs on Mini, Apple's on-device model · change anytime in Settings." : {
+      "comment" : "Mini is a brain name: never translated."
     },
     "Save" : {
 
