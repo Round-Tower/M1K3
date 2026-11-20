@@ -13,6 +13,13 @@ struct VoiceTierTests {
         #expect(VoiceTier.m1k3Voice.displayName == "M1K3 Voice")
     }
 
+    @Test("the views' localised names render the same English bytes as the wire names")
+    func localizedNamesMatchEnglish() {
+        // `displayName` is what MCP get_status reports; `localizedName` is the views' catalog copy.
+        #expect(VoiceTier.builtin.localizedName == "Built-in")
+        #expect(VoiceTier.m1k3Voice.localizedName == "M1K3 Voice")
+    }
+
     @Test("only M1K3 Voice requires a download")
     func downloadRequirement() {
         #expect(VoiceTier.builtin.approxDownloadMB == nil)

@@ -1,0 +1,112 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ answers. Web search is off." : {
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
+    },
+    "%@ answers. Web search is on." : {
+      "comment" : "VoiceOver label of the chat status line. %@ is the brain's name (Mini, Lil, Big, Brain at Home) or Private Cloud Compute; keep it untranslated"
+    },
+    "%@ can't remember photos. Switch to Lil to remember photos." : {
+      "comment" : "Shown when 'Remember this photo' is tapped on a brain that cannot caption"
+    },
+    "Adult: no adjustments" : {
+      "comment" : "Settings ▸ Content Controls: an adult age range is stored, so nothing is adjusted"
+    },
+    "Age-appropriate adjustments active" : {
+      "comment" : "Settings ▸ Content Controls: a minor's age range is stored, so content is adjusted"
+    },
+    "Finished reading" : {
+
+    },
+    "I couldn't make out that photo. Try again?" : {
+
+    },
+    "It's waiting in the chat." : {
+
+    },
+    "Kept “%@” (the first %@ characters) in Documents — %lld chunks (already kept)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks (already kept)."
+          }
+        }
+      }
+    },
+    "Kept “%@” (the first %@ characters) in Documents — %lld chunks." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” (the first %2$@ characters) in Documents — %3$lld chunks."
+          }
+        }
+      }
+    },
+    "Kept “%@” in Documents — %lld chunks (already kept)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” in Documents — %2$lld chunks (already kept)."
+          }
+        }
+      }
+    },
+    "Kept “%@” in Documents — %lld chunks." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept “%1$@” in Documents — %2$lld chunks."
+          }
+        }
+      }
+    },
+    "No age range declared" : {
+      "comment" : "Settings ▸ Content Controls: no age range has been shared"
+    },
+    "Open M1K3 to finish your answer." : {
+
+    },
+    "Please provide a query for M1K3." : {
+
+    },
+    "Please provide a question for M1K3." : {
+
+    },
+    "Please provide a text for M1K3." : {
+
+    },
+    "Please provide a title for M1K3." : {
+
+    },
+    "Set up" : {
+      "comment" : "Settings ▸ Content Controls button: share an age range for the first time"
+    },
+    "The answer is waiting in the chat." : {
+
+    },
+    "This brain can't read photos right now." : {
+
+    },
+    "Update" : {
+      "comment" : "Settings ▸ Content Controls button: share the age range again"
+    },
+    "Web off" : {
+      "comment" : "Chat status chip: web search is off for the next message"
+    },
+    "Web on" : {
+      "comment" : "Chat status chip: web search can run for the next message"
+    },
+    "Your answer paused" : {
+
+    },
+    "Your answer's ready" : {
+
+    }
+  },
+  "version" : "1.0"
+}

@@ -43,6 +43,14 @@
 //  edge (and one M1K3AnswerBlocks target, not a split UI target). No manifest change.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — M1K3LiveActivity leaf (+ tests): the iPhone Live Activity's phase-only
 //  state, dependency-free; M1K3Chat depends on it for TurnActivityPolicy. No package dependency moves. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: defaultLocalization "en"; M1K3AnswerBlocks carries its own
+//  Localizable.xcstrings and resolves with `bundle: .module` (the spike module; Xcode never pulls package keys into the
+//  app's catalog). No package dependency moves. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0 (package slice): eleven more targets carry a
+//  Localizable.xcstrings resource for their user-facing copy (Chat, Inference, Knowledge, MemoryViz, Heartbeat,
+//  WhisperKit, Calls, Voice, and MLX / Avatar / Kokoro beside their existing resources). Each gains a Bundle.module
+//  bundle the app shells embed; M1K3Knowledge's also lands beside the stdio M1K3MCP binary, which never reads its
+//  strings. No dependency or product moves. Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-19 — M1K3ChatTests copies its Resources folder (the reply-language blind sets
 //  read by ReplyLanguageBlindSetTests). Test-only; no dependency moves. Confidence 0.9.
 
@@ -51,6 +59,9 @@ import PackageDescription
 
 let package = Package(
     name: "M1K3",
+    // Localisation Phase 0 (2026-11-19): a module with a Localizable.xcstrings resource gets its own
+    // bundle and resolves its strings with `bundle: .module`. English, written in en-GB spelling.
+    defaultLocalization: "en",
     // iOS/visionOS added for the multiplatform derisk spike (2026-07-06): the app
     // shell (M1K3App/) is still macOS-only, but the library graph is protocol-seam
     // first, so the products build for iOS 26 / visionOS 26 to prove portability
@@ -255,7 +266,9 @@ let package = Package(
             dependencies: [
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
-            path: "Sources/M1K3Knowledge"
+            path: "Sources/M1K3Knowledge",
+            // Its user-facing copy (the kind labels; the stdio M1K3MCP binary never reads them), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3KnowledgeTests",
@@ -296,7 +309,9 @@ let package = Package(
         .target(
             name: "M1K3MemoryViz",
             dependencies: ["M1K3Memory"],
-            path: "Sources/M1K3MemoryViz"
+            path: "Sources/M1K3MemoryViz",
+            // Its user-facing copy (the constellation's VoiceOver hint), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3MemoryVizTests",
@@ -315,7 +330,9 @@ let package = Package(
             // guardrail refusals and daemon collapses were one silent empty
             // stream. This target stays otherwise dependency-free by design.
             dependencies: ["M1K3LogCore"],
-            path: "Sources/M1K3Inference"
+            path: "Sources/M1K3Inference",
+            // Its user-facing copy (download, onboarding and privacy-line copy), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3InferenceTests",
@@ -431,7 +448,9 @@ let package = Package(
                 // M1K3Knowledge already links GRDB, so zero new build weight.
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
-            path: "Sources/M1K3Chat"
+            path: "Sources/M1K3Chat",
+            // Its user-facing copy (notices, Keep's banner, intent and caption errors), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3ChatTests",
@@ -491,7 +510,9 @@ let package = Package(
             // M1K3AnswerBlocks (#717) — never M1K3Chat or M1K3Inference.
             // M1K3ObjCTry: the one ObjC shim, for the audio player's start (an NSException Swift cannot catch).
             dependencies: ["M1K3LogCore", "M1K3AnswerBlocks", "M1K3ObjCTry"],
-            path: "Sources/M1K3Voice"
+            path: "Sources/M1K3Voice",
+            // Its user-facing copy (voice character and tier copy), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         // The package's only Objective-C: one @try/@catch around a single framework call. No product:
         // it rides inside M1K3Voice.
@@ -537,6 +558,8 @@ let package = Package(
                 .copy("Resources/gemma4-chat-template-canonical.jinja"),
                 // E4B's (Google, 2026-07-15) — a different file from 12B's.
                 .copy("Resources/gemma4-e4b-chat-template-canonical.jinja"),
+                // The integrity sentences a person reads, resolved with `bundle: .module`.
+                .process("Resources/Localizable.xcstrings"),
             ]
         ),
         .testTarget(
@@ -656,7 +679,9 @@ let package = Package(
                 "M1K3LogCore",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
-            path: "Sources/M1K3Heartbeat"
+            path: "Sources/M1K3Heartbeat",
+            // Its user-facing copy (the pulse filter-chip labels), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3HeartbeatTests",
@@ -727,7 +752,9 @@ let package = Package(
         // M1K3MemoryViz precedent for a view inside a Sources target).
         .target(
             name: "M1K3AnswerBlocks",
-            path: "Sources/M1K3AnswerBlocks"
+            path: "Sources/M1K3AnswerBlocks",
+            // Its card and VoiceOver words (AnswerBlockText), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3AnswerBlocksTests",
@@ -760,7 +787,9 @@ let package = Package(
                 "M1K3Knowledge",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
-            path: "Sources/M1K3Calls"
+            path: "Sources/M1K3Calls",
+            // Its user-facing copy (the recorder and writer errors), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3CallsTests",
@@ -785,7 +814,9 @@ let package = Package(
                 "M1K3Inference",
                 .product(name: "WhisperKit", package: "WhisperKit"),
             ],
-            path: "Sources/M1K3WhisperKit"
+            path: "Sources/M1K3WhisperKit",
+            // Its user-facing copy (the speech-model picker names), resolved with `bundle: .module`.
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3WhisperKitTests",
@@ -802,7 +833,7 @@ let package = Package(
             // Per-clip companion USDZs (Fox v1; more are a folder + spec). Copied
             // verbatim — RealityKit loads them via Bundle.module at the app layer.
             // SoundEffects: short UI earcons (AVAudioPlayer via Bundle.module).
-            resources: [.copy("Companions"), .copy("SoundEffects")]
+            resources: [.copy("Companions"), .copy("SoundEffects"), .process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3AvatarTests",
@@ -834,7 +865,7 @@ let package = Package(
             // Swift source and isn't a runtime resource — exclude it explicitly so
             // SwiftPM doesn't warn about unhandled files on every build.
             exclude: ["MLX/Vendored/README.md", "MLX/Vendored/LICENSE"],
-            resources: [.copy("Resources/g2p-en-gb.deflate")]
+            resources: [.copy("Resources/g2p-en-gb.deflate"), .process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "M1K3KokoroTests",

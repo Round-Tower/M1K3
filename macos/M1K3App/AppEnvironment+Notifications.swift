@@ -31,6 +31,9 @@
 //  verify-by-launch — ⌘R with both toggles on).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — no banners under the screengrab
 //  harness (one landed in a voice plate). Confidence now 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: the five ping titles and the four fixed bodies go
+//  through String(localized:) (Bundle.main); English renders word for word. The heartbeat body stays the
+//  pulse text M1K3 composed.
 
 import Foundation
 import M1K3Chat
@@ -84,7 +87,17 @@ enum TurnNotifier {
     /// Post the generic "answer ready" notification. No content preview by design
     /// (privacy). The center silently drops it if authorization was never granted.
     static func notifyTurnFinished() async {
-        await post(.turnFinished, title: "Your answer's ready", body: "It's waiting in the chat.")
+        await post(
+            .turnFinished,
+            title: String(
+                localized: "Your answer's ready",
+                comment: "Notification title: a long answer finished while M1K3 was in the background."
+            ),
+            body: String(
+                localized: "It's waiting in the chat.",
+                comment: "Notification body under \"Your answer's ready\". Never the answer text (privacy)."
+            )
+        )
     }
 
     /// A brain finished downloading in the background — ready to load. The brain
@@ -92,18 +105,48 @@ enum TurnNotifier {
     /// unlike a turn's content. The name leads the TITLE: the news is WHICH
     /// brain, and a title that repeats the app name says nothing (principle 5).
     static func notifyDownloadComplete(modelName: String) async {
-        await post(.downloadComplete, title: "\(modelName) downloaded", body: "Ready to load.")
+        await post(
+            .downloadComplete,
+            title: String(
+                localized: "\(modelName) downloaded",
+                comment: "Notification title. The argument is a brain name (Lil, Big or a model id), never translated."
+            ),
+            body: String(
+                localized: "Ready to load.",
+                comment: "Notification body after a brain finished downloading."
+            )
+        )
     }
 
     /// A brain finished loading and M1K3 can now answer with it.
     static func notifyModelReady(modelName: String) async {
-        await post(.brainReady, title: "\(modelName) is ready", body: "Loaded and ready to answer.")
+        await post(
+            .brainReady,
+            title: String(
+                localized: "\(modelName) is ready",
+                comment: "Notification title. The argument is a brain name (Lil, Big or a model id), never translated."
+            ),
+            body: String(
+                localized: "Loaded and ready to answer.",
+                comment: "Notification body after a brain finished loading."
+            )
+        )
     }
 
     /// A delegated deep dive landed in the chat. No content preview by design
     /// (privacy — same stance as the turn-finished ping).
     static func notifyDeepDiveFinished() async {
-        await post(.deepDive, title: "Deep dive finished", body: "The background work is ready in the chat.")
+        await post(
+            .deepDive,
+            title: String(
+                localized: "Deep dive finished",
+                comment: "Notification title: a delegated deep dive delivered its result."
+            ),
+            body: String(
+                localized: "The background work is ready in the chat.",
+                comment: "Notification body under \"Deep dive finished\". Never the result text (privacy)."
+            )
+        )
     }
 
     /// A heartbeat pulse landed. DELIBERATE exception to the generic-body rule
@@ -116,7 +159,14 @@ enum TurnNotifier {
     /// "M1K3" as its header, so "M1K3's heartbeat" spent a title line saying
     /// the app name twice.
     static func notifyHeartbeatPulse(text: String) async {
-        await post(.heartbeat, title: "Heartbeat", body: text)
+        await post(
+            .heartbeat,
+            title: String(
+                localized: "Heartbeat",
+                comment: "Notification title for the ambient status pulse (the Heartbeat feature)."
+            ),
+            body: text
+        )
     }
 
     /// Shared post path — no trigger (immediate). The center silently drops it

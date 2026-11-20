@@ -1,0 +1,180 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ are each a switch in Settings." : {
+
+    },
+    "%@ is a switch in Settings." : {
+
+    },
+    "%@ needs a newer chip than this device has. Staying on Mini." : {
+      "comment" : "Settings note on an older chip. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+    },
+    "%@ runs on a real device — the Simulator has no GPU for MLX. Staying on Mini." : {
+      "comment" : "Settings note in the Simulator. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+    },
+    "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro." : {
+      "comment" : "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated."
+    },
+    "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device." : {
+      "comment" : "Brain card copy for Lil, on an iPhone or iPad (\"your device\")."
+    },
+    "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine." : {
+      "comment" : "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac)."
+    },
+    "A small brain for this Mac, which can't run Apple Intelligence." : {
+
+    },
+    "A small brain for this Mac." : {
+
+    },
+    "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your Vision Pro." : {
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on Apple Vision Pro. M1K3 is the app's name; Vision Pro is Apple's product name: keep both untranslated."
+    },
+    "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your device." : {
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on an iPhone or iPad (\"your device\"). M1K3 is the app's name."
+    },
+    "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your machine." : {
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on a Mac (\"your machine\" is the Mac). M1K3 is the app's name."
+    },
+    "Also get semantic memory (%@)" : {
+
+    },
+    "Apple's built-in on-device model. No download. The quickest way to start." : {
+      "comment" : "Brain card copy for Mini (Apple's on-device model)."
+    },
+    "Besides model downloads, the one capability that sends anything off this Mac: every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way." : {
+
+    },
+    "Better dictation than Apple Speech (WhisperKit %@)." : {
+
+    },
+    "Better dictation than Apple Speech." : {
+
+    },
+    "Better recall of your notes." : {
+
+    },
+    "Better recall of your notes. Starts after %@ is ready." : {
+
+    },
+    "Big" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "Couldn't download — try again from Settings ▸ Brains & downloads" : {
+
+    },
+    "Couldn't start just now — try again from Settings ▸ Brains & downloads" : {
+
+    },
+    "Download stopped." : {
+
+    },
+    "Downloading…" : {
+
+    },
+    "Every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way." : {
+
+    },
+    "Fast and focused" : {
+      "comment" : "Tagline under the brain name Mini."
+    },
+    "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes." : {
+
+    },
+    "Finds your notes by meaning. Re-indexes them once." : {
+
+    },
+    "Full intelligence" : {
+      "comment" : "Tagline under the brain name Big."
+    },
+    "Getting it ready…" : {
+
+    },
+    "Lil" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "M1K3 Voice" : {
+      "comment" : "Voice tier name: never translated.",
+      "shouldTranslate" : false
+    },
+    "M1K3 Voice needs a newer chip than this device has. Built-in works here." : {
+      "comment" : "Settings note on an older chip. M1K3 Voice is a product name: never translated. Built-in names the other voice option: match its translation."
+    },
+    "M1K3 Voice runs on a real device." : {
+      "comment" : "Settings note in the Simulator. M1K3 Voice is a product name: never translated."
+    },
+    "Maximum capability, fully local. The full M1K3." : {
+      "comment" : "Brain card copy for Big. M1K3 is the app's name."
+    },
+    "Mini" : {
+      "comment" : "Brain name: never translated.",
+      "shouldTranslate" : false
+    },
+    "My everyday brain. Quick, sees pictures, lives on this Mac." : {
+
+    },
+    "My everyday brain: quick, and it sees pictures." : {
+
+    },
+    "My own voice, instead of the built-in one." : {
+
+    },
+    "Ready" : {
+
+    },
+    "Semantic memory" : {
+
+    },
+    "Sharp and capable" : {
+      "comment" : "Tagline under the brain name Lil."
+    },
+    "Sharper ears" : {
+
+    },
+    "Starts after %@ is ready." : {
+
+    },
+    "The deep thinker. Slower, sharper, for the hard questions." : {
+
+    },
+    "The deep thinker: slower, sharper." : {
+
+    },
+    "The download didn't finish (%@). Try again in a moment." : {
+
+    },
+    "Web search" : {
+      "comment" : "A switch name, listed with \"Private Cloud Compute\" in \"… is a switch in Settings.\""
+    },
+    "Your local AI companion. Runs on this Mac — no account. It goes online only to %@. %@" : {
+      "comment" : "First-run privacy line: a list of infinitive phrases, then the Settings-switch sentence.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your local AI companion. Runs on this Mac — no account. It goes online only to %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "download the models you choose (brains, speech, voice)" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to" : {
+      "comment" : "One way M1K3 goes online (an infinitive phrase). Round Tower is the developer's name."
+    },
+    "search the web and look things up" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "update" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    },
+    "use the optional Private Cloud Compute brain" : {
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+    }
+  },
+  "version" : "1.0"
+}

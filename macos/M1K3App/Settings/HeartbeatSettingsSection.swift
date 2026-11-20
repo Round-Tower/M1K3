@@ -20,6 +20,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import M1K3Heartbeat
 import SwiftUI
@@ -59,9 +62,13 @@ struct HeartbeatSettingsSection: View {
         } header: {
             SettingsHeader("Heartbeat", systemImage: "waveform.path.ecg")
         } footer: {
-            Text("Every couple of hours M1K3 takes stock and writes a short note. "
-                + "Kept on this machine, capped at a week, never remembered as facts.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                Every couple of hours M1K3 takes stock and writes a short note. \
+                Kept on this machine, capped at a week, never remembered as facts.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .onChange(of: heartbeatOn) { _, enabled in
             env.setHeartbeatEnabled(enabled)

@@ -54,6 +54,11 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `cardTitle` / `cardCaption` take a LocalizedStringKey so their
+//  literals reach the string catalog; the About-you caption's three `+` pieces became one literal (same words).
+//  `kitRowLabel` stays String: it shows runtime names, sizes and package-localised lines. English renders unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the voice card shows `VoiceTier.localizedName` (catalogued in M1K3Voice);
+//  `displayName` stays the plain-English value MCP get_status reports. English unchanged.
 
 import M1K3Avatar
 import M1K3Inference
@@ -199,9 +204,10 @@ struct WakeSetupCarousel: View {
             .textFieldStyle(.roundedBorder)
             .font(.body)
             .onSubmit { turn(forward: true) }
-            cardCaption("A line about you seeds my memory — \"I teach primary school\", "
-                + "\"short answers, please\". It stays on this Mac, and you can edit it "
-                + "any time in Settings → You.")
+            cardCaption("""
+            A line about you seeds my memory — "I teach primary school", "short answers, please". \
+            It stays on this Mac, and you can edit it any time in Settings → You.
+            """)
         }
     }
 
@@ -241,7 +247,7 @@ struct WakeSetupCarousel: View {
                     HStack(spacing: 10) {
                         SelectionRadio(isSelected: env.selectedVoiceTier == tier)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(tier.displayName).font(.headline)
+                            Text(tier.localizedName).font(.headline)
                             Text(tier.tagline).font(.caption).foregroundStyle(.readableSecondary)
                         }
                         Spacer()
@@ -636,11 +642,11 @@ struct WakeSetupCarousel: View {
         UserDefaults.standard.string(forKey: AppEnvironment.userDisplayNameKey)
     }
 
-    private func cardTitle(_ text: String) -> some View {
+    private func cardTitle(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.pixelTitle)
     }
 
-    private func cardCaption(_ text: String) -> some View {
+    private func cardCaption(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.caption)
             .foregroundStyle(.readableSecondary)

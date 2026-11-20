@@ -144,6 +144,8 @@
 //  Review: claude-opus-5-5, 2026-11-16 (review fold, #852) — the capture reads through `UtteranceRecorder.append(_:)`
 //  (channels averaged, an unreadable buffer marks the audio truncated), starts per listen via `beginListen` (a
 //  `.watches` listen records nothing; the switch applies at a listen's start, never mid-listen). Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: the speech-permission failure resolves from M1K3Voice's
+//  catalog (`bundle: .module`); `lastFailure` is display-only (voice screens + log). English unchanged.
 
 import AVFoundation
 import Foundation
@@ -447,8 +449,14 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // (review fold, #129 — previously only `isAvailable` was re-checked
         // here and in restartRecognition).
         guard await Self.authorized() else {
+            // Display-only: `lastFailure` reaches `VoiceLoopController.lastError`, which only the voice screens
+            // and the log read.
             recordFailure(
-                "Speech recognition isn't allowed — check Settings › Privacy & Security.",
+                String(
+                    localized: "Speech recognition isn't allowed — check Settings › Privacy & Security.",
+                    bundle: .module,
+                    comment: "Voice mode error. Settings › Privacy & Security must match the system's own localized names for the Settings app and that pane."
+                ),
                 ifGeneration: generation
             )
             continuation.finish()

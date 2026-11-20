@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.7 (a coarse tripwire over text;
 //  the layout itself is verify-by-launch). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `Pane.title` is a `Text` now (a catalog key, the
+//  brand names verbatim), so the pins read `Text("Server")` / `Text(verbatim: "Brain at Home")`. Same English.
 //
 
 import Foundation
@@ -46,11 +48,11 @@ struct SettingsPaneLayoutTests {
     func paneOrder() throws {
         let code = try Self.code("M1K3App/SettingsView.swift")
         #expect(code.contains("case m1k3, downloads, you, privacy, brainAtHome, mcp, general, advanced"))
-        #expect(code.contains("case .downloads: \"Brains & downloads\""))
+        #expect(code.contains("case .downloads: Text(\"Brains & downloads\")"))
         #expect(code.contains("case .downloads: \"arrow.down.circle\""))
         #expect(code.contains("case .downloads: DownloadsSettingsPane()"))
-        #expect(code.contains("case .brainAtHome: \"Brain at Home\""))
-        #expect(code.contains("case .mcp: \"Server\""))
+        #expect(code.contains("case .brainAtHome: Text(verbatim: \"Brain at Home\")"))
+        #expect(code.contains("case .mcp: Text(\"Server\")"))
         #expect(code.contains("case .brainAtHome: BrainAtHomeSettingsPane()"))
         #expect(code.contains("case .mcp: MCPServerSettingsPane()"))
     }

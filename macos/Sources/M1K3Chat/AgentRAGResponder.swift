@@ -264,6 +264,10 @@
 //  own turn text; a follow-up ("and when I search?") carries no cue and gets no clause (known gap). The age
 //  clause is unchanged everywhere; a Home clause (`EgressDisclosure.ridesEveryTurn`) rides every turn.
 //  Confidence 0.75: the gate is unmeasured on the phone itself.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `runDispatchedTurn` hands the picker's own `none` to the agent turn when the
+//  route says `noneTakesAgent`, with the palette off the web (`offlinePalette`; nothing left = plain); a pick the
+//  search head emptied stays plain. Confidence 0.8: the gain is the 11-19
+//  route control's, re-measured by the arm in the PR.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider`: the turn's reply-language line
 //  (`ReplyLanguage.clause`) joins `turnClauses` last, nearest the question, on every route that calls it, reading
 //  the person's earlier turns too (a short turn keeps their language). nil by default and for English, so an
@@ -767,7 +771,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
                         question: question, picker: picker, staysLocal: plainRoute?.staysLocal,
-                        tools: tools, chunks: turnChunks,
+                        noneTakesAgent: plainRoute?.noneTakesAgent ?? false, tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -1071,6 +1075,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         question: String,
         picker: @Sendable (String, String) async -> ToolPick?,
         staysLocal: (@Sendable (String) -> SearchRouter.Decision)?,
+        noneTakesAgent: Bool,
         tools: [any AgentTool],
         chunks: [ChunkHit],
         memories: [ChunkHit],
@@ -1098,6 +1103,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         var pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
         if pick != corrected {
             Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
+            ToolRouterWiring.pickRecorder?.record(.documentPlain)
             return await plain()
         }
         // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
@@ -1121,6 +1127,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
         }
         if pick.tool == ToolPick.noTool {
+            // The picker's own `none`, not a pick the search head emptied (the agent could search again). A lookup the
+            // kept documents answer returned plain above, on purpose: the agent turn would look it up.
+            if picked.tool == ToolPick.noTool {
+                // The agent works the question (2026-11-19 route control: 15/16 there, 16/24 plain) with no web
+                // reads: the picker said no tool, and one such turn fetched a page. Nothing left = plain (#427).
+                let offline = ToolDispatch.offlinePalette(tools)
+                if noneTakesAgent, !offline.isEmpty {
+                    Self.log.notice("tool dispatch: none — the agent turn answers, off the web")
+                    ToolRouterWiring.pickRecorder?.record(.noneToAgent)
+                    return .agent(offline)
+                }
+                ToolRouterWiring.pickRecorder?.record(.pickedNone)
+            }
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()
         }

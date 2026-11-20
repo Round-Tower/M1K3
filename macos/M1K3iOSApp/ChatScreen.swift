@@ -139,6 +139,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — the blank canvas's starter chips are gone: a memory title trimmed into a chip was sent
 //  as the person's words. The canvas is the face and the composer.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the String-typed readiness hint and the refused-image
+//  line are String(localized:). English unchanged.
 
 import M1K3Avatar
 import M1K3Chat
@@ -528,16 +530,29 @@ struct ChatScreen: View {
         case .appleFoundationModels:
             switch core.miniAvailability {
             case .available: return nil
-            case .notReady: return "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on…"
+            case .notReady:
+                return String(
+                    localized: "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on…"
+                )
             case let .blocked(userFixable):
-                let alternative = core.brainMenu.localFallbackPhrase(verb: "pick") ?? "pair with your Mac"
+                let alternative = core.brainMenu.localFallbackPhrase(verb: "pick")
+                    ?? String(localized: "pair with your Mac", comment: "Fills %@ in “… — or %@ in Settings.”")
                 return userFixable
-                    ? "Turn on Apple Intelligence in Settings — or \(alternative) in Settings."
-                    : "This device can't run Apple Intelligence — \(alternative) in Settings."
+                    ? String(
+                        localized: "Turn on Apple Intelligence in Settings — or \(alternative) in Settings.",
+                        comment: "%@ is what else to do, a verb phrase such as “pick Lil” or “pair with your Mac”"
+                    )
+                    : String(
+                        localized: "This device can't run Apple Intelligence — \(alternative) in Settings.",
+                        comment: "%@ is what else to do, a verb phrase such as “pick Lil” or “pair with your Mac”"
+                    )
             }
         case .mlx:
             if case let .failed(message) = core.brainLoad { return message }
-            return "\(core.selectedBrain.displayName) isn't ready yet."
+            return String(
+                localized: "\(core.selectedBrain.displayName) isn't ready yet.",
+                comment: "%@ is a brain's name (Lil, Big, Mini): keep it untranslated"
+            )
         }
     }
 
@@ -1156,7 +1171,10 @@ struct ChatScreen: View {
     private func attach(_ urls: [URL]) {
         let route = AttachmentRouting.route(urls, imagesAccepted: core.imagesAccepted)
         let refused = route.refusedImages.map {
-            "\($0.lastPathComponent): \(core.answeringBrainName) can't see images"
+            String(
+                localized: "\($0.lastPathComponent): \(core.answeringBrainName) can't see images",
+                comment: "%1$@ is a file name, %2$@ the answering brain's name (kept untranslated)"
+            )
         }
         let failures = refused + attachImages(at: route.images) + attachFiles(at: route.files)
         if !failures.isEmpty {

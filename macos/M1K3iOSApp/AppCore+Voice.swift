@@ -94,6 +94,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a turn that is a spoken page command is answered by
 //  `handleVoicePageCommand` before the chat sees it (both lanes), and leaving the mode closes the page.
 //  Compile-checked; the spoken commands are verify-on-device.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the pause notes and the voice-turn failure lines (shown,
+//  never spoken or replayed to a brain) are String(localized:). English unchanged.
 
 import AVFoundation
 import Foundation
@@ -227,7 +229,7 @@ extension AppCore {
         // the next question into ChatSession.send's re-entrancy guard and fail
         // it as "No answer arrived" (review, 2026-09-03). Say why instead.
         guard !chat.isResponding else {
-            voicePauseNote = "Finishing the last answer — tap the face again in a moment."
+            voicePauseNote = String(localized: "Finishing the last answer — tap the face again in a moment.")
             return
         }
         // Same gate as enterVoiceMode: a tap inside the activation window (or
@@ -261,7 +263,7 @@ extension AppCore {
             controller.begin()
         case .park:
             avatar.resetToIdle()
-            voicePauseNote = "Couldn't open the microphone — tap the face to try again."
+            voicePauseNote = String(localized: "Couldn't open the microphone — tap the face to try again.")
         case .ignore:
             Self.voiceLog.notice(
                 "voice activation result ignored: active=\(sessionActive, privacy: .public) latest=\(isLatest, privacy: .public)"
@@ -306,7 +308,7 @@ extension AppCore {
         return VoiceLoopController.Dependencies(
             startListening: { [weak self] in
                 guard let self else {
-                    throw VoiceTurnFailure(message: "M1K3 is shutting down.")
+                    throw VoiceTurnFailure(message: String(localized: "M1K3 is shutting down."))
                 }
                 // Voice-first owns its turn boundary: recognizer finality is a
                 // segment boundary, not the end of the listen (FinalityPolicy).
@@ -352,20 +354,20 @@ extension AppCore {
             },
             runTurn: { [weak self] question in
                 guard let self else {
-                    return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
+                    return .failure(VoiceTurnFailure(message: String(localized: "M1K3 is shutting down.")))
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
                 if let reply = await handleVoicePageCommand(question) { return .success(reply) }
                 await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
-                    return .failure(VoiceTurnFailure(message: "No answer arrived."))
+                    return .failure(VoiceTurnFailure(message: String(localized: "No answer arrived.")))
                 }
                 if case let .failed(message) = last.status {
                     return .failure(VoiceTurnFailure(message: message))
                 }
                 guard !last.text.isEmpty else {
-                    return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
+                    return .failure(VoiceTurnFailure(message: String(localized: "The model had nothing to say.")))
                 }
                 // The rating ask counts spoken wins — the phone's main signal.
                 if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: last.interrupted == true) {
@@ -403,7 +405,7 @@ extension AppCore {
             // Mac adapter, minus its Mac-only earned-moment counter.
             runTurnStreaming: { [weak self] question, onChunk in
                 guard let self else {
-                    return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
+                    return .failure(VoiceTurnFailure(message: String(localized: "M1K3 is shutting down.")))
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
@@ -460,7 +462,7 @@ extension AppCore {
                 await sendVoiceTurn(question)
                 poller.cancel()
                 guard let settled = pinnedMessage() else {
-                    return .failure(VoiceTurnFailure(message: "No answer arrived."))
+                    return .failure(VoiceTurnFailure(message: String(localized: "No answer arrived.")))
                 }
                 // A tool that fired inside the final poll window is persisted
                 // but was never ticked — announce it BEFORE the answer tail and
@@ -485,8 +487,8 @@ extension AppCore {
                 }
                 guard folder.emittedAny else {
                     return .failure(VoiceTurnFailure(message: announcedAnyTool
-                            ? "I checked, but no answer came back."
-                            : "The model had nothing to say."))
+                            ? String(localized: "I checked, but no answer came back.")
+                            : String(localized: "The model had nothing to say.")))
                 }
                 // A refused turn is not a win to rate (the Mac's rule): the folder
                 // tripped, spoke the refusal, and the leak never counts toward the ask.
@@ -584,14 +586,14 @@ extension AppCore {
                 forName: AVAudioSession.interruptionNotification, object: session, queue: .main
             ) { notification in
                 guard let event = Self.interruptionEvent(from: notification.userInfo) else { return }
-                handle(event, "Paused for the call — tap the face to carry on.")
+                handle(event, String(localized: "Paused for the call — tap the face to carry on."))
             },
             center.addObserver(
                 forName: AVAudioSession.routeChangeNotification, object: session, queue: .main
             ) { notification in
                 handle(
                     Self.routeChangeEvent(from: notification.userInfo),
-                    "Paused — headphones came out. Tap the face to carry on."
+                    String(localized: "Paused — headphones came out. Tap the face to carry on.")
                 )
             },
             center.addObserver(

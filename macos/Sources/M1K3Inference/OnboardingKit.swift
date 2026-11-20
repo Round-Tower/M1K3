@@ -23,6 +23,8 @@
 //  (a refused one is `.notStarted`, a static note). Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — a brain on its previous weights (an update offered or ready,
 //  WeightsRefresh) counts as here: it works, so onboarding never offers to download it.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the kit's copy resolves from M1K3Inference's catalog
+//  (`bundle: .module`). English unchanged.
 
 import Foundation
 
@@ -183,12 +185,12 @@ public struct OnboardingKit: Equatable, Sendable {
     /// One short line per kit item (the catalogue's `purpose` is Settings-length; the card is not).
     public static func shortPurpose(_ kind: DownloadKind) -> String {
         switch kind {
-        case .lil: String(localized: "My everyday brain: quick, and it sees pictures.")
-        case .big: String(localized: "The deep thinker: slower, sharper.")
-        case .pocket: String(localized: "A small brain for this Mac.")
-        case .semanticMemory: String(localized: "Finds your notes by meaning. Re-indexes them once.")
-        case .sharperEars: String(localized: "Better dictation than Apple Speech.")
-        case .voice: String(localized: "My own voice, instead of the built-in one.")
+        case .lil: String(localized: "My everyday brain: quick, and it sees pictures.", bundle: .module)
+        case .big: String(localized: "The deep thinker: slower, sharper.", bundle: .module)
+        case .pocket: String(localized: "A small brain for this Mac.", bundle: .module)
+        case .semanticMemory: String(localized: "Finds your notes by meaning. Re-indexes them once.", bundle: .module)
+        case .sharperEars: String(localized: "Better dictation than Apple Speech.", bundle: .module)
+        case .voice: String(localized: "My own voice, instead of the built-in one.", bundle: .module)
         }
     }
 
@@ -206,11 +208,11 @@ public struct OnboardingKit: Equatable, Sendable {
     public static func statusLine(_ status: Status) -> String? {
         switch status {
         case .offer: nil
-        case .downloading: String(localized: "Downloading…")
-        case .preparing: String(localized: "Getting it ready…")
-        case .ready: String(localized: "Ready")
-        case .failed: String(localized: "Couldn't download — try again from Settings ▸ Brains & downloads")
-        case .notStarted: String(localized: "Couldn't start just now — try again from Settings ▸ Brains & downloads")
+        case .downloading: String(localized: "Downloading…", bundle: .module)
+        case .preparing: String(localized: "Getting it ready…", bundle: .module)
+        case .ready: String(localized: "Ready", bundle: .module)
+        case .failed: String(localized: "Couldn't download — try again from Settings ▸ Brains & downloads", bundle: .module)
+        case .notStarted: String(localized: "Couldn't start just now — try again from Settings ▸ Brains & downloads", bundle: .module)
         }
     }
 

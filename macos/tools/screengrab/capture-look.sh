@@ -2,6 +2,10 @@
 # The look plate (1.4, #768): a REAL look at a still you choose, captured on an iPhone simulator.
 #
 #   tools/screengrab/capture-look.sh <simulator-udid> <still.jpg> [out.png]
+#   PSEUDO=1 | RTL=1 | LOCALE=<code> tools/screengrab/capture-look.sh <udid> <still.jpg> [out.png]
+#
+# Localisation passes (opt-in, l10n-args.zsh): the arguments ride after the recipe's own; the default
+# out file becomes look-<suffix>.png (pseudo, rtl, the code). None set = exactly as before.
 #
 # Why not the XCUITest lane (capture.sh): a test install gives the app a NEW data container, and a
 # simulator app on macOS 27 reads only inside its own container, so a still placed for the test is gone
@@ -17,9 +21,12 @@
 # ScreengrabPlate.launchRecipe by hand, so a recipe change must be copied here.
 # Review: Kev + claude-fable-5.2, 2026-11-11 (review fold): the still and the output resolve against the
 # caller's directory, the log's folder is made first, and the status bar is restored on any exit. Not re-run.
+# Review: claude-opus-5-5, 2026-11-19 — l10n Phase 0: PSEUDO=1 / RTL=1 / LOCALE=<code> append l10n-args.zsh's
+# arguments to the launch; the default out file gains -<suffix>. Defaults unchanged. Not run.
 set -euo pipefail
 
-udid=${1:?simulator udid}; still=${2:?path to a JPEG}; out=${3:-look.png}
+source ${0:A:h}/l10n-args.zsh           # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
+udid=${1:?simulator udid}; still=${2:?path to a JPEG}; out=${3:-look${l10n_suffix:+-$l10n_suffix}.png}
 still=${still:A}; out=${out:A}          # absolute before the cd below: relative paths are the caller's
 root=${0:A:h:h:h}                       # macos/
 dd=${M1K3_SCREENGRAB_DD:-${TMPDIR:-/tmp}/m1k3-screengrab/dd-look}
@@ -47,7 +54,7 @@ SIMCTL_CHILD_M1K3_SCREENGRAB_RUN="look-$(date +%s)" \
 SIMCTL_CHILD_M1K3_SCREENGRAB_LOOK_FRAME="$container/tmp/look-still.jpg" \
   xcrun simctl launch "$udid" app.m1k3 -hasChosenBrain YES -selectedBrain mini \
     -voiceMode.companion PhosphorFox -companion.shadingStyle off -chat.avatarDisplay background \
-    -chatEgressAllowed NO -webSearchEnabled YES -memoryAutoCapture NO >/dev/null
+    -chatEgressAllowed NO -webSearchEnabled YES -memoryAutoCapture NO "${l10n_args[@]}" >/dev/null
 
 line=""
 for _ in {1..48}; do

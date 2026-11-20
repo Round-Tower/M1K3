@@ -28,6 +28,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — pins the signed Lil RAM cap (5 GB own peak, MiB, inclusive).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — `imageReaders(platform:)`: the tiers an image decline
 //  may name, derived from `supportsImageInput` and the platform floor (PR #526 review). Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: the catalogued taglines and the Mini/Big card copy keep
+//  their English bytes (each was a `+` join before it became one key).
 //
 
 @testable import M1K3Inference
@@ -47,6 +49,20 @@ struct BrainTierTests {
             #expect(!tier.detail.isEmpty)
             #expect(!tier.glyph.isEmpty)
         }
+    }
+
+    @Test("the catalogued taglines and card copy keep their English bytes")
+    func catalogCopyEnglishBytes() {
+        #expect(BrainTier.mini.tagline == "Fast and focused")
+        #expect(BrainTier.pocket.tagline == "Fast and focused")
+        #expect(BrainTier.lil.tagline == "Sharp and capable")
+        #expect(BrainTier.big.tagline == "Full intelligence")
+        #expect(BrainTier.mini.detail == "Apple's built-in on-device model. No download. The quickest way to start.")
+        #expect(BrainTier.big.detail == "Maximum capability, fully local. The full M1K3.")
+        #expect(BrainTier.pocket.detail == "A small brain of M1K3's own, for devices without Apple Intelligence. "
+            + "One-time download. Runs entirely on \(HostPlatform.yourDevice).")
+        #expect(BrainTier.lil.detail == "A fully local engine — multi-turn conversation, memory, and "
+            + "reasoning that keeps up with you. Runs entirely on \(HostPlatform.yourDevice).")
     }
 
     @Test("Mini wears the Apple Intelligence symbol — it is Apple Intelligence")

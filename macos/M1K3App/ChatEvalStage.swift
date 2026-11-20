@@ -143,6 +143,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs the live path (garbled voice turns, the
 //  bench for recogniser changes). A heard-line arm was measured and dropped (docs/evals/2026-11-16-heard-line).
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `_ROUTER_NONE_AGENT=1` wires `toolNoneToAgent` like the Mac app, and every
+//  live-path turn records the tools it ran (`tools` skip check). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — the language arm: `_REPLY_LANGUAGE=1` wires the app's reply-language
 //  clause, `_DEVICE_LANGUAGE` stands in for the device's (default en). Off by default, so older arms are unchanged.
 
@@ -442,7 +444,8 @@ enum ChatEvalStage {
                 provider: provider, enabled: true, dispatch: true,
                 groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true,
                 chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1",
-                searchHead: searchHead
+                searchHead: searchHead,
+                noneToAgent: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT") == "1"
             )
             plainRoute = { route }
         default:
@@ -1037,9 +1040,16 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                let score = shippedScore(
+                var score = shippedScore(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+                // Which tools the turn ran, on every live-path kind (2026-11-19): a puzzle grounded on a datetime or
+                // notes stub read like a fast commit, and a picker `none` handed to the agent turn may search on
+                // its own (`toolNoneToAgent`); neither showed, because the record carried no tool calls here.
+                score = score.appending(EvalCheck(
+                    name: "tools", outcome: .skip,
+                    detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                ))
                 guard calculatorRequested else { return score }
                 return score.appending(EvalCheck(
                     name: "calls calculate",

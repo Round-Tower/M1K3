@@ -12,6 +12,10 @@
 //  cut it (`capped`, so Keep's banner names the part kept), and decoding re-runs the sanitiser's
 //  injection stages (`ReadSanitizer.recleaned`): "cleaned once" held only at `init?(title:raw:)`, so an
 //  edited payload could hand a tokenizer raw text on "Ask more". Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `keptStatus` is four whole sentences from the module's
+//  catalog (`bundle: .module`), not fragments; the titles ("Pasted text", "… and N more") reach grounding, so they
+//  are plain English (the count grouped with an en locale, as master printed it in English). English unchanged.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -63,15 +67,29 @@ public struct ReadSource: Codable, Sendable, Equatable {
     }
 
     /// The banner after "Keep this", saying so when only the first part of the text was kept.
+    /// Four whole sentences, not fragments joined in code, so a translation can reorder them.
     public func keptStatus(chunkCount: Int, deduped: Bool) -> String {
-        let dedup = deduped ? String(localized: " (already kept)") : ""
-        let part = capped
-            ? String(localized: " (the first \(Self.characterCap.formatted()) characters)")
-            : ""
-        return String(localized: "Kept “\(title)”\(part) in Documents — \(chunkCount) chunks\(dedup).")
+        let cap = Self.characterCap.formatted()
+        return switch (capped, deduped) {
+        case (false, false):
+            String(localized: "Kept “\(title)” in Documents — \(chunkCount) chunks.", bundle: .module)
+        case (false, true):
+            String(localized: "Kept “\(title)” in Documents — \(chunkCount) chunks (already kept).", bundle: .module)
+        case (true, false):
+            String(
+                localized: "Kept “\(title)” (the first \(cap) characters) in Documents — \(chunkCount) chunks.",
+                bundle: .module
+            )
+        case (true, true):
+            String(
+                localized: "Kept “\(title)” (the first \(cap) characters) in Documents — \(chunkCount) chunks (already kept).",
+                bundle: .module
+            )
+        }
     }
 
-    public static let pastedTitle = String(localized: "Pasted text")
+    /// A title reaches grounding (the brain reads it), so it stays plain English (localisation plan §4).
+    public static let pastedTitle = "Pasted text"
     public static let titleCap = 120
 
     /// The composer's attached files as one source: one file keeps its name; several are each
@@ -83,7 +101,8 @@ public struct ReadSource: Codable, Sendable, Equatable {
             : files.map { "\($0.filename)\n\n\($0.extractedText)" }.joined(separator: "\n\n")
         let title = files.count == 1
             ? first.filename
-            : String(localized: "\(first.filename) and \(files.count - 1) more")
+            : "\(first.filename) and \((files.count - 1).formatted(.number.locale(Locale(identifier: "en")))) more"
+        // ^ a title: model-facing, stays English (plan §4); en grouping keeps master's English "1,000"
         self.init(title: title, raw: raw)
     }
 

@@ -30,6 +30,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import M1K3Inference
 import SwiftUI
@@ -68,9 +71,13 @@ struct AdvancedSettingsPane: View {
             } header: {
                 SettingsHeader("Embeddings", systemImage: "point.3.connected.trianglepath.dotted")
             } footer: {
-                Text("Semantic MLX embeddings improve retrieval but download a model on "
-                    + "first use and re-embed every stored chunk.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    Semantic MLX embeddings improve retrieval but download a model on \
+                    first use and re-embed every stored chunk.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -99,10 +106,14 @@ struct AdvancedSettingsPane: View {
             } header: {
                 SettingsHeader("Call recording", systemImage: "phone.bubble")
             } footer: {
-                Text("Record a call from the chat toolbar (consent-gated). With transcription "
-                    + "enabled, a stopped recording is transcribed, summarised, encrypted, and "
-                    + "indexed — on-device.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    Record a call from the chat toolbar (consent-gated). With transcription \
+                    enabled, a stopped recording is transcribed, summarised, encrypted, and \
+                    indexed — on-device.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -110,10 +121,14 @@ struct AdvancedSettingsPane: View {
             } header: {
                 SettingsHeader("Generation stats", systemImage: "gauge.with.dots.needle.33percent")
             } footer: {
-                Text("A testing aid: shows context tokens and tokens/sec under each answer "
-                    + "from Lil or Big. Mini (Apple's on-device model) doesn't report "
-                    + "generation metrics.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    A testing aid: shows context tokens and tokens/sec under each answer \
+                    from Lil or Big. Mini (Apple's on-device model) doesn't report \
+                    generation metrics.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -159,8 +174,7 @@ struct AdvancedSettingsPane: View {
                 Button("Third-party licenses") { showLicenses = true }
                     .buttonStyle(.glass)
             } footer: {
-                Text("M1K3 is built with open-source components. "
-                    + "Everything runs on this Mac.")
+                Text("M1K3 is built with open-source components. Everything runs on this Mac.")
                     .font(.callout).foregroundStyle(.readableSecondary)
             }
         }

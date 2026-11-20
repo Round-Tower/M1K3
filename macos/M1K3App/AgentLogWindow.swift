@@ -17,6 +17,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: both empty states are single literals (no `+` join).
+//  English unchanged.
 
 import M1K3MCPLog
 import SwiftUI
@@ -70,17 +72,17 @@ struct AgentLogWindowContent: View {
             ContentUnavailableView {
                 Label("Logging is off", systemImage: "eye.slash")
             } description: {
-                Text("M1K3 doesn't capture agent conversations by default. Turn on "
-                    + "“Log agent conversations” in Settings → Server to review what a "
-                    + "connected agent asks for and hears back — on this Mac only.")
+                Text("""
+                M1K3 doesn't capture agent conversations by default. Turn on “Log agent conversations” in Settings → \
+                Server to review what a connected agent asks for and hears back — on this Mac only.
+                """)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if calls.isEmpty {
             ContentUnavailableView {
                 Label("No calls captured yet", systemImage: "bubble.left.and.bubble.right")
             } description: {
-                Text("Logging is on. As a connected agent calls M1K3's tools, the "
-                    + "requests and responses will appear here.")
+                Text("Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

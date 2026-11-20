@@ -54,6 +54,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — no link chips under a read's answer: a chip fetches the page
 //  in the side panel, so a planted link would be one tap from sending its query. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the sources count is one inflected key, not an English
+//  plural ternary. English unchanged (renders byte-identical for 0, 1, 2, 21, 1234).
 
 import AppKit
 import M1K3AnswerBlocks
@@ -584,7 +586,7 @@ struct MessageView: View {
             }
             .padding(.top, 4)
         } label: {
-            Label("\(citedSources.count) source\(citedSources.count == 1 ? "" : "s")",
+            Label("^[\(citedSources.count) source](inflect: true)",
                   systemImage: "doc.text.magnifyingglass")
                 .font(.caption.weight(.medium).monospacedDigit())
                 .foregroundStyle(.readableSecondary)

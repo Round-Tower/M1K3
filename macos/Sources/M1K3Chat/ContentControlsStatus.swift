@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-09, Confidence 0.9 (every band pinned in
 //  ContentControlsStatusTests). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-19 — localisable (l10n Phase 0): every title and action
+//  resolves from M1K3Chat's catalog (`bundle: .module`). Display-only (rg: the two Settings
+//  rows and the tests read it; nothing model-facing). English unchanged. Confidence 0.9.
 //
 
 import Foundation
@@ -27,18 +30,24 @@ public extension AgeBand {
         switch self {
         case .undeclared:
             ContentControlsStatus(
-                title: "No age range declared", systemImage: "person.crop.circle",
-                actionTitle: "Set up", canClear: false
+                title: String(localized: "No age range declared", bundle: .module, comment: "Settings ▸ Content Controls: no age range has been shared"),
+                systemImage: "person.crop.circle",
+                actionTitle: String(localized: "Set up", bundle: .module, comment: "Settings ▸ Content Controls button: share an age range for the first time"),
+                canClear: false
             )
         case .adult:
             ContentControlsStatus(
-                title: "Adult: no adjustments", systemImage: "person.crop.circle.badge.checkmark",
-                actionTitle: "Update", canClear: true
+                title: String(localized: "Adult: no adjustments", bundle: .module, comment: "Settings ▸ Content Controls: an adult age range is stored, so nothing is adjusted"),
+                systemImage: "person.crop.circle.badge.checkmark",
+                actionTitle: String(localized: "Update", bundle: .module, comment: "Settings ▸ Content Controls button: share the age range again"),
+                canClear: true
             )
         case .under13, .teen13to15, .teen16to17:
             ContentControlsStatus(
-                title: "Age-appropriate adjustments active", systemImage: "person.crop.circle.badge.checkmark",
-                actionTitle: "Update", canClear: true
+                title: String(localized: "Age-appropriate adjustments active", bundle: .module, comment: "Settings ▸ Content Controls: a minor's age range is stored, so content is adjusted"),
+                systemImage: "person.crop.circle.badge.checkmark",
+                actionTitle: String(localized: "Update", bundle: .module, comment: "Settings ▸ Content Controls button: share the age range again"),
+                canClear: true
             )
         }
     }

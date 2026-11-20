@@ -2,6 +2,10 @@
 # HUD capture: the notch HUD in Light and Dark, on every screen, without anyone watching.
 #
 #   tools/screengrab/direct/hud-capture.sh [path/to/M1K3.app] [out dir]
+#   PSEUDO=1 | RTL=1 | LOCALE=<code> tools/screengrab/direct/hud-capture.sh [app] [out dir]
+#
+# Localisation passes (opt-in, ../l10n-args.zsh): the arguments ride after the demo's own on every
+# launch; the default out dir gets a -<suffix> (pseudo, rtl, the code). None set = exactly as before.
 #
 # With no app path it asks xcodebuild for the Debug product of the M1K3 scheme. The app MUST be a
 # Debug build: -hudDemo / -hudDemoScreen / -hudDemoText exist only under #if DEBUG
@@ -28,11 +32,14 @@
 # window-finding and timing are verify-by-launch). Prior: none (new file).
 # Review: Kev + claude-opus-5.5, 2026-11-05 — review fold: Debug-app guard, argv-matched pid, PNG size check,
 # layer-1000 dump on a miss (test_hud_capture.py). Confidence 0.65, still not run.
+# Review: claude-opus-5-5, 2026-11-19 — l10n Phase 0: PSEUDO=1 / RTL=1 / LOCALE=<code> append ../l10n-args.zsh's
+# arguments to each launch; the default out dir gains -<suffix>. Defaults unchanged. Not run.
 set -u
 here=${0:A:h}
 repo=${here:h:h:h}                                  # macos/
+source ${here:h}/l10n-args.zsh                      # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
 APP=${1:-}
-OUT=${2:-${TMPDIR:-/tmp}/m1k3-hud-capture}
+OUT=${2:-${TMPDIR:-/tmp}/m1k3-hud-capture${l10n_suffix:+-$l10n_suffix}}
 S=${TMPDIR:-/tmp}/m1k3-direct-capture; mkdir -p $S $OUT
 
 if [[ -z $APP ]]; then
@@ -78,7 +85,7 @@ for a in light dark; do
     open -n --env M1K3_SCREENGRAB=1 --env M1K3_SCREENGRAB_RUN=$RUN-$a-$i $APP --args \
       -hudDemo $a -hudDemoScreen $i \
       -hasChosenBrain NO -mcpServer.enabled NO -brainServe.enabled NO -memoryAutoCapture NO \
-      -ApplePersistenceIgnoreState YES -chatEgressAllowed NO
+      -ApplePersistenceIgnoreState YES -chatEgressAllowed NO "${l10n_args[@]}"
     pid=""
     for t in {1..30}; do
       pid=$(pids $a $i | head -1)

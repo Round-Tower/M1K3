@@ -32,6 +32,11 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
+//  Review: claude-opus-5-5, 2026-11-19 — "Active voice" shows `VoiceTier.localizedName`; MCP get_status keeps
+//  `displayName` (plain English). English unchanged.
 import M1K3Chat
 import M1K3Inference
 import M1K3MLX
@@ -101,17 +106,21 @@ struct M1K3SettingsPane: View {
                 } header: {
                     SettingsHeader("Reasoning", systemImage: "lightbulb")
                 } footer: {
-                    Text("Reasoning models think before answering — sharper on hard "
-                        + "questions, slower on small talk. Auto decides per turn; voice "
-                        + "mode has its own toggle and ignores this setting.")
-                        .font(.callout).foregroundStyle(.readableSecondary)
+                    Text(
+                        """
+                        Reasoning models think before answering — sharper on hard \
+                        questions, slower on small talk. Auto decides per turn; voice \
+                        mode has its own toggle and ignores this setting.
+                        """
+                    )
+                    .font(.callout).foregroundStyle(.readableSecondary)
                 }
             }
 
             CompanionSettingsSection(env: env)
 
             Section {
-                LabeledContent("Active voice", value: env.selectedVoiceTier.displayName)
+                LabeledContent("Active voice", value: env.selectedVoiceTier.localizedName)
                 voiceOutputControl
                 if env.selectedVoiceTier == .m1k3Voice {
                     // Character applies to the neural voice's effect chain, so it's
@@ -133,11 +142,15 @@ struct M1K3SettingsPane: View {
             } header: {
                 SettingsHeader("Voice output", systemImage: "waveform")
             } footer: {
-                Text("Built-in is Apple's default voice. M1K3 Voice downloads a neural "
-                    + "voice model and runs entirely offline. Character shapes the tone "
-                    + "\u{2014} Clean is the full range, M1K3 is the signature sound, Radio "
-                    + "leans lo-fi. Hit \u{201C}Hear a sample\u{201D} to compare.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    Built-in is Apple's default voice. M1K3 Voice downloads a neural \
+                    voice model and runs entirely offline. Character shapes the tone \
+                    \u{2014} Clean is the full range, M1K3 is the signature sound, Radio \
+                    leans lo-fi. Hit \u{201C}Hear a sample\u{201D} to compare.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             voiceInputSection
@@ -256,11 +269,15 @@ struct M1K3SettingsPane: View {
         } header: {
             SettingsHeader("Voice input", systemImage: "mic")
         } footer: {
-            Text("Apple Speech works by default; WhisperKit is higher accuracy after "
-                + "a one-time download and applies on the next launch. Echo "
-                + "cancellation stops M1K3 hearing itself, at some cost to accuracy "
-                + "in a quiet room.")
-                .font(.callout).foregroundStyle(.readableSecondary)
+            Text(
+                """
+                Apple Speech works by default; WhisperKit is higher accuracy after \
+                a one-time download and applies on the next launch. Echo \
+                cancellation stops M1K3 hearing itself, at some cost to accuracy \
+                in a quiet room.
+                """
+            )
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 

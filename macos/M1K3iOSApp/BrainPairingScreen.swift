@@ -21,6 +21,13 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — no viewfinder (no camera prompt) under the screengrab harness. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the instruction's `+` join is one literal; the
+//  String-typed done and working lines are String(localized:). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the paste field's `m1k3-pair://…` placeholder is a String title (never a
+//  catalog key), and the Mac-path instruction carries a translator comment: its steps must match the Mac's own
+//  translated names. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — the last step names the Mac button as it reads ("Pair a device…", not
+//  "Pair a Device"), so a person can find it and a translator matches one string.
 //
 
 #if os(iOS)
@@ -31,6 +38,9 @@ import M1K3Screengrab
 import SwiftUI
 
 struct BrainPairingScreen: View {
+    /// The paste field's placeholder: the shape of a pairing link, shown verbatim in every language.
+    private static let pairLinkPlaceholder = "m1k3-pair://…"
+
     @Environment(AppCore.self) private var core
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -93,9 +103,10 @@ struct BrainPairingScreen: View {
 
     @ViewBuilder private var scanSections: some View {
         Section {
+            // One literal, not a `+` join: a joined Text is a plain String, which the catalog never sees.
             Text(
-                "On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. "
-                    + "Then scan the code it shows."
+                "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
+                comment: "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
             )
             .font(.callout)
             .foregroundStyle(.readableSecondary)
@@ -140,7 +151,8 @@ struct BrainPairingScreen: View {
             }
         #endif
         Section {
-            TextField("m1k3-pair://…", text: $pastedLink)
+            // A String title, not a literal key: the link's scheme is not words to translate.
+            TextField(Self.pairLinkPlaceholder, text: $pastedLink)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.footnote.monospaced())
@@ -158,19 +170,24 @@ struct BrainPairingScreen: View {
     /// Home-only device + auto-activation failed (keychain read race) must not
     /// be told to "choose Home" — there is nothing else to choose; say pair again.
     private var doneCopy: String {
-        let name = core.homeBrain?.name ?? "your Mac"
-        if core.homeBrainActive { return "Paired with \(name) — using its brain now." }
-        if !core.brainMenu.hasLocalBrain { return "Paired with \(name), but its key couldn’t be read — pair again." }
-        return "Paired with \(name). Choose Home under Brain to use it."
+        let name = core.homeBrain?.name ?? String(localized: "your Mac", comment: "Fills %@ in “Paired with %@…”")
+        if core.homeBrainActive { return String(localized: "Paired with \(name) — using its brain now.") }
+        if !core.brainMenu.hasLocalBrain {
+            return String(localized: "Paired with \(name), but its key couldn’t be read — pair again.")
+        }
+        return String(
+            localized: "Paired with \(name). Choose Home under Brain to use it.",
+            comment: "Home and Brain are the brain menu's names: keep Home untranslated, match the menu's Brain"
+        )
     }
 
     private func begin(_ code: String) {
         guard case .scanning = phase else { return } // scanner fires repeatedly
-        phase = .working("Contacting your Mac…")
+        phase = .working(String(localized: "Contacting your Mac…"))
         Task {
             let failure = await core.pairWithMac(
                 payloadString: code,
-                onAwaitingApproval: { phase = .working("Now click Approve on your Mac…") }
+                onAwaitingApproval: { phase = .working(String(localized: "Now click Approve on your Mac…")) }
             )
             phase = failure.map { .failed($0) } ?? .done
         }

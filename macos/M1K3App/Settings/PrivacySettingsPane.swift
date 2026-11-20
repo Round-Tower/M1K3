@@ -54,6 +54,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import AppKit // NSApp — the age-range sheet's window
 #if canImport(DeclaredAgeRange)
@@ -256,10 +259,14 @@ struct PrivacySettingsPane: View {
             Toggle("Battery", isOn: $contextBattery)
             Toggle("Calendar (titles & times)", isOn: $contextCalendar)
             if calendarDenied {
-                Text("macOS has calendar access off for M1K3 — grant it in System "
-                    + "Settings → Privacy & Security → Calendars, then switch this "
-                    + "back on.")
-                    .font(.callout).foregroundStyle(.orange)
+                Text(
+                    """
+                    macOS has calendar access off for M1K3 — grant it in System \
+                    Settings → Privacy & Security → Calendars, then switch this \
+                    back on.
+                    """
+                )
+                .font(.callout).foregroundStyle(.orange)
             }
             Toggle("Location", isOn: $contextLocation)
             if contextLocation {
@@ -270,10 +277,14 @@ struct PrivacySettingsPane: View {
                     .font(.callout).foregroundStyle(.readableSecondary)
             }
             if locationDenied {
-                Text("macOS has location access off for M1K3 — grant it in System "
-                    + "Settings → Privacy & Security → Location Services, then "
-                    + "switch this back on.")
-                    .font(.callout).foregroundStyle(.orange)
+                Text(
+                    """
+                    macOS has location access off for M1K3 — grant it in System \
+                    Settings → Privacy & Security → Location Services, then \
+                    switch this back on.
+                    """
+                )
+                .font(.callout).foregroundStyle(.orange)
             }
         } header: {
             SettingsHeader("Context", systemImage: "calendar.badge.clock")

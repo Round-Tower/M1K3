@@ -24,6 +24,8 @@
 //  (a leftover hover tooltip floated mid-frame in four plates). Confidence now 0.75.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — `testConstellation`: the memory field's own window, opened
 //  from Window ▸ Memory Constellation, shot after a 20 s settle. Verify-by-launch. Confidence now 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the launch appends `M1K3_SCREENGRAB_EXTRA_ARGS`
+//  (capture.sh's pseudo / right-to-left / LOCALE pass) after the recipe; unset changes nothing. Not run.
 //
 
 import M1K3Screengrab
@@ -191,7 +193,10 @@ final class ScreengrabUITests: XCTestCase {
         if let run = ProcessInfo.processInfo.environment[ScreengrabHarness.runKey], !run.isEmpty {
             app.launchEnvironment[ScreengrabHarness.runKey] = run
         }
-        app.launchArguments = recipe.flatArguments
+        // capture.sh's PSEUDO= / RTL= / LOCALE= pass (tools/screengrab/l10n-args.zsh): appended after the
+        // recipe; unset = exactly the recipe, as before.
+        let l10nArgs = ProcessInfo.processInfo.environment["M1K3_SCREENGRAB_EXTRA_ARGS"] ?? ""
+        app.launchArguments = recipe.flatArguments + l10nArgs.split(separator: " ").map(String.init)
         addTeardownBlock { app.terminate() } // a failed wait must not leave the app running
         app.launch()
         // A cold launch warms brains + reindexes the seed (~40 s here) and the

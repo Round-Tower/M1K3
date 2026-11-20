@@ -7,6 +7,7 @@
 //  original texture (cel). The on-screen look is verify-at-⌘R; the routing is not.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-18, Confidence 0.95 (pure map). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: the catalogued display names' English bytes are pinned.
 //
 
 @testable import M1K3Avatar
@@ -51,6 +52,13 @@ struct CompanionShadingStyleTests {
         for style in CompanionShadingStyle.allCases {
             #expect(!style.displayName.isEmpty)
         }
+    }
+
+    @Test("the catalogued display names keep their English bytes")
+    func displayNamesEnglishBytes() {
+        #expect(CompanionShadingStyle.off.displayName == "Off (textured)")
+        #expect(CompanionShadingStyle.phosphor.displayName == "Phosphor")
+        #expect(CompanionShadingStyle.cel.displayName == "Cel")
     }
 
     @Test("a season costumes only the Phosphor Fox: the lattice is what it colours, and the others have none")

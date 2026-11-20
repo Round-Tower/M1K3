@@ -54,6 +54,8 @@
 //  only by the chip or a spoken "show me that". Compile-checked; the layout and Reduce Motion are verify-on-device.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — the spoken timeline is one centred column, like the Mac's (Kev: the
 //  tool-call bubble sat left). Text inside a bubble stays leading. Confidence 0.8 (verify-on-device).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the String-typed caption fallbacks and the face's
+//  VoiceOver state label are String(localized:). English unchanged.
 //
 
 import M1K3Avatar
@@ -366,13 +368,13 @@ struct VoiceScreen: View {
         case .idle:
             // Parked (a long quiet spell, a failure, or not yet awake) — the
             // mode is hands-free, so this reads as "carry on", never "talk".
-            core.voicePauseNote ?? "Tap the face to carry on."
+            core.voicePauseNote ?? String(localized: "Tap the face to carry on.")
         case let .listening(partial):
-            partial.isEmpty ? "Listening…" : partial
+            partial.isEmpty ? String(localized: "Listening…") : partial
         case .awaitingAnswer:
             // The live activity (a tool in flight) beats a flat "Thinking…" —
             // the Mac shows the same label.
-            core.chat.messages.last?.activityLabel ?? "Thinking…"
+            core.chat.messages.last?.activityLabel ?? String(localized: "Thinking…")
         case .speaking:
             "" // unreachable by construction: `caption` renders spokenTimeline here
         case .ended:
@@ -445,11 +447,11 @@ struct VoiceScreen: View {
 
     private var accessibilityStateLabel: String {
         switch state {
-        case .idle: "Voice mode, microphone parked"
-        case .listening: "Listening"
-        case .awaitingAnswer: "Thinking"
-        case .speaking: "Speaking"
-        case .ended: "Voice mode ended"
+        case .idle: String(localized: "Voice mode, microphone parked")
+        case .listening: String(localized: "Listening")
+        case .awaitingAnswer: String(localized: "Thinking")
+        case .speaking: String(localized: "Speaking")
+        case .ended: String(localized: "Voice mode ended")
         }
     }
 

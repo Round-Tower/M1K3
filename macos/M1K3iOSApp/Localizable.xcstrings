@@ -1,0 +1,441 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {},
+    "%@ doesn't run on this device. Staying on Mini." : {
+      "comment" : "%@ is a brain's name (Lil, Big): keep it and Mini untranslated"
+    },
+    "%@ isn't ready yet." : {
+      "comment" : "%@ is a brain's name (Lil, Big, Mini): keep it untranslated"
+    },
+    "%@ keeps downloading if you leave M1K3." : {},
+    "%@ needs %lld GB of memory — this device has %lld GB. Staying on Mini." : {
+      "comment" : "%1$@ is a brain's name (Lil, Big): keep it and Mini untranslated",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ needs %2$lld GB of memory — this device has %3$lld GB. Staying on Mini."
+          }
+        }
+      }
+    },
+    "%@ ready" : {},
+    "%@ update download" : {},
+    "%@ warming" : {},
+    "%@: %@ can't see images" : {
+      "comment" : "%1$@ is a file name, %2$@ the answering brain's name (kept untranslated)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ can't see images"
+          }
+        }
+      }
+    },
+    "%@’s brain, over your Wi-Fi" : {
+      "comment" : "%@ is the paired Mac's name"
+    },
+    "%@’s brain, over your Wi‑Fi." : {
+      "comment" : "%@ is the paired Mac's name"
+    },
+    "%lld" : {},
+    "%lld memories" : {},
+    "%lld percent" : {},
+    "%lld." : {},
+    "A photo couldn't be read." : {},
+    "A quick note, like \"should have searched the web\", so this can be fixed later." : {},
+    "A serif face; some readers find the strokes easier to track." : {},
+    "About" : {},
+    "Add" : {},
+    "Allow the camera in Settings" : {},
+    "Also send this conversation" : {},
+    "Answer ratings" : {},
+    "Answers on Apple's servers — asks before your first message goes" : {},
+    "Answers on Apple's servers. Asks before your first message leaves this device." : {},
+    "Appearance" : {},
+    "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on." : {},
+    "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on…" : {},
+    "As M1K3 remembers things, they appear here as a constellation." : {},
+    "Ask M1K3…" : {},
+    "Ask about this photo" : {},
+    "Ask about what you see…" : {},
+    "Ask more" : {},
+    "Ask more about this text" : {},
+    "Ask: %@" : {},
+    "Asking about the photo" : {},
+    "Asking about “%@”" : {},
+    "Attached image" : {},
+    "Attachment Error" : {},
+    "Avatar backdrop in chat" : {},
+    "Back." : {},
+    "Bionic reader" : {},
+    "Bolds the start of each word to guide the eye." : {},
+    "Brain" : {},
+    "Brain at Home" : {
+      "shouldTranslate" : false
+    },
+    "Brain at Home can't remember photos yet." : {
+      "comment" : "Shown when 'Remember this photo' is tapped while the paired Mac's brain answers"
+    },
+    "Camera access is off for M1K3" : {},
+    "Camera access is off for M1K3." : {},
+    "Camera permission…" : {},
+    "Camera view" : {},
+    "Cancel" : {},
+    "Changes the brain or web search" : {},
+    "Clear" : {},
+    "Clear ratings" : {},
+    "Close M1K3's eyes" : {},
+    "Close page" : {},
+    "Close the camera" : {},
+    "Closed." : {},
+    "Codes expire after about a minute." : {},
+    "Constellation" : {},
+    "Constellation needs a bigger screen. The pixel face stands in for now." : {},
+    "Contacting your Mac…" : {},
+    "Content Controls" : {},
+    "Copied" : {},
+    "Copied. Nothing was sent — paste it wherever you like." : {},
+    "Copy code" : {},
+    "Copy instead" : {},
+    "Copy this answer" : {},
+    "Couldn't load the page." : {},
+    "Couldn't open the microphone — tap the face to try again." : {},
+    "Couldn’t index “%@”: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn’t index “%1$@”: %2$@"
+          }
+        }
+      }
+    },
+    "Couldn’t keep “%@”: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn’t keep “%1$@”: %2$@"
+          }
+        }
+      }
+    },
+    "Default" : {},
+    "Delete all %lld ratings?" : {},
+    "Delete ratings" : {},
+    "Documents" : {},
+    "Done" : {},
+    "Double-tap to start talking, or to interrupt while M1K3 is speaking." : {},
+    "Download %@ (one-time, ~%lld MB)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Download %1$@ (one-time, ~%2$lld MB)"
+          }
+        }
+      }
+    },
+    "Downloaded. Takes a moment to load." : {},
+    "Downloading %@'s update… %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading %1$@'s update… %2$lld%%"
+          }
+        }
+      }
+    },
+    "Drafting…" : {},
+    "Dyslexia-friendly" : {},
+    "Every thumb and note goes. Your conversations stay." : {},
+    "Export ratings (JSONL)" : {},
+    "Face" : {},
+    "Files" : {},
+    "Finishing the last answer — tap the face again in a moment." : {},
+    "Forget" : {},
+    "Forget %@? This device stops using its brain; also revoke this device on the Mac." : {},
+    "Forget This Mac" : {},
+    "Glow when speaking" : {},
+    "Good answer" : {},
+    "Grounding" : {},
+    "Hear a sample" : {},
+    "Here it is." : {},
+    "Home" : {
+      "shouldTranslate" : false
+    },
+    "How Apple protects it" : {},
+    "I can't open that one." : {},
+    "I checked, but no answer came back." : {},
+    "I hit a snag last time. Send Round Tower a short report? You'll see it first." : {},
+    "I noticed" : {},
+    "Import a file" : {},
+    "In voice mode, saying “what am I looking at?” takes one picture and answers on this device. Voice mode hears the room, so turn this off if someone else might say it. The eye button always works." : {},
+    "Indexed “%@” — %@ chunks (already indexed).%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indexed “%1$@” — %2$@ chunks (already indexed).%3$@"
+          }
+        }
+      }
+    },
+    "Indexed “%@” — %@ chunks.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Indexed “%1$@” — %2$@ chunks.%3$@"
+          }
+        }
+      }
+    },
+    "Interrupt" : {},
+    "Keep M1K3 open while %@ downloads." : {},
+    "Keep it here" : {},
+    "Keep this text in Documents" : {},
+    "Kept in Documents" : {},
+    "Leave voice mode" : {},
+    "Listening" : {},
+    "Listening…" : {},
+    "Live preview of the chosen face" : {},
+    "Loading…" : {},
+    "Look" : {},
+    "Looking at the photo" : {},
+    "Looking…" : {},
+    "M1K3" : {
+      "shouldTranslate" : false
+    },
+    "M1K3 answer ratings" : {},
+    "M1K3 couldn't name anything in the photo to search for." : {},
+    "M1K3 couldn't start" : {},
+    "M1K3 is shutting down." : {},
+    "M1K3 is speaking" : {},
+    "M1K3 looks at what the camera sees and answers on this device" : {},
+    "M1K3 won't open a page on a private network." : {},
+    "M1K3 won't open that link from a page." : {},
+    "M1K3's face fills the background while you chat. Reduce Transparency also turns it off." : {},
+    "M1K3's face in chat." : {},
+    "M1K3's memory store couldn't open on this device." : {},
+    "M1K3, %@" : {},
+    "Mapping memory…" : {},
+    "Memories" : {},
+    "Memories build up as you chat." : {},
+    "Memory unavailable" : {},
+    "Mute microphone" : {},
+    "Needs M1K3 on your Mac" : {},
+    "Needs work" : {},
+    "New chat" : {},
+    "New weights for %@, %@. %@ keeps working meanwhile; keep M1K3 open until it's done." : {
+      "comment" : "%1$@ is a brain's name (Lil, Big): keep it untranslated; %2$@ is a download size",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New weights for %1$@, %2$@. %3$@ keeps working meanwhile; keep M1K3 open until it's done."
+          }
+        }
+      }
+    },
+    "New weights for %@. %@ keeps working meanwhile; keep M1K3 open until it's done." : {
+      "comment" : "%@ is a brain's name (Lil, Big): keep it untranslated",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New weights for %1$@. %2$@ keeps working meanwhile; keep M1K3 open until it's done."
+          }
+        }
+      }
+    },
+    "No answer arrived." : {},
+    "No camera? Paste the link" : {},
+    "No documents yet" : {},
+    "No download — instant" : {},
+    "No download — needs the internet" : {},
+    "No face" : {},
+    "No face — just the conversation." : {},
+    "No memories yet" : {},
+    "None" : {
+      "comment" : "Face choice: no face at all"
+    },
+    "Not available" : {},
+    "Not now" : {},
+    "Note (optional)" : {},
+    "Nothing uses them now. Frees %@." : {
+      "comment" : "%@ is a file size, already formatted"
+    },
+    "Now click Approve on your Mac…" : {},
+    "OK" : {},
+    "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows." : {
+      "comment" : "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
+    },
+    "One moment." : {},
+    "Open M1K3's eyes" : {},
+    "Open source: %@" : {},
+    "Open the camera" : {},
+    "Open the camera when I ask aloud" : {},
+    "OpenDyslexic — weighted letterforms + roomier spacing." : {},
+    "Opening the camera" : {},
+    "Opens a note on what was off" : {},
+    "Opens the camera so M1K3 can see what you point it at" : {},
+    "PDFs and text files M1K3 can answer from. Photos you ask it to remember show up here too; their descriptions stay on this device." : {},
+    "Pair with Pasted Link" : {},
+    "Pair with your Mac" : {},
+    "Paired" : {},
+    "Paired with %@ — using its brain now." : {},
+    "Paired with %@, but its key couldn’t be read — pair again." : {},
+    "Paired with %@. Choose Home under Brain to use it." : {
+      "comment" : "Home and Brain are the brain menu's names: keep Home untranslated, match the menu's Brain"
+    },
+    "Paired, but this device couldn’t store the key — try again." : {},
+    "Paused for the call — tap the face to carry on." : {},
+    "Paused — headphones came out. Tap the face to carry on." : {},
+    "Phosphor glows with M1K3's mood. Cel toon-shades the creature." : {
+      "comment" : "Phosphor and Cel are the Skin picker's choices: use the same words as those options."
+    },
+    "Photo remembered. The caption stays on this device." : {},
+    "Photos" : {},
+    "Pick a brain." : {},
+    "Pick a face." : {},
+    "Pixel face" : {},
+    "Private by design" : {},
+    "Private by design. No account, no analytics." : {},
+    "Prompts go to your Mac over your own Wi‑Fi, encrypted — never to the internet." : {},
+    "Rate M1K3 on the App Store" : {},
+    "Rated answers" : {},
+    "Reading" : {},
+    "Reading should feel effortless." : {},
+    "Recall a memory" : {},
+    "Remember this photo" : {},
+    "Remembered on this device" : {},
+    "Remove %@" : {},
+    "Remove %@'s old weights" : {
+      "comment" : "%@ is a brain's name (Lil, Big): keep it untranslated"
+    },
+    "Remove attachment" : {},
+    "Reply typeface" : {},
+    "Runs on your own Mac, over your own Wi‑Fi" : {},
+    "Say hello" : {},
+    "Say hi" : {},
+    "Scrolling." : {},
+    "Search the web" : {},
+    "Search the web for this" : {},
+    "Searches go to %@" : {},
+    "Seasonal looks" : {},
+    "See the report" : {},
+    "Send" : {},
+    "Send a report" : {},
+    "Send a short report?" : {},
+    "Send by email" : {},
+    "Send to Private Cloud Compute?" : {},
+    "Serif" : {},
+    "Settings" : {},
+    "Share this answer" : {},
+    "Show exactly what that sends" : {},
+    "Shows the page beside M1K3" : {},
+    "Skin" : {},
+    "Sound effects" : {},
+    "Source page" : {},
+    "Speak answers" : {},
+    "Speak this answer" : {},
+    "Speaking" : {},
+    "Speaking…" : {},
+    "Start listening" : {},
+    "Still downloading. Keep M1K3 open and on Wi-Fi." : {},
+    "Stop asking about the photo" : {},
+    "Stop asking about this text" : {},
+    "Stop generating" : {},
+    "Stop speaking" : {},
+    "Stopped" : {},
+    "Switch %@ to its update" : {
+      "comment" : "%@ is a brain's name (Lil, Big): keep it untranslated"
+    },
+    "Tap the face to carry on." : {},
+    "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home." : {
+      "comment" : "Pairing error. Keep M1K3 and Brain at Home untranslated; match the Mac's Settings names."
+    },
+    "That isn't a web page M1K3 can open." : {},
+    "The camera is restricted on this device." : {},
+    "The exact text that will be sent" : {},
+    "The model had nothing to say." : {},
+    "The only thing that sends your conversation to the internet. Every search shows in the reply as it happens." : {},
+    "The system font — clean and familiar." : {},
+    "Thinking" : {},
+    "Thinking…" : {},
+    "This device can't run Apple Intelligence — %@ in Settings." : {
+      "comment" : "%@ is what else to do, a verb phrase such as “pick Lil” or “pair with your Mac”"
+    },
+    "This device can't run Apple Intelligence — %@." : {},
+    "This device has no camera M1K3 can use." : {},
+    "This device’s pairing key is missing — pair with your Mac again." : {},
+    "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask."
+          }
+        }
+      }
+    },
+    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {},
+    "Try Again" : {},
+    "Try again" : {},
+    "Turn on Apple Intelligence in Settings — or %@ in Settings." : {
+      "comment" : "%@ is what else to do, a verb phrase such as “pick Lil” or “pair with your Mac”"
+    },
+    "Turn on Apple Intelligence in Settings, or %@." : {},
+    "Turns the camera off" : {},
+    "Turns the camera on so M1K3 answers about what you point it at" : {},
+    "Unreachable" : {},
+    "Update %@" : {
+      "comment" : "%@ is a brain's name (Lil, Big): keep it untranslated"
+    },
+    "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for under 16; the assistant's tone adjusts for all minors. Declining gives full capability." : {},
+    "Version" : {},
+    "Voice" : {},
+    "Voice mode" : {},
+    "Voice mode ended" : {},
+    "Voice mode, microphone parked" : {},
+    "Web search" : {},
+    "Web search in chat" : {},
+    "Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, sends your messages to Apple. %@" : {},
+    "What was off?" : {},
+    "Workspace" : {},
+    "Write a short description of this photo and remember it. The description stays on this device." : {},
+    "Writes a search for you to read and send. Nothing is sent until you send it" : {},
+    "Writes a short description and remembers it on this device" : {},
+    "Your Mac’s brain, over your Wi‑Fi — pair to use it" : {},
+    "Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair." : {},
+    "Your mail app didn't open it. The full text is on your clipboard — paste it into an email to %@." : {},
+    "Your mail app opened with the start of it. The message was too long for one link, so the full text is on your clipboard — paste it in before you send." : {},
+    "Your mail app should now show it, addressed and filled in; it goes when you send it there. If no message appeared, Copy instead still has the text." : {},
+    "Your memories as a star field that grows." : {},
+    "Your message" : {},
+    "Your next message is answered by looking at this photo again, on this device" : {},
+    "Your next message is answered from this text again, on this device" : {},
+    "Your thumbs up and down, with any notes, and the question and answer each one rates. They stay on this device unless you export them." : {},
+    "m1k3.app" : {},
+    "pair with your Mac" : {
+      "comment" : "Fills %@ in “… — or %@ in Settings.”"
+    },
+    "remembered" : {},
+    "use Home" : {
+      "comment" : "Ends \"…, or %@.\"; Home is Brain at Home: keep it untranslated"
+    },
+    "you told me" : {},
+    "your Mac" : {
+      "comment" : "Fills %@ in “Paired with %@…”"
+    },
+    "~%@ MB download on first use" : {},
+    "·" : {},
+    "•" : {}
+  },
+  "version" : "1.0"
+}

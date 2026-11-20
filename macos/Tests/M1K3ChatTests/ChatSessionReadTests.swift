@@ -14,6 +14,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.85 (fakes on both sides;
 //  the brains are the eval's). Prior: none (new file; ChatSessionLookTests' shape).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0 review fold: a 1,001-file title reads "1,000 more"
+//  (en grouping, model-facing English).
 //
 
 import Foundation
@@ -150,6 +152,9 @@ struct ChatSessionReadTests {
         #expect(two.title == "a.txt and 1 more")
         #expect(two.text == "a.txt\n\nAlpha.\n\nb.txt\n\nBeta.")
         #expect(ReadSource(files: []) == nil)
+        // The title is model-facing English: the count groups the en way whatever the device's region.
+        let many = (0 ... 1000).map { FileAttachment(filename: "f\($0).txt", extractedText: "x") }
+        #expect(try #require(ReadSource(files: many)).title == "f0.txt and 1,000 more")
     }
 
     @Test("a file is read only when it is prose and the words ask about it; anything else stays a chat turn")

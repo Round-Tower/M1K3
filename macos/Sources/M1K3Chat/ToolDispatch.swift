@@ -60,6 +60,8 @@
 //  (2026-10-27 web sample); with WebSearchTool's three-result list the page text reaching the model across the
 //  sample's nine answered searches went 6,388 → 11,996 characters. The Sources footer still reads the raw URLs.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `offlinePalette`: a picker `none` handed to the agent turn
+//  (`toolNoneToAgent`) gets no web reads. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -97,6 +99,12 @@ public enum ToolDispatch {
     /// tokens on 375 for "if you could redesign one thing about how you work…").
     public static func actionPalette(_ palette: [any AgentTool]) -> [any AgentTool] {
         palette.filter { !dispatchable.contains($0.name) }
+    }
+
+    /// The palette for an agent turn the picker said needs no tool (`toolNoneToAgent`): everything but the
+    /// web reads. On 2026-11-19 such a turn fetched a page for "build me a landing page" (131 s, failed).
+    public static func offlinePalette(_ palette: [any AgentTool]) -> [any AgentTool] {
+        palette.filter { !webSourced.contains($0.name) }
     }
 
     /// Every name a picker may answer: the dispatchable tools, `none` (plain chat)

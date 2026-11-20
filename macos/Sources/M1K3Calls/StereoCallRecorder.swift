@@ -50,6 +50,8 @@ import os
 // the shared adaptive shell reaches call-recording only on macOS. On mobile the
 // feature is simply absent (a Phase-2 decision, not a silent stub).
 // Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.8, Prior: Kev + claude-opus-4-8
+// Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `RecorderError`'s text resolves from M1K3Calls'
+// catalog (`bundle: .module`). English unchanged.
 #if os(macOS)
 
     /// Records a stereo call (mic + system audio). `@unchecked Sendable`: mutable
@@ -286,9 +288,9 @@ import os
             public var errorDescription: String? {
                 switch self {
                 case .formatUnavailable:
-                    String(localized: "The microphone isn’t ready yet — try again in a moment.")
+                    String(localized: "The microphone isn’t ready yet — try again in a moment.", bundle: .module)
                 case .micPermissionDenied:
-                    String(localized: "Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone.")
+                    String(localized: "Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone.", bundle: .module)
                 }
             }
         }

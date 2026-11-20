@@ -39,6 +39,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `destination(_:systemImage:_:)` takes a LocalizedStringKey, so its
+//  six literal titles reach the string catalog. English renders unchanged.
 
 import M1K3Chat
 import SwiftUI
@@ -122,7 +124,7 @@ struct SidebarView: View {
     /// weight), grey at rest; only the page you're on wears the accent. Every
     /// row in accent blue made the selection hard to find (Kev, 2026-09-26:
     /// "our blue menu icons need some re-designing"; direction C of the mock).
-    private func destination(_ title: String, systemImage: String, _ tag: SidebarSelection) -> some View {
+    private func destination(_ title: LocalizedStringKey, systemImage: String, _ tag: SidebarSelection) -> some View {
         Label {
             Text(title)
         } icon: {

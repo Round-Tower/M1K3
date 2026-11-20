@@ -109,6 +109,8 @@ Review: Kev + claude-fable-5.1, 2026-11-06 — `_shipped` / the shipped column: 
 Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on for the Mac (`whenUnset: true`), so
 `--router-search` now defaults on under dispatch like head and chain; `--no-router-search` is the off arm. The
 shipped head is still the untrained stub, which never vetoes. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-11-19 — `--router-none-agent` (M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT): a picker
+`none` takes the agent turn, on under dispatch like the Mac app; `--no-router-none-agent` is the off arm. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-11-19 — `--reply-language` (on by default on the live path, like the app) and
 `--device-language` (the clause's short-turn fallback): the language arm's switches. Confidence 0.85.
 """
@@ -273,6 +275,7 @@ class RunOptions:
     router_head: bool | None = None  # the group head (toolGroupRouter); None → on under dispatch, like the Mac app
     router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
     router_search: bool | None = None  # the search head's veto (toolSearchHead, #713); None → on, like the Mac app
+    router_none_agent: bool | None = None  # a picker `none` takes the agent turn (toolNoneToAgent); None → on, like the Mac
     reply_language: bool | None = None  # the reply-language clause (2026-11-19); None → on on the live path, like the app
     device_language: str | None = None  # stands in for the device's language list (the clause's short-turn fallback)
 
@@ -384,9 +387,11 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
     if opts.router is not None and opts.router not in ROUTER_MODES:
         raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
-    if (opts.router_head or opts.router_chain or opts.router_search) and opts.router != "dispatch":
+    if (
+        opts.router_head or opts.router_chain or opts.router_search or opts.router_none_agent
+    ) and opts.router != "dispatch":
         # An explicit off is fine anywhere.
-        raise ValueError("router head/chain/search need --router dispatch (the app reads them only there)")
+        raise ValueError("router head/chain/search/none-agent need --router dispatch (the app reads them only there)")
     if opts.device_language and opts.reply_language is False:
         raise ValueError("--device-language needs the reply-language clause on (it is the clause's fallback)")
     report = out_path(container, opts.name)
@@ -424,6 +429,9 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         # The search head ships ON on the Mac too (Kev, 2026-10-27; `whenUnset: true`), as its untrained stub.
         if opts.router == "dispatch" and opts.router_search is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] = "1"
+        # A picker `none` takes the agent turn on the Mac (2026-11-19, `toolNoneToAgent`, `whenUnset: true`).
+        if opts.router == "dispatch" and opts.router_none_agent is not False:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT"] = "1"
     # The Mac and iPhone wire the clause on when unset (`ReplyLanguage.liveClause`); the bare arm has no responder.
     if opts.live_path and opts.reply_language is not False:
         trig["M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE"] = "1"
@@ -885,6 +893,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--router-search", action=argparse.BooleanOptionalAction, default=None,
                     help="with --router dispatch: the search head vetoes a web read on a turn it reads as local "
                          "(toolSearchHead, #713; default on, as the Mac app)")
+    ap.add_argument("--router-none-agent", action=argparse.BooleanOptionalAction, default=None,
+                    help="with --router dispatch: a picker `none` takes the agent turn, not a plain turn "
+                         "(toolNoneToAgent; default on, as the Mac app)")
     ap.add_argument("--reply-language", action=argparse.BooleanOptionalAction, default=None,
                     help="the reply-language clause (default: on on the live path, like the app; --no- for the baseline)")
     ap.add_argument("--device-language", help="the device language the clause falls back to on short turns (default en)")
@@ -923,7 +934,7 @@ def main(argv: list[str] | None = None) -> int:
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
         calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
-        router_search=args.router_search,
+        router_search=args.router_search, router_none_agent=args.router_none_agent,
         reply_language=args.reply_language, device_language=args.device_language,
     )
     if args.app_arg and not args.direct:

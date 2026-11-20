@@ -25,6 +25,8 @@
 //  embedder and the gate's missing one proves the share. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — `macShipsTheSearchHeadOn`: Kev flipped the Mac to `whenUnset: true`;
 //  the bare default (iOS) stays off. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `toolNoneToAgent` joins the flag pins, and
+//  `noneToAgentNeedsDispatchFlagAndNotMini` pins where a none pick may take the agent turn. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -323,18 +325,21 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.pickerPrewarmEnabled(defaults), "the prewarmed picker is an arm until its eval")
         #expect(!ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
         #expect(!ToolRouterWiring.searchHeadEnabled(defaults), "an arm until its teacher pass and eval")
+        #expect(!ToolRouterWiring.noneToAgentEnabled(defaults), "iOS keeps the plain turn until a phone run")
         defaults.set(true, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(true, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(true, forKey: ToolRouterWiring.chainKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmPrefixKey)
         defaults.set(true, forKey: ToolRouterWiring.searchHeadKey)
+        defaults.set(true, forKey: ToolRouterWiring.noneToAgentKey)
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
         #expect(ToolRouterWiring.searchHeadEnabled(defaults))
+        #expect(ToolRouterWiring.noneToAgentEnabled(defaults))
     }
 
     @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")
@@ -346,14 +351,34 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.noneToAgentEnabled(defaults, whenUnset: true))
         defaults.set(false, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(false, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(false, forKey: ToolRouterWiring.chainKey)
         defaults.set(false, forKey: ToolRouterWiring.searchHeadKey)
+        defaults.set(false, forKey: ToolRouterWiring.noneToAgentKey)
         #expect(!ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.noneToAgentEnabled(defaults, whenUnset: true))
+    }
+
+    /// 2026-11-19 route control: Lil's routed puzzles that Apple's picker answered `none` scored 16/24 on the plain
+    /// turn and 15/16 on the agent turn. Mini keeps its plain turn: its native agent session overflowed (#427).
+    @Test("a none pick takes the agent turn only under dispatch, with the flag, on a brain that isn't Mini")
+    func noneToAgentNeedsDispatchFlagAndNotMini() throws {
+        let embedder = OneTurnEmbedder { _ in nil }
+        func takes(_ provider: any InferenceProvider, dispatch: Bool, flag: Bool) throws -> Bool {
+            try #require(ToolRouterWiring.compose(
+                provider: provider, enabled: true, dispatch: dispatch, allTiers: true, noneToAgent: flag,
+                embedder: embedder
+            )).noneTakesAgent
+        }
+        #expect(try takes(OtherBrain(), dispatch: true, flag: true))
+        #expect(try !takes(OtherBrain(), dispatch: true, flag: false))
+        #expect(try !takes(OtherBrain(), dispatch: false, flag: true), "no picker, no none pick")
+        #expect(try !takes(AppleFoundationModelsProvider(), dispatch: true, flag: true), "Mini keeps the plain turn")
     }
 
     /// Kev, 2026-10-27: the Mac ships the search head ON. The head itself ships as the untrained stub, which never
