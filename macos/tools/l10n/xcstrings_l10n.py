@@ -32,6 +32,10 @@ Review: claude-opus-5-5, 2026-11-20 (bot passes, round 2 on #873) — approvals 
 they were read against (`docs/l10n/approved.json`), so `sweep` and a re-draft keep them until the English
 changes; the rule holds localhost / API-key / "protects" copy and short local / offline / private claims
 (the sweep retracted 50 more lines). Confidence 0.8.
+Review: claude-opus-5-5, 2026-11-20 (the #873 round-2 follow-ups) — `--approved` writes only rows the pending file
+holds, against the English the reader's sheet showed (held rows now record it; the 932 existing rows were backfilled
+from the English their sheets were printed from); a kept approval must still ship; `unread_shipped` is the hold
+invariant over the real catalogs, pinned by a test CI runs. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -310,8 +314,9 @@ def apply(
     time with `locales`). Holding a row also retracts any translation the catalog already has for it. Rows for
     other `locales` are left alone, in the catalogs and in the hold file. Each catalog is written whole, atomically.
     With `approvals_path`, an approved write is recorded there with its English, and a row whose approval still
-    matches the English is kept as the reader approved it: a later draft neither replaces nor holds it. Pass only
-    the pending file with `approved`: a drafts file there would skip the native read.
+    matches the English (and still ships) is kept as the reader approved it: a later draft neither replaces nor holds
+    it. A held row records the English it was drafted against, and `approved` writes only rows the pending file holds
+    against that same English, so an approval never covers a line nobody read.
     Exit 0 when every row landed or was held, 1 when anything was rejected.
     """
     with open(path, encoding="utf-8") as handle:
@@ -350,17 +355,21 @@ def apply(
                 rejects.append({**row, "why": "the catalog marks this key do-not-translate"})
                 continue
             english = source_text(row["key"], entry)
-            if not approved and approvals.get(_row_id(row)) == english:
+            if (not approved and approvals.get(_row_id(row)) == english
+                    and _ships(entry, row["locale"])):
                 kept += 1  # a native reader approved what ships; a new draft waits for a new read
+                held.pop(_row_id(row), None)
                 continue
             private = (bool(row.get("review")) or _row_id(row) in held
                        or needs_native_read(catalog, english))
             try:
+                if approved:
+                    _check_approvable(held.get(_row_id(row)), english)
                 if private and not approved:
                     if not hold_path:
                         raise ValueError("privacy copy needs --hold-review (or --approved after the native read)")
                     apply_one(json.loads(json.dumps(entry)), row["key"], row["locale"], row, True)  # validate only
-                    held[_row_id(row)] = {**row, "review": True}
+                    held[_row_id(row)] = {**row, "review": True, "english": english}
                     _retract(entry, row["locale"])
                     continue
                 apply_one(entry, row["key"], row["locale"], row, False)
@@ -387,6 +396,35 @@ def apply(
     for reject in rejects[:20]:
         print(f"  reject {reject.get('locale')} {reject.get('catalog')}: {reject['why']}")
     return 0 if not rejects else 1
+
+
+def _check_approvable(held_row: dict | None, english: str) -> None:
+    """`--approved` writes only what a reader read: a row the pending file holds, against the English its sheet showed."""
+    if held_row is None:
+        raise ValueError("--approved writes only rows the pending file holds (pass the pending file)")
+    if held_row.get("english") != english:
+        raise ValueError("the English changed after the reader's sheet: re-print the sheet and read it again")
+
+
+def _ships(entry: dict, locale: str) -> bool:
+    """Whether `entry` carries a translation for `locale` (any shape)."""
+    return bool(list(gate.string_units((entry.get("localizations") or {}).get(locale) or {})))
+
+
+def unread_shipped(root: str, approvals_path: str | None) -> list[tuple[str, str, str]]:
+    """Shipped wave translations the rule holds that no reader approved against their current English."""
+    approvals = _load_approvals(approvals_path)
+    leaks = []
+    for catalog in _catalogs(root):
+        with open(os.path.join(root, catalog), encoding="utf-8") as handle:
+            strings = json.load(handle).get("strings") or {}
+        for key, entry in translatable(strings):
+            english = source_text(key, entry)
+            if not needs_native_read(catalog, english):
+                continue
+            leaks.extend((locale, catalog, key) for locale in LOCALES
+                         if _ships(entry, locale) and approvals.get((locale, catalog, key)) != english)
+    return leaks
 
 
 def _retract(entry: dict, locale: str) -> dict | None:
@@ -434,8 +472,8 @@ def sweep(root: str, hold_path: str, approvals_path: str | None = None) -> int:
                     continue
                 if locale in (entry.get("localizations") or {}):
                     removed = _retract(entry, locale)
-                    held[(locale, catalog, key)] = {"catalog": catalog, "key": key, "locale": locale, "review": True,
-                                                    **_draft_of(removed or {})}
+                    held[(locale, catalog, key)] = {"catalog": catalog, "english": english, "key": key,
+                                                    "locale": locale, "review": True, **_draft_of(removed or {})}
                     moved += 1
                     changed = True
         if changed:

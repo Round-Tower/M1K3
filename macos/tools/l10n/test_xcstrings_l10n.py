@@ -427,3 +427,73 @@ def test_rows_pass_two_found_shipping_unread_are_held(text):
 @pytest.mark.parametrize("text", ["Always local", "Fully offline", "Private by design"])
 def test_a_short_local_or_offline_claim_is_held(text):
     assert l10n.needs_native_read("x/Localizable.xcstrings", text)
+
+
+# --------------------------------------------------------------------------- #
+# Approval guards (#873 round-2 follow-ups): an approval covers exactly what a reader read
+# --------------------------------------------------------------------------- #
+
+def test_a_held_row_carries_the_english_it_was_drafted_against(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending = tmp_path / "pending.json"
+    row = {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}
+    l10n.apply(str(tmp_path), _drafts(tmp_path, [row]), None, str(pending))
+    assert json.loads(pending.read_text())[0]["english"] == PRIVACY
+
+
+def test_approved_refuses_a_row_the_pending_file_does_not_hold(tmp_path):
+    # A drafts file passed with --approved would skip the native read.
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending, approvals = tmp_path / "pending.json", tmp_path / "approved.json"
+    row = {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Ungelesen.", "review": True}
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, [row]), None, str(pending), approved=True,
+                      approvals_path=str(approvals)) == 1
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]
+    assert not approvals.exists()
+
+
+def test_approved_refuses_a_row_whose_english_changed_after_the_sheet(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending, approvals = tmp_path / "pending.json", tmp_path / "approved.json"
+    row = {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}
+    l10n.apply(str(tmp_path), _drafts(tmp_path, [row]), None, str(pending))
+    rows = json.loads(pending.read_text())
+    rows[0]["english"] = "Your notes stay here."  # the reader's sheet showed an older English line
+    pending.write_text(json.dumps(rows))
+    assert l10n.apply(str(tmp_path), str(pending), None, str(pending), approved=True,
+                      approvals_path=str(approvals)) == 1
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]
+    assert [r["locale"] for r in json.loads(pending.read_text())] == ["de"]
+
+
+def test_approved_refuses_a_held_row_without_its_english(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending = tmp_path / "pending.json"
+    pending.write_text(json.dumps([{"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Hier.", "review": True}]))
+    assert l10n.apply(str(tmp_path), str(pending), None, str(pending), approved=True) == 1
+
+
+def test_a_kept_row_whose_translation_is_gone_is_held_again(tmp_path):
+    cat, pending, approvals, row = _approve_de(tmp_path)
+    data = json.loads((tmp_path / cat).read_text())
+    data["strings"][PRIVACY] = {}  # the approved translation was removed from the catalog
+    (tmp_path / cat).write_text(l10n.dumps(data))
+    l10n.apply(str(tmp_path), _drafts(tmp_path, [{**row, "value": "Neu."}], "b.json"), None, str(pending),
+               approvals_path=str(approvals))
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]
+    assert [r["value"] for r in json.loads(pending.read_text())] == ["Neu."]
+
+
+def test_shipped_privacy_copy_in_the_repo_was_read_against_its_english():
+    # The hold invariant over the real catalogs: CI fails when a translation the rule holds ships without an
+    # approval for its current English (a hand edit, an Xcode re-extract, or an approved line's English edited).
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+    leaks = l10n.unread_shipped(root, os.path.join(root, l10n.APPROVALS))
+    assert leaks == [], f"{len(leaks)} privacy lines ship unread, first: {leaks[:3]}"
+
+
+def test_pending_rows_in_the_repo_carry_their_english():
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+    with open(os.path.join(root, "docs/l10n/pending-review.json"), encoding="utf-8") as handle:
+        rows = json.load(handle)
+    assert rows and all(isinstance(r.get("english"), str) and r["english"] for r in rows)
