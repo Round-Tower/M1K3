@@ -7,62 +7,6 @@
     " " : {
       "shouldTranslate" : false
     },
-    " ago" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " her"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " atrás"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " plus tôt"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " atrás"
-          }
-        }
-      }
-    },
-    " ago · told by %@" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " her · erzählt von %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " atrás · contado por %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " plus tôt · raconté par %@"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " atrás · contado por %@"
-          }
-        }
-      }
-    },
     "\"%@\" isn't a link or a readable file. Paste an http(s) link, or drop / choose a file." : {
       "localizations" : {
         "de" : {
@@ -435,6 +379,40 @@
         }
       }
     },
+    "%@ · told by %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · erzählt von %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · told by %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · contado por %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · raconté par %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · contado por %@"
+          }
+        }
+      }
+    },
     "%@ →" : {
       "localizations" : {
         "de" : {
@@ -459,6 +437,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ →"
+          }
+        }
+      }
+    },
+    "%@'s already here — my sharper brain is sitting on disk." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist schon da – mein schärferes Hirn liegt auf der Festplatte."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ya está aquí: mi cerebro más agudo te espera en el disco."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ est déjà là — mon cerveau le plus affûté attend sur le disque."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O %@ já está aqui — meu cérebro mais afiado está guardado no disco."
           }
         }
       }
@@ -614,16 +620,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld línea"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld líneas"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld línea"
                 }
               },
               "other" : {
@@ -638,16 +644,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ligne"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld lignes"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ligne"
                 }
               },
               "other" : {
@@ -662,16 +668,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld linha"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld linhas"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld linha"
                 }
               },
               "other" : {
@@ -708,13 +714,13 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
@@ -732,13 +738,13 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
@@ -756,13 +762,13 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ms"
@@ -802,13 +808,13 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld por ciento"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld por ciento"
@@ -826,13 +832,13 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld pour cent"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld pour cent"
@@ -850,13 +856,13 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld por cento"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld por cento"
@@ -896,13 +902,13 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
@@ -920,13 +926,13 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
@@ -944,13 +950,13 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld."
@@ -1744,6 +1750,9 @@
           }
         }
       }
+    },
+    "An agent" : {
+
     },
     "Answer stopped early" : {
       "localizations" : {
@@ -2847,6 +2856,34 @@
         }
       }
     },
+    "Brain unavailable" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hirn nicht verfügbar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerebro no disponible"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerveau indisponible"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cérebro indisponível"
+          }
+        }
+      }
+    },
     "Brains" : {
       "localizations" : {
         "de" : {
@@ -2905,6 +2942,34 @@
     },
     "Built-in is Apple's default voice. M1K3 Voice downloads a neural voice model and runs entirely offline. Character shapes the tone — Clean is the full range, M1K3 is the signature sound, Radio leans lo-fi. Hit “Hear a sample” to compare." : {
 
+    },
+    "Built-in · no download" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingebaut · kein Download"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Integrado · sin descarga"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intégré · aucun téléchargement"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Integrado · sem download"
+          }
+        }
+      }
     },
     "Calendar (titles & times)" : {
 
@@ -3558,6 +3623,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rosto do companheiro"
+          }
+        }
+      }
+    },
+    "Configuring M1K3's mainframe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfiguriere M1K3s Mainframe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurando el mainframe de M1K3"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration du mainframe de M1K3"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurando o mainframe do M1K3"
           }
         }
       }
@@ -4910,6 +5003,34 @@
         }
       }
     },
+    "Download %@ →" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ laden →"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargar %@ →"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger %@ →"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baixar %@ →"
+          }
+        }
+      }
+    },
     "Download and re-index" : {
       "localizations" : {
         "de" : {
@@ -5073,13 +5194,13 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Descargando… %lld %%"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Descargando… %lld %%"
@@ -5097,13 +5218,13 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Téléchargement… %lld %%"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Téléchargement… %lld %%"
@@ -5618,6 +5739,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Baixando em segundo plano. Pode continuar ou terminar."
+          }
+        }
+      }
+    },
+    "Fetching my proper voice — I'll switch over when it's ready." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich lade meine richtige Stimme – ich wechsle, sobald sie bereit ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estoy descargando mi voz de verdad: cambiaré en cuanto esté lista."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je récupère ma vraie voix — je basculerai dès qu’elle sera prête."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estou baixando minha voz de verdade — vou trocar assim que ela estiver pronta."
           }
         }
       }
@@ -6207,6 +6356,62 @@
         }
       }
     },
+    "Heartbeat: holding." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herzschlag: wartet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latido: en espera."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pouls : en attente."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsação: em espera."
+          }
+        }
+      }
+    },
+    "Heartbeat: latest pulse." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herzschlag: neuester Puls."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latido: último pulso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pouls : dernier bilan."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsação: pulso mais recente."
+          }
+        }
+      }
+    },
     "Here it is." : {
       "localizations" : {
         "de" : {
@@ -6554,6 +6759,40 @@
     },
     "I remember things — properly, on this Mac." : {
 
+    },
+    "I'll keep us on %@ while %@ downloads — switching the moment it's ready." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich bleibe bei %@, solange %@ lädt – ich wechsle, sobald es bereit ist."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I'll keep us on %1$@ while %2$@ downloads — switching the moment it's ready."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguiremos con %@ mientras se descarga %@: cambiaré en cuanto esté listo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je reste sur %@ pendant le téléchargement de %@ — je basculerai dès qu’il sera prêt."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vou ficar no %@ enquanto o %@ baixa — troco assim que ele estiver pronto."
+          }
+        }
+      }
     },
     "Import" : {
       "localizations" : {
@@ -7122,6 +7361,34 @@
         }
       }
     },
+    "Let M1K3 choose →" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 wählen lassen →"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Que elija M1K3 →"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laisser M1K3 choisir →"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deixar o M1K3 escolher →"
+          }
+        }
+      }
+    },
     "Let M1K3 choose. Recommended for most people." : {
       "localizations" : {
         "de" : {
@@ -7304,6 +7571,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvindo"
+          }
+        }
+      }
+    },
+    "Listening…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hört zu …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escuchando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l’écoute…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvindo…"
           }
         }
       }
@@ -8138,6 +8433,9 @@
         }
       }
     },
+    "Microphone unavailable" : {
+
+    },
     "Mini is answering while %@ downloads. %@" : {
       "localizations" : {
         "de" : {
@@ -8815,6 +9113,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Próximo cartão"
+          }
+        }
+      }
+    },
+    "Nice to meet you, %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schön, dich kennenzulernen, %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encantado de conocerte, %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravi de te rencontrer, %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prazer em te conhecer, %@."
+          }
+        }
+      }
+    },
+    "Nice to meet you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schön, dich kennenzulernen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encantado de conocerte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravi de te rencontrer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prazer em te conhecer."
+          }
+        }
+      }
+    },
+    "No brain ready yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kein Hirn bereit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay ningún cerebro listo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun cerveau prêt pour l’instant"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum cérebro pronto ainda"
           }
         }
       }
@@ -9594,6 +9976,34 @@
         }
       }
     },
+    "On disk · ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf der Festplatte · bereit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En el disco · listo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur le disque · prêt"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No disco · pronto"
+          }
+        }
+      }
+    },
     "Once" : {
       "localizations" : {
         "de" : {
@@ -9964,6 +10374,34 @@
         }
       }
     },
+    "Opens the Heartbeat timeline." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet den Herzschlag-Verlauf."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre la cronología del Latido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre la chronologie du Pouls."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre a linha do tempo da Pulsação."
+          }
+        }
+      }
+    },
     "Or from Terminal — it asks for the token, so Copy that first:" : {
       "localizations" : {
         "de" : {
@@ -10225,6 +10663,34 @@
     "Photo remembered. The caption stays on this device." : {
 
     },
+    "Pick a brain" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl ein Hirn"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige un cerebro"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis un cerveau"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha um cérebro"
+          }
+        }
+      }
+    },
     "Pick my face" : {
       "localizations" : {
         "de" : {
@@ -10308,6 +10774,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Localização Precisa"
+          }
+        }
+      }
+    },
+    "Preparing call transcription…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anruftranskription wird vorbereitet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando la transcripción de la llamada…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préparation de la transcription de l’appel…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando a transcrição da chamada…"
           }
         }
       }
@@ -10885,6 +11379,34 @@
         }
       }
     },
+    "Rebuilding index…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Index wird neu aufgebaut …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconstruyendo el índice…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconstruction de l’index…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconstruindo o índice…"
+          }
+        }
+      }
+    },
     "Recall ${query} from M1K3's memory" : {
       "localizations" : {
         "de" : {
@@ -11167,6 +11689,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gravando"
+          }
+        }
+      }
+    },
+    "Recording in progress" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme läuft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabación en curso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrement en cours"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gravação em andamento"
           }
         }
       }
@@ -11567,16 +12117,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Resuelta (%lld)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Resueltas (%lld)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Resuelta (%lld)"
                 }
               },
               "other" : {
@@ -11609,13 +12159,13 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Resolvidas (%lld)"
                 }
               },
-              "many" : {
+              "one" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Resolvidas (%lld)"
@@ -14021,6 +14571,90 @@
         }
       }
     },
+    "That one stretched me." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das hat mich ganz schön gefordert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esa me hizo esforzarme."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celle-là m’a fait travailler."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa me fez suar."
+          }
+        }
+      }
+    },
+    "That was %@ — and this Mac can run my full brain." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das war %@ – und dieser Mac kann mein volles Hirn ausführen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese era %@, y este Mac puede ejecutar mi cerebro completo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’était %@ — et ce Mac peut faire tourner mon cerveau complet."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse foi o %@ — e este Mac consegue rodar meu cérebro completo."
+          }
+        }
+      }
+    },
+    "That was %@, my quickest brain." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das war %@, mein schnellstes Hirn."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese era %@, mi cerebro más rápido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’était %@, mon cerveau le plus rapide."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse foi o %@, meu cérebro mais rápido."
+          }
+        }
+      }
+    },
     "That was my everyday voice. Want to hear my proper one?" : {
       "localizations" : {
         "de" : {
@@ -14223,6 +14857,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Estes já estão a caminho ou precisam de uma nova tentativa."
+          }
+        }
+      }
+    },
+    "Thinking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denkt nach"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pensando"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réflexion"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pensando"
           }
         }
       }
@@ -15166,6 +15828,37 @@
         }
       }
     },
+    "Voice input — tap to speak, tap to send" : {
+
+    },
+    "Voice input — wait for M1K3 to finish answering" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spracheingabe – warte, bis M1K3 fertig geantwortet hat"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrada de voz: espera a que M1K3 termine de responder"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisie vocale — attends que M1K3 ait fini de répondre"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entrada de voz — espere o M1K3 terminar de responder"
+          }
+        }
+      }
+    },
     "Voice mode" : {
       "localizations" : {
         "de" : {
@@ -15250,6 +15943,34 @@
         }
       }
     },
+    "Wake up %@ →" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aufwecken →"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Despertar a %@ →"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réveiller %@ →"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acordar o %@ →"
+          }
+        }
+      }
+    },
     "Waking M1K3…" : {
       "localizations" : {
         "de" : {
@@ -15277,6 +15998,9 @@
           }
         }
       }
+    },
+    "Want me to switch over? Takes a few seconds; the weights are already on this Mac." : {
+
     },
     "Warming up sharper voice…" : {
       "localizations" : {
@@ -15983,16 +16707,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld elemento"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld elementos"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld elemento"
                 }
               },
               "other" : {
@@ -16007,16 +16731,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "^[%lld élément](inflect: true)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "^[%lld éléments](inflect: true)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "^[%lld élément](inflect: true)"
                 }
               },
               "other" : {
@@ -16031,16 +16755,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld item"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld itens"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item"
                 }
               },
               "other" : {
@@ -16077,16 +16801,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld recuerdo"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld recuerdos"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld recuerdo"
                 }
               },
               "other" : {
@@ -16101,16 +16825,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "^[%lld souvenir](inflect: true)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "^[%lld souvenirs](inflect: true)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "^[%lld souvenir](inflect: true)"
                 }
               },
               "other" : {
@@ -16125,16 +16849,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld lembrança"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld lembranças"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lembrança"
                 }
               },
               "other" : {
@@ -16171,16 +16895,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld fuente"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld fuentes"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld fuente"
                 }
               },
               "other" : {
@@ -16195,16 +16919,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "^[%lld source](inflect: true)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "^[%lld sources](inflect: true)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "^[%lld source](inflect: true)"
                 }
               },
               "other" : {
@@ -16219,16 +16943,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld fonte"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld fontes"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld fonte"
                 }
               },
               "other" : {
@@ -16363,6 +17087,35 @@
         }
       }
     },
+    "small" : {
+      "comment" : "Fills the size in “a one-time %@ download” when the size is unknown.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "geringem Umfang"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "poco tamaño"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "petite taille"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tamanho pequeno"
+          }
+        }
+      }
+    },
     "told by %@" : {
       "localizations" : {
         "de" : {
@@ -16442,16 +17195,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· %lld llamada"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· %lld llamadas"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· %lld llamada"
                 }
               },
               "other" : {
@@ -16466,16 +17219,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· ^[%lld appel](inflect: true)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· ^[%lld appels](inflect: true)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· ^[%lld appel](inflect: true)"
                 }
               },
               "other" : {
@@ -16490,16 +17243,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· %lld chamada"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· %lld chamadas"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· %lld chamada"
                 }
               },
               "other" : {
@@ -16536,16 +17289,16 @@
         "es" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· %lld error"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· %lld errores"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· %lld error"
                 }
               },
               "other" : {
@@ -16560,16 +17313,16 @@
         "fr" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· ^[%lld erreur](inflect: true)"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· ^[%lld erreurs](inflect: true)"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· ^[%lld erreur](inflect: true)"
                 }
               },
               "other" : {
@@ -16584,16 +17337,16 @@
         "pt-BR" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "· %lld erro"
-                }
-              },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "· %lld erros"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "· %lld erro"
                 }
               },
               "other" : {

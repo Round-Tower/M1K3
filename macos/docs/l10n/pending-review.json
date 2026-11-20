@@ -148,6 +148,15 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "An agent",
+  "locale": "de",
+  "value": "Ein Agent",
+  "review": true,
+  "english": "An agent",
+  "sheet": "af9974e312cd89cc"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Apple Intelligence isn't available here, so I'll fetch my own brain — %@ M1K3, a one-time %@ download. Still fully on this Mac.",
   "locale": "de",
   "review": true,
@@ -581,6 +590,15 @@
   "value": "Neuen API-Schlüssel erstellen?",
   "english": "Make a new API key?",
   "sheet": "628bc419ad0541be"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Microphone unavailable",
+  "locale": "de",
+  "value": "Mikrofon nicht verfügbar",
+  "review": true,
+  "english": "Microphone unavailable",
+  "sheet": "85d3f41861730d97"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1026,6 +1044,24 @@
   "note": "„Angegebene Altersgruppe“ has not been checked against Apple's German string, so a native reader must confirm it. The source is a multi-line literal at PrivacySettingsPane.swift:206. The iOS copy at SettingsScreen.swift:276 has different wording and is a different key.",
   "english": "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for users under 16; the assistant's tone adjusts for all minors. Declining gives full capability.",
   "sheet": "89dd4979c368f87f"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Voice input — tap to speak, tap to send",
+  "locale": "de",
+  "value": "Spracheingabe – zum Sprechen tippen, zum Senden tippen",
+  "review": true,
+  "english": "Voice input — tap to speak, tap to send",
+  "sheet": "3dc8763df428316e"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "locale": "de",
+  "value": "Soll ich wechseln? Dauert ein paar Sekunden; die Gewichte sind schon auf diesem Mac.",
+  "review": true,
+  "english": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "sheet": "8a0b6ae25cbb68a9"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2098,6 +2134,15 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A one-time download, kept on this device",
+  "locale": "de",
+  "value": "Ein einmaliger Download, bleibt auf diesem Gerät",
+  "review": true,
+  "english": "A one-time download, kept on this device",
+  "sheet": "f717da0195b9d831"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your Vision Pro.",
   "locale": "de",
   "review": true,
@@ -2125,6 +2170,15 @@
   "note": "„your machine“ is rendered as „deinem Mac“, as the comment says. Held for review.",
   "english": "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your machine.",
   "sheet": "2ec440cb58e02072"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "About %@, kept on this device",
+  "locale": "de",
+  "value": "Etwa %@, bleibt auf diesem Gerät",
+  "review": true,
+  "english": "About %@, kept on this device",
+  "sheet": "01e8a9c1feef6c4f"
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -2196,6 +2250,15 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "That brain was switched out. Send it again to use the new one.",
+  "locale": "de",
+  "value": "Dieses Hirn wurde ausgewechselt. Sende die Nachricht noch einmal, um das neue zu nutzen.",
+  "review": true,
+  "english": "That brain was switched out. Send it again to use the new one.",
+  "sheet": "3416c12cd4259ac0"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Your local AI companion. Runs on this Mac — no account. It goes online only to %@. %@",
   "locale": "de",
   "review": true,
@@ -2243,6 +2306,15 @@
   "note": "Private Cloud Compute stays as Apple's name, hyphenated into one compound. 'optional' is kept literally (privacy line). Kept unchanged.",
   "english": "use the optional Private Cloud Compute brain",
   "sheet": "6d7f0268255ae9ea"
+ },
+ {
+  "catalog": "Sources/M1K3Knowledge/Resources/Localizable.xcstrings",
+  "key": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "locale": "de",
+  "value": "M1K3 konnte die gescannten Seiten auf diesem Gerät nicht lesen. Versuch es gleich noch einmal.",
+  "review": true,
+  "english": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "sheet": "397488c44be0acf4"
  },
  {
   "catalog": "Sources/M1K3Voice/Resources/Localizable.xcstrings",
@@ -2438,6 +2510,15 @@
   "note": "Says what paired devices can reach, so flagged for review (the batch had false).",
   "english": "Also serve MCP tools to paired devices",
   "sheet": "04ebe42e3fadb04f"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "An agent",
+  "locale": "es",
+  "value": "Un agente",
+  "review": true,
+  "english": "An agent",
+  "sheet": "e4d78c502e5a57a2"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2880,6 +2961,15 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Microphone unavailable",
+  "locale": "es",
+  "value": "Micrófono no disponible",
+  "review": true,
+  "english": "Microphone unavailable",
+  "sheet": "f1a230a677c1c798"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Needs Private Cloud Compute on in Settings ▸ Privacy.",
   "locale": "es",
   "review": true,
@@ -3313,6 +3403,24 @@
   "note": "Apple's Spanish name for Declared Age Range is unverified, so a native reader should check it against Apple's es localisation.",
   "english": "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for users under 16; the assistant's tone adjusts for all minors. Declining gives full capability.",
   "sheet": "3e6ae30198ee6e1e"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Voice input — tap to speak, tap to send",
+  "locale": "es",
+  "value": "Entrada de voz: toca para hablar, toca para enviar",
+  "review": true,
+  "english": "Voice input — tap to speak, tap to send",
+  "sheet": "9752f02b8b890e98"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "locale": "es",
+  "value": "¿Quieres que cambie? Tarda unos segundos; los pesos ya están en este Mac.",
+  "review": true,
+  "english": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "sheet": "8c13fe7e98c93e40"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4361,6 +4469,24 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A one-time download, kept on this device",
+  "locale": "es",
+  "value": "Una descarga única, guardada en este dispositivo",
+  "review": true,
+  "english": "A one-time download, kept on this device",
+  "sheet": "614fddfa038948da"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "About %@, kept on this device",
+  "locale": "es",
+  "value": "Unos %@, guardados en este dispositivo",
+  "review": true,
+  "english": "About %@, kept on this device",
+  "sheet": "353ddc0b956d9adb"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "es",
   "review": true,
@@ -4405,6 +4531,15 @@
   "value": "Mi cerebro de todos los días. Rápido, ve imágenes y vive en este Mac.",
   "english": "My everyday brain. Quick, sees pictures, lives on this Mac.",
   "sheet": "c515fc16060132c8"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "That brain was switched out. Send it again to use the new one.",
+  "locale": "es",
+  "value": "Ese cerebro se ha cambiado. Vuelve a enviar el mensaje para usar el nuevo.",
+  "review": true,
+  "english": "That brain was switched out. Send it again to use the new one.",
+  "sheet": "e1f2d445ebcc5981"
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -4455,6 +4590,15 @@
   "note": "Infinitive fragment. 'Private Cloud Compute' stays as Apple's name, and 'opcional' is literal (opt-in). Privacy line: this crossing sends history to PCC.",
   "english": "use the optional Private Cloud Compute brain",
   "sheet": "1b0bf1fe04617123"
+ },
+ {
+  "catalog": "Sources/M1K3Knowledge/Resources/Localizable.xcstrings",
+  "key": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "locale": "es",
+  "value": "M1K3 no pudo leer sus páginas escaneadas en este dispositivo. Vuelve a intentarlo en un momento.",
+  "review": true,
+  "english": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "sheet": "93cae86822e22615"
  },
  {
   "catalog": "Sources/M1K3Voice/Resources/Localizable.xcstrings",
@@ -4651,6 +4795,15 @@
   "note": "Says which devices get the MCP tools. The batch flag was false; kept true.",
   "english": "Also serve MCP tools to paired devices",
   "sheet": "91ff40111e57e0c3"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "An agent",
+  "locale": "fr",
+  "value": "Un agent",
+  "review": true,
+  "english": "An agent",
+  "sheet": "ad4bbe938b38e6eb"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5082,6 +5235,15 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Microphone unavailable",
+  "locale": "fr",
+  "value": "Micro indisponible",
+  "review": true,
+  "english": "Microphone unavailable",
+  "sheet": "4588ec45f2c2cdff"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Needs Private Cloud Compute on in Settings ▸ Privacy.",
   "locale": "fr",
   "review": true,
@@ -5508,6 +5670,24 @@
   "note": "Changed the opening « Utilise » to « S’appuie sur »: with tu register, « Utilise … » reads as an instruction to the user (imperative) rather than a description of the feature. Declared Age Range name (« Tranche d’âge déclarée ») still to confirm against Apple’s fr string.",
   "english": "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for users under 16; the assistant's tone adjusts for all minors. Declining gives full capability.",
   "sheet": "65f944de4c40ad28"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Voice input — tap to speak, tap to send",
+  "locale": "fr",
+  "value": "Saisie vocale — touche pour parler, touche pour envoyer",
+  "review": true,
+  "english": "Voice input — tap to speak, tap to send",
+  "sheet": "2581a5327df90d38"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "locale": "fr",
+  "value": "Tu veux que je bascule ? Ça prend quelques secondes ; les poids sont déjà sur ce Mac.",
+  "review": true,
+  "english": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "sheet": "2818a17c3beb77da"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -6576,6 +6756,24 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A one-time download, kept on this device",
+  "locale": "fr",
+  "value": "Un téléchargement unique, conservé sur cet appareil",
+  "review": true,
+  "english": "A one-time download, kept on this device",
+  "sheet": "87cbdbe6dc64273b"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "About %@, kept on this device",
+  "locale": "fr",
+  "value": "Environ %@, conservé sur cet appareil",
+  "review": true,
+  "english": "About %@, kept on this device",
+  "sheet": "359710f7d8e1764b"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "fr",
   "review": true,
@@ -6620,6 +6818,15 @@
   "value": "Mon cerveau de tous les jours. Rapide, voit les images, vit sur ce Mac.",
   "english": "My everyday brain. Quick, sees pictures, lives on this Mac.",
   "sheet": "fa4a0a4e9d13d8c0"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "That brain was switched out. Send it again to use the new one.",
+  "locale": "fr",
+  "value": "Ce cerveau a été remplacé. Renvoie le message pour utiliser le nouveau.",
+  "review": true,
+  "english": "That brain was switched out. Send it again to use the new one.",
+  "sheet": "42f63b0d38eedc5e"
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -6670,6 +6877,15 @@
   "note": "Moved « facultatif » ahead of the Apple name. « le cerveau Private Cloud Compute facultatif » left the adjective dangling after a three-word English proper noun. Private Cloud Compute stays English. This is a privacy line.",
   "english": "use the optional Private Cloud Compute brain",
   "sheet": "b8399b89e5433806"
+ },
+ {
+  "catalog": "Sources/M1K3Knowledge/Resources/Localizable.xcstrings",
+  "key": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "locale": "fr",
+  "value": "M1K3 n’a pas pu lire ses pages numérisées sur cet appareil. Réessaie dans un instant.",
+  "review": true,
+  "english": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "sheet": "ae4f6f7a14b7d2a8"
  },
  {
   "catalog": "Sources/M1K3Voice/Resources/Localizable.xcstrings",
@@ -6864,6 +7080,15 @@
   "note": "The batch had review:false. Set to true because the line says which other devices get M1K3's tools (Brain at Home egress).",
   "english": "Also serve MCP tools to paired devices",
   "sheet": "119c5445f1a930a3"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "An agent",
+  "locale": "pt-BR",
+  "value": "Um agente",
+  "review": true,
+  "english": "An agent",
+  "sheet": "971c291bfb5d6e70"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -7296,6 +7521,15 @@
   "value": "Criar uma nova chave de API?",
   "english": "Make a new API key?",
   "sheet": "f9d83cd47864f4d8"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Microphone unavailable",
+  "locale": "pt-BR",
+  "value": "Microfone indisponível",
+  "review": true,
+  "english": "Microphone unavailable",
+  "sheet": "6fa1b2cb01c2e686"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -7734,6 +7968,24 @@
   "note": "Kept 'Declared Age Range' as Apple's API/feature name. A native reviewer should confirm whether Apple pt-BR localises it. No call sites: may be a stale key.",
   "english": "Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for users under 16; the assistant's tone adjusts for all minors. Declining gives full capability.",
   "sheet": "04fe9ef6946bd73d"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Voice input — tap to speak, tap to send",
+  "locale": "pt-BR",
+  "value": "Entrada de voz — toque para falar, toque para enviar",
+  "review": true,
+  "english": "Voice input — tap to speak, tap to send",
+  "sheet": "0a350dac5b777130"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "locale": "pt-BR",
+  "value": "Quer que eu troque? Leva alguns segundos; os pesos já estão neste Mac.",
+  "review": true,
+  "english": "Want me to switch over? Takes a few seconds; the weights are already on this Mac.",
+  "sheet": "11cdc5b74709ad4e"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -8791,6 +9043,24 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A one-time download, kept on this device",
+  "locale": "pt-BR",
+  "value": "Um download único, guardado neste dispositivo",
+  "review": true,
+  "english": "A one-time download, kept on this device",
+  "sheet": "2454ca55f211653f"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "About %@, kept on this device",
+  "locale": "pt-BR",
+  "value": "Cerca de %@, guardado neste dispositivo",
+  "review": true,
+  "english": "About %@, kept on this device",
+  "sheet": "b8c2b0d738aed05b"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "pt-BR",
   "review": true,
@@ -8834,6 +9104,15 @@
   "value": "Meu cérebro do dia a dia. Rápido, enxerga imagens, mora neste Mac.",
   "english": "My everyday brain. Quick, sees pictures, lives on this Mac.",
   "sheet": "2209215a1ca9062e"
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "That brain was switched out. Send it again to use the new one.",
+  "locale": "pt-BR",
+  "value": "Esse cérebro foi trocado. Envie a mensagem de novo para usar o novo.",
+  "review": true,
+  "english": "That brain was switched out. Send it again to use the new one.",
+  "sheet": "232f5c30eb7b45c3"
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -8884,6 +9163,15 @@
   "note": "Kept as drafted. Private Cloud Compute stays English, and \"optional\" is kept literally (opt-in force unchanged).",
   "english": "use the optional Private Cloud Compute brain",
   "sheet": "23fa86e690f04cbb"
+ },
+ {
+  "catalog": "Sources/M1K3Knowledge/Resources/Localizable.xcstrings",
+  "key": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "locale": "pt-BR",
+  "value": "O M1K3 não conseguiu ler as páginas digitalizadas neste dispositivo. Tente de novo em instantes.",
+  "review": true,
+  "english": "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.",
+  "sheet": "de73cbc6c8cf3cac"
  },
  {
   "catalog": "Sources/M1K3Voice/Resources/Localizable.xcstrings",
