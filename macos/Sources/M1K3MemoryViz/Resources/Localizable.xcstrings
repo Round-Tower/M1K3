@@ -2,7 +2,32 @@
   "sourceLanguage" : "en",
   "strings" : {
     "For a full accessible list, open Memories from the toolbar." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine vollständige, barrierefreie Liste findest du unter „Erinnerungen“ in der Symbolleiste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para ver una lista completa y accesible, abre Recuerdos desde la barra de herramientas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour une liste complète et accessible, ouvre Souvenirs depuis la barre d’outils."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para uma lista completa e acessível, abra Lembranças na barra de ferramentas."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

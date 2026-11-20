@@ -25,6 +25,9 @@
 //  app's language once a translation ships. So the submit word is per-locale: `localizedSubmitWord` (catalog key
 //  "please") is what `uiHint` teaches, and `isSubmit` matches it OR the English `submitWord` (WhisperKit, or a
 //  recogniser still in English, keeps working). English unchanged: the en value of "please" is "please".
+//  Review: claude-opus-5-5, 2026-11-20 — localisation wave one pins the recogniser to English (`SpeechLocalePolicy`),
+//  so the catalog marks "please" do-not-translate and every language's hint teaches the English word the ear hears.
+//  `localizedSubmitWord` stays, for the day speech follows the interface (Phase 2).
 
 import Foundation
 
@@ -47,14 +50,14 @@ public enum PoliteEndpoint {
     /// and an English recogniser hear English.
     public static let submitWord = "please"
 
-    /// The submit word in the app's language. The recogniser runs in `Locale.current`
-    /// (`AppleSpeechTranscriber`'s default, and both shells take it), which can follow the app's
-    /// language, so a translated app listens for, and teaches, its own word. "please" in English.
+    /// The submit word the hint teaches, from M1K3Voice's catalog. While the recogniser is pinned to
+    /// English (`SpeechLocalePolicy`, localisation wave one) the key is do-not-translate, so this is
+    /// "please" in every language; it becomes the language's own word when speech follows the interface.
     public static var localizedSubmitWord: String {
         String(
             localized: "please",
             bundle: .module,
-            comment: "Spoken word that ends a voice turn (“tell me a story, please”). ONE lowercase word, as speech recognition spells it: M1K3 matches the last word said against it."
+            comment: "Spoken word that ends a voice turn (“tell me a story, please”). Not translated while speech recognition is pinned to English (SpeechLocalePolicy): the recogniser hears English, so the hint must teach the English word."
         )
     }
 

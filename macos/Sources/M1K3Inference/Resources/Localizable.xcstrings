@@ -8,10 +8,62 @@
 
     },
     "%@ needs a newer chip than this device has. Staying on Mini." : {
-      "comment" : "Settings note on an older chip. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+      "comment" : "Settings note on an older chip. The argument is a brain name (Lil, Big). Mini is a brain name: never translated.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ braucht einen neueren Chip, als dieses Gerät hat. Es bleibt bei Mini."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ necesita un chip más reciente que el de este dispositivo. Seguimos con Mini."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ demande une puce plus récente que celle de cet appareil. On reste sur Mini."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O %@ precisa de um chip mais novo do que o deste dispositivo. Continuando no Mini."
+          }
+        }
+      }
     },
     "%@ runs on a real device — the Simulator has no GPU for MLX. Staying on Mini." : {
-      "comment" : "Settings note in the Simulator. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+      "comment" : "Settings note in the Simulator. The argument is a brain name (Lil, Big). Mini is a brain name: never translated.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ braucht ein echtes Gerät – der Simulator hat keine GPU für MLX. Es bleibt bei Mini."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ funciona en un dispositivo real — el Simulador no tiene GPU para MLX. Seguimos con Mini."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fonctionne sur un vrai appareil — le Simulator n’a pas de GPU pour MLX. On reste sur Mini."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O %@ roda em um dispositivo real — o Simulator não tem GPU para MLX. Continuando no Mini."
+          }
+        }
+      }
     },
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro." : {
       "comment" : "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated."
@@ -23,22 +75,157 @@
       "comment" : "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac)."
     },
     "A small brain for this Mac, which can't run Apple Intelligence." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein kleines Hirn für diesen Mac, auf dem Apple Intelligence nicht läuft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un cerebro pequeño para este Mac, que no puede usar Apple Intelligence."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un petit cerveau pour ce Mac, qui n’est pas compatible avec Apple Intelligence."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um cérebro pequeno para este Mac, que não é compatível com Apple Intelligence."
+          }
+        }
+      }
     },
     "A small brain for this Mac." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein kleines Hirn für diesen Mac."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un cerebro pequeño para este Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un petit cerveau pour ce Mac."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um cérebro pequeno para este Mac."
+          }
+        }
+      }
     },
     "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your Vision Pro." : {
-      "comment" : "Brain card copy for Mini without Apple Intelligence, on Apple Vision Pro. M1K3 is the app's name; Vision Pro is Apple's product name: keep both untranslated."
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on Apple Vision Pro. M1K3 is the app's name; Vision Pro is Apple's product name: keep both untranslated.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un cerebro pequeño propio de M1K3, para dispositivos sin Apple Intelligence. Descarga única. Funciona por completo en tu Vision Pro."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un petit cerveau propre à M1K3, pour les appareils sans Apple Intelligence. Téléchargement unique. Fonctionne entièrement sur ton Vision Pro."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um cérebro pequeno do próprio M1K3, para dispositivos sem Apple Intelligence. Download único. Roda inteiramente no seu Vision Pro."
+          }
+        }
+      }
     },
     "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your device." : {
-      "comment" : "Brain card copy for Mini without Apple Intelligence, on an iPhone or iPad (\"your device\"). M1K3 is the app's name."
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on an iPhone or iPad (\"your device\"). M1K3 is the app's name.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un cerebro pequeño propio de M1K3, para dispositivos sin Apple Intelligence. Descarga única. Funciona por completo en tu dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un petit cerveau propre à M1K3, pour les appareils sans Apple Intelligence. Téléchargement unique. Fonctionne entièrement sur ton appareil."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um cérebro pequeno do próprio M1K3, para dispositivos sem Apple Intelligence. Download único. Roda inteiramente no seu dispositivo."
+          }
+        }
+      }
     },
     "A small brain of M1K3's own, for devices without Apple Intelligence. One-time download. Runs entirely on your machine." : {
-      "comment" : "Brain card copy for Mini without Apple Intelligence, on a Mac (\"your machine\" is the Mac). M1K3 is the app's name."
+      "comment" : "Brain card copy for Mini without Apple Intelligence, on a Mac (\"your machine\" is the Mac). M1K3 is the app's name.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un cerebro pequeño propio de M1K3, para dispositivos sin Apple Intelligence. Descarga única. Funciona por completo en tu Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un petit cerveau propre à M1K3, pour les appareils sans Apple Intelligence. Téléchargement unique. Fonctionne entièrement sur ta machine."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um cérebro pequeno do próprio M1K3, para dispositivos sem Apple Intelligence. Download único. Roda inteiramente na sua máquina."
+          }
+        }
+      }
     },
     "Also get semantic memory (%@)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch semantisches Gedächtnis laden (%@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargar también la memoria semántica (%@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger aussi la mémoire sémantique (%@)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baixar também a memória semântica (%@)"
+          }
+        }
+      }
     },
     "Apple's built-in on-device model. No download. The quickest way to start." : {
       "comment" : "Brain card copy for Mini (Apple's on-device model)."
@@ -47,50 +234,377 @@
 
     },
     "Better dictation than Apple Speech (WhisperKit %@)." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besseres Diktieren als mit Apple Speech (WhisperKit %@)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictado mejor que el de Apple Speech (WhisperKit %@)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une meilleure dictée qu’Apple Speech (WhisperKit %@)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditado melhor que o Apple Speech (WhisperKit %@)."
+          }
+        }
+      }
     },
     "Better dictation than Apple Speech." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besseres Diktieren als mit Apple Speech."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictado mejor que el de Apple Speech."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une meilleure dictée qu’Apple Speech."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditado melhor que o Apple Speech."
+          }
+        }
+      }
     },
     "Better recall of your notes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besseres Abrufen deiner Notizen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encuentra mejor tus notas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour mieux retrouver tes notes."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recupera melhor suas notas."
+          }
+        }
+      }
     },
     "Better recall of your notes. Starts after %@ is ready." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besseres Abrufen deiner Notizen. Startet, sobald %@ bereit ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encuentra mejor tus notas. Empieza cuando %@ esté listo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour mieux retrouver tes notes. Démarrera quand %@ sera prêt."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recupera melhor suas notas. Começa quando o %@ estiver pronto."
+          }
+        }
+      }
     },
     "Big" : {
       "comment" : "Brain name: never translated.",
       "shouldTranslate" : false
     },
     "Couldn't download — try again from Settings ▸ Brains & downloads" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download fehlgeschlagen – versuch es noch mal unter Einstellungen ▸ Hirne & Downloads"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido descargar — vuelve a intentarlo desde Ajustes ▸ Cerebros y descargas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec du téléchargement — réessaie depuis Réglages ▸ Cerveaux et téléchargements"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível baixar — tente de novo em Ajustes ▸ Cérebros e downloads"
+          }
+        }
+      }
     },
     "Couldn't start just now — try again from Settings ▸ Brains & downloads" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konnte gerade nicht starten – versuch es noch mal unter Einstellungen ▸ Hirne & Downloads"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido iniciar ahora mismo — vuelve a intentarlo desde Ajustes ▸ Cerebros y descargas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de démarrer pour l’instant — réessaie depuis Réglages ▸ Cerveaux et téléchargements"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível começar agora — tente de novo em Ajustes ▸ Cérebros e downloads"
+          }
+        }
+      }
     },
     "Download stopped." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download abgebrochen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descarga detenida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement interrompu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O download parou."
+          }
+        }
+      }
     },
     "Downloading…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird geladen …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baixando…"
+          }
+        }
+      }
     },
     "Every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way." : {
 
     },
     "Fast and focused" : {
-      "comment" : "Tagline under the brain name Mini."
+      "comment" : "Tagline under the brain name Mini.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schnell und fokussiert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rápido y centrado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapide et concentré"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rápido e focado"
+          }
+        }
+      }
     },
     "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Findet deine Notizen nach Bedeutung, nicht nur nach passenden Wörtern. Beim Einschalten werden deine Notizen neu indexiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encuentra tus notas por su significado, no solo por palabras que coinciden. Al activarla, se reindexan tus notas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet de retrouver tes notes par leur sens, pas seulement par les mots exacts. L’activer réindexe tes notes."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encontra suas notas pelo significado, não só por palavras iguais. Ao ligar, suas notas são reindexadas."
+          }
+        }
+      }
     },
     "Finds your notes by meaning. Re-indexes them once." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Findet deine Notizen nach Bedeutung. Indexiert sie einmal neu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encuentra tus notas por su significado. Las reindexa una vez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet de retrouver tes notes par leur sens. Réindexation unique."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encontra suas notas pelo significado. Reindexa as notas uma vez."
+          }
+        }
+      }
     },
     "Full intelligence" : {
-      "comment" : "Tagline under the brain name Big."
+      "comment" : "Tagline under the brain name Big.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volle Intelligenz"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inteligencia completa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toute l’intelligence"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inteligência completa"
+          }
+        }
+      }
     },
     "Getting it ready…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird vorbereitet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparándolo…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préparation…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando…"
+          }
+        }
+      }
     },
     "Lil" : {
       "comment" : "Brain name: never translated.",
@@ -101,10 +615,50 @@
       "shouldTranslate" : false
     },
     "M1K3 Voice needs a newer chip than this device has. Built-in works here." : {
-      "comment" : "Settings note on an older chip. M1K3 Voice is a product name: never translated. Built-in names the other voice option: match its translation."
+      "comment" : "Settings note on an older chip. M1K3 Voice is a product name: never translated. Built-in names the other voice option: match its translation.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 Voice necesita un chip más reciente que el de este dispositivo. La voz integrada sí funciona aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 Voice demande une puce plus récente que celle de cet appareil. La voix Intégrée fonctionne ici."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Voz do M1K3 precisa de um chip mais novo do que o deste dispositivo. A voz Integrada funciona aqui."
+          }
+        }
+      }
     },
     "M1K3 Voice runs on a real device." : {
-      "comment" : "Settings note in the Simulator. M1K3 Voice is a product name: never translated."
+      "comment" : "Settings note in the Simulator. M1K3 Voice is a product name: never translated.",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 Voice funciona en un dispositivo real."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 Voice fonctionne sur un vrai appareil."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Voz do M1K3 roda em um dispositivo real."
+          }
+        }
+      }
     },
     "Maximum capability, fully local. The full M1K3." : {
       "comment" : "Brain card copy for Big. M1K3 is the app's name."
@@ -117,37 +671,314 @@
 
     },
     "My everyday brain: quick, and it sees pictures." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein Hirn für jeden Tag: schnell, und es sieht Bilder."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi cerebro de todos los días: es rápido y ve imágenes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon cerveau de tous les jours : rapide, et il voit les images."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meu cérebro do dia a dia: rápido, e enxerga imagens."
+          }
+        }
+      }
     },
     "My own voice, instead of the built-in one." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine eigene Stimme statt der integrierten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi propia voz, en lugar de la integrada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ma propre voix, au lieu de la voix intégrée."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minha própria voz, em vez da integrada."
+          }
+        }
+      }
     },
     "Ready" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prêt"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pronto"
+          }
+        }
+      }
     },
     "Semantic memory" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semantisches Gedächtnis"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memoria semántica"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mémoire sémantique"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memória semântica"
+          }
+        }
+      }
     },
     "Sharp and capable" : {
-      "comment" : "Tagline under the brain name Lil."
+      "comment" : "Tagline under the brain name Lil.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klug und leistungsstark"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agudo y capaz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vif et compétent"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afiado e capaz"
+          }
+        }
+      }
     },
     "Sharper ears" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schärfere Ohren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oído más fino"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une oreille plus fine"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvidos mais afiados"
+          }
+        }
+      }
     },
     "Starts after %@ is ready." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startet, sobald %@ bereit ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empieza cuando %@ esté listo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrera quand %@ sera prêt."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Começa quando o %@ estiver pronto."
+          }
+        }
+      }
     },
     "The deep thinker. Slower, sharper, for the hard questions." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Denker mit Tiefgang. Langsamer, schärfer, für die schweren Fragen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El pensador profundo. Más lento, más agudo, para las preguntas difíciles."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le penseur profond. Plus lent, plus fin, pour les questions difficiles."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O pensador profundo. Mais lento, mais afiado, para as perguntas difíceis."
+          }
+        }
+      }
     },
     "The deep thinker: slower, sharper." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Denker mit Tiefgang: langsamer, schärfer."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El pensador profundo: más lento, más agudo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le penseur profond : plus lent, plus fin."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O pensador profundo: mais lento, mais afiado."
+          }
+        }
+      }
     },
     "The download didn't finish (%@). Try again in a moment." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Download wurde nicht abgeschlossen (%@). Versuch es gleich noch mal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La descarga no se ha completado (%@). Vuelve a intentarlo en un momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le téléchargement n’a pas abouti (%@). Réessaie dans un instant."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O download não terminou (%@). Tente de novo daqui a pouco."
+          }
+        }
+      }
     },
     "Web search" : {
-      "comment" : "A switch name, listed with \"Private Cloud Compute\" in \"… is a switch in Settings.\""
+      "comment" : "A switch name, listed with \"Private Cloud Compute\" in \"… is a switch in Settings.\"",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Websuche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Búsqueda web"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche web"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca na web"
+          }
+        }
+      }
     },
     "Your local AI companion. Runs on this Mac — no account. It goes online only to %@. %@" : {
       "comment" : "First-run privacy line: a list of infinitive phrases, then the Settings-switch sentence.",
@@ -170,7 +1001,33 @@
       "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
     },
     "update" : {
-      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+      "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase).",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sich zu aktualisieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "actualizarse"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "se mettre à jour"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "se atualizar"
+          }
+        }
+      }
     },
     "use the optional Private Cloud Compute brain" : {
       "comment" : "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."

@@ -1,0 +1,517 @@
+[
+ {
+  "en": "brain (Mini/Lil/Big, the model tier)",
+  "translation": "cerveau",
+  "note": "m. 'Brains' = Cerveaux. 'Change brain…' = Changer de cerveau… Tier names stay English."
+ },
+ {
+  "en": "brain tier / level",
+  "translation": "niveau",
+  "note": "m. Store: « Trois niveaux de cerveau »."
+ },
+ {
+  "en": "memory (what M1K3 remembers, the store/feature)",
+  "translation": "mémoire",
+  "note": "f. Settings tab 'Memory' = Mémoire. 'Semantic memory' = mémoire sémantique."
+ },
+ {
+  "en": "a memory / memories (one remembered fact, the list)",
+  "translation": "souvenir / souvenirs",
+  "note": "m. 'Memories' window/section = Souvenirs; 'Export Memories…' = Exporter les souvenirs…; '^[%lld memory](inflect: true)' = ^[%lld souvenir](inflect: true). Never 'mémoires' for the plural (that means a thesis/memoir)."
+ },
+ {
+  "en": "remember (verb, label/action)",
+  "translation": "mémoriser",
+  "note": "'Remember this photo' = Mémoriser cette photo; 'Photo remembered' = Photo mémorisée; 'remembered' (badge) = mémorisé. In M1K3's own first-person prose the store's « je retiens » is fine ('Je retiens ce qui compte pour toi')."
+ },
+ {
+  "en": "recall (a memory)",
+  "translation": "retrouver",
+  "note": "'Recall Memory' = Retrouver un souvenir. Not 'rappeler' (clashes with reminder/rappel)."
+ },
+ {
+  "en": "forget",
+  "translation": "oublier",
+  "note": "'Forget this photo' = Oublier cette photo. Privacy line: keep 'everywhere, no residue' literal (partout, sans aucune trace)."
+ },
+ {
+  "en": "fact (a remembered fact)",
+  "translation": "fait",
+  "note": "m. 'corrected facts' = faits corrigés."
+ },
+ {
+  "en": "corrected (kept as history)",
+  "translation": "corrigé (conservé dans l’historique)",
+  "note": "Agrees with the noun: fait corrigé, info corrigée."
+ },
+ {
+  "en": "history (edit/conversation history)",
+  "translation": "historique",
+  "note": "m."
+ },
+ {
+  "en": "knowledge (M1K3's knowledge / your knowledge)",
+  "translation": "connaissances",
+  "note": "f. pl., per store « Apporte tes connaissances ». 'Search M1K3's Knowledge' = Chercher dans les connaissances de M1K3; 'knowledge base' = base de connaissances; 'knowledge graph' = graphe de connaissances (store)."
+ },
+ {
+  "en": "document / Documents (section)",
+  "translation": "document / Documents",
+  "note": "m. 'Keep this text in Documents' = Garder ce texte dans Documents (section name, capitalised)."
+ },
+ {
+  "en": "index / re-index",
+  "translation": "indexer / réindexer",
+  "note": "'Re-indexing your notes…' = Réindexation de tes notes…"
+ },
+ {
+  "en": "chunk (indexed piece of a document)",
+  "translation": "fragment",
+  "note": "m. '^[%lld chunk](inflect: true)' = ^[%lld fragment](inflect: true)."
+ },
+ {
+  "en": "embeddings / embedder",
+  "translation": "embeddings / modèle d’embeddings",
+  "note": "Keep 'embeddings' (m. pl., the term French ML users use); do not use 'plongements'. Prefer 'recherche par le sens' in user-facing descriptions."
+ },
+ {
+  "en": "note (a user's note; Notes import)",
+  "translation": "note",
+  "note": "f. Notes the Apple app stays « Notes »."
+ },
+ {
+  "en": "chat (the surface / a single thread)",
+  "translation": "discussion",
+  "note": "f. 'New chat' = Nouvelle discussion; 'Back to the chat' = Retour à la discussion; 'Continue in chat →' = Continuer dans la discussion →. Verb 'chat' = discuter (store « Discute avec… »)."
+ },
+ {
+  "en": "conversation / Conversations (history list)",
+  "translation": "conversation / Conversations",
+  "note": "f. Use where English says conversation; keep 'chat' → discussion distinct."
+ },
+ {
+  "en": "message",
+  "translation": "message",
+  "note": "m. 'Your message' = Ton message."
+ },
+ {
+  "en": "answer / reply",
+  "translation": "réponse",
+  "note": "f. 'Your answer's ready' = Ta réponse est prête. Verb: répondre."
+ },
+ {
+  "en": "companion",
+  "translation": "compagnon",
+  "note": "m. Companion names (Fox, Inkfish, Sparrow…) stay English and take masculine agreement (le Fox)."
+ },
+ {
+  "en": "face / pixel face",
+  "translation": "visage / visage en pixels",
+  "note": "m. Store wording. 'Pick my face' = Choisis mon visage."
+ },
+ {
+  "en": "avatar",
+  "translation": "avatar",
+  "note": "m."
+ },
+ {
+  "en": "skin (companion look: Phosphor, Cel)",
+  "translation": "habillage",
+  "note": "m. Skin option names (Phosphor, Cel) stay as names."
+ },
+ {
+  "en": "seasonal looks",
+  "translation": "tenues de saison",
+  "note": "f. pl."
+ },
+ {
+  "en": "constellation / Memory Constellation",
+  "translation": "constellation / Constellation des souvenirs",
+  "note": "f."
+ },
+ {
+  "en": "voice mode",
+  "translation": "mode vocal",
+  "note": "m. 'Leave voice mode' = Quitter le mode vocal."
+ },
+ {
+  "en": "voice (M1K3's spoken voice)",
+  "translation": "voix",
+  "note": "f., invariable plural. 'M1K3 Voice' is a product name, stays English; 'Built-in' voice = Intégrée (voix intégrée)."
+ },
+ {
+  "en": "voice input / voice output",
+  "translation": "saisie vocale / sortie vocale",
+  "note": "f."
+ },
+ {
+  "en": "speech recognition",
+  "translation": "reconnaissance vocale",
+  "note": "f. Store wording. Apple's on-device feature: reconnaissance vocale sur l’appareil."
+ },
+ {
+  "en": "dictate / dictation",
+  "translation": "dicter / Dictée",
+  "note": "Dictée is Apple's feature name (capitalised). 'Discard dictation' = Abandonner la dictée."
+ },
+ {
+  "en": "speak / say aloud (M1K3 talks)",
+  "translation": "lire à voix haute",
+  "note": "'Speak this answer' = Lire cette réponse à voix haute; 'Have M1K3 say something' = Faire dire quelque chose à M1K3; 'M1K3 is speaking' = M1K3 parle."
+ },
+ {
+  "en": "auto-speak",
+  "translation": "lecture automatique à voix haute",
+  "note": "'Auto-speak answers' = Lire les réponses à voix haute."
+ },
+ {
+  "en": "talk (to M1K3)",
+  "translation": "parler",
+  "note": "tu form, store « Parle-moi ». 'Talk to M1K3' = Parler à M1K3; 'Tap to start talking' = Touche pour parler."
+ },
+ {
+  "en": "listen / Listening",
+  "translation": "écouter / À l’écoute",
+  "note": "'Start listening' = Commencer l’écoute; 'Stop listening' = Arrêter l’écoute."
+ },
+ {
+  "en": "interrupt",
+  "translation": "interrompre",
+  "note": ""
+ },
+ {
+  "en": "mute / unmute",
+  "translation": "couper le son / réactiver le son",
+  "note": "'Mute microphone' = Couper le micro."
+ },
+ {
+  "en": "hands-free",
+  "translation": "mains libres",
+  "note": "Invariable."
+ },
+ {
+  "en": "echo cancellation",
+  "translation": "annulation d’écho",
+  "note": "f."
+ },
+ {
+  "en": "reasoning",
+  "translation": "raisonnement",
+  "note": "m. 'MODEL REASONING' = RAISONNEMENT DU MODÈLE. Reasoning models = modèles de raisonnement."
+ },
+ {
+  "en": "thinking / think (toggle)",
+  "translation": "réflexion / réfléchir",
+  "note": "'Thinking…' / 'THINKING…' = Réflexion… / RÉFLEXION…; 'Always think' = Toujours réfléchir; '%@ is thinking' = %@ réfléchit."
+ },
+ {
+  "en": "persona / personality",
+  "translation": "personnalité",
+  "note": "f."
+ },
+ {
+  "en": "todo / Todos (list)",
+  "translation": "tâche / Tâches",
+  "note": "f. 'Add Todo' = Ajouter une tâche; 'todo list' = liste de tâches; 'Mark done' = Marquer comme faite; '^[%@ todo](inflect: true) open' = ^[%@ tâche](inflect: true) en cours (agreement handled by inflect)."
+ },
+ {
+  "en": "reminder",
+  "translation": "rappel",
+  "note": "m. Apple's app is Rappels. Keep distinct from todo (tâche)."
+ },
+ {
+  "en": "suggested / suggestion",
+  "translation": "suggéré / suggestion",
+  "note": "Agreement: tâche suggérée. 'Suggested — yours to accept' = Suggérée — à toi de l’accepter."
+ },
+ {
+  "en": "accept / dismiss / decline",
+  "translation": "accepter / ignorer / refuser",
+  "note": ""
+ },
+ {
+  "en": "inbox",
+  "translation": "boîte de réception",
+  "note": "f."
+ },
+ {
+  "en": "Heartbeat (the status feature)",
+  "translation": "Pouls",
+  "note": "m., capitalised as a feature title ('Show the Heartbeat' = Afficher le Pouls; 'The heartbeat is off' = Le Pouls est désactivé)."
+ },
+ {
+  "en": "pulse / heartbeat note (one note it writes)",
+  "translation": "bilan",
+  "note": "m. 'No pulses yet' = Aucun bilan pour l’instant; 'Clear pulses' = Effacer les bilans; 'Notify on new pulses' = M’avertir des nouveaux bilans. Matches 'takes stock' (fait le point)."
+ },
+ {
+  "en": "web search",
+  "translation": "recherche web",
+  "note": "f. Glossary word. 'Search the web' = Chercher sur le web."
+ },
+ {
+  "en": "search (verb / noun)",
+  "translation": "chercher / recherche",
+  "note": "'Clear search' = Effacer la recherche."
+ },
+ {
+  "en": "source / source page",
+  "translation": "source / page source",
+  "note": "f."
+ },
+ {
+  "en": "ground (answers) / grounding",
+  "translation": "ancrer / ancrage",
+  "note": "'grounded answer' = réponse ancrée dans tes données; 'Grounding' (label) = Ancrage."
+ },
+ {
+  "en": "context",
+  "translation": "contexte",
+  "note": "m."
+ },
+ {
+  "en": "download (noun / verb)",
+  "translation": "téléchargement / télécharger",
+  "note": "m. 'one-time download' = téléchargement unique; 'Downloading…' = Téléchargement…; 'Downloaded' = Téléchargé."
+ },
+ {
+  "en": "fetch (in the background)",
+  "translation": "récupérer",
+  "note": "'Fetching %@ in the background…' = Récupération de %@ en arrière-plan…"
+ },
+ {
+  "en": "kit ('Get my kit', 'My full kit')",
+  "translation": "kit",
+  "note": "m. Keep the playful English loanword; 'Get my kit' = Récupérer mon kit."
+ },
+ {
+  "en": "update / new weights",
+  "translation": "mise à jour / nouveaux poids",
+  "note": "f. / m. pl."
+ },
+ {
+  "en": "model",
+  "translation": "modèle",
+  "note": "m."
+ },
+ {
+  "en": "tokens (model tokens, generation stats)",
+  "translation": "tokens",
+  "note": "m. Keep English to avoid clashing with access token (jeton). 'Generation stats' = Statistiques de génération."
+ },
+ {
+  "en": "on-device",
+  "translation": "sur l’appareil",
+  "note": "Glossary/store. With Mac context: sur ce Mac."
+ },
+ {
+  "en": "offline",
+  "translation": "hors ligne",
+  "note": ""
+ },
+ {
+  "en": "in the background",
+  "translation": "en arrière-plan",
+  "note": ""
+ },
+ {
+  "en": "private / Private Cloud (when not the Apple name)",
+  "translation": "privé / cloud privé",
+  "note": "'Private Cloud Compute' itself stays English. 'Private by design' = Privé par design (store)."
+ },
+ {
+  "en": "Settings (M1K3's window) / Settings ▸ X",
+  "translation": "Réglages",
+  "note": "m. pl. Translate the pane names in the path too: Settings ▸ Brains & downloads = Réglages ▸ Cerveaux et téléchargements."
+ },
+ {
+  "en": "Privacy (Settings pane)",
+  "translation": "Confidentialité",
+  "note": "f. System Settings path 'Privacy & Security' = Confidentialité et sécurité (Apple)."
+ },
+ {
+  "en": "Server (Settings pane)",
+  "translation": "Serveur",
+  "note": "m. Store release notes kept 'Settings > Server' only because the UI was English."
+ },
+ {
+  "en": "Local API",
+  "translation": "Local API",
+  "note": "Keep as the feature name (store copy keeps it); 'OpenAI-compatible' = compatible OpenAI."
+ },
+ {
+  "en": "MCP server",
+  "translation": "serveur MCP",
+  "note": "m."
+ },
+ {
+  "en": "API key",
+  "translation": "clé API",
+  "note": "f. 'New Key…' = Nouvelle clé…"
+ },
+ {
+  "en": "access token",
+  "translation": "jeton d’accès",
+  "note": "m. 'New Token…' = Nouveau jeton…"
+ },
+ {
+  "en": "Keychain",
+  "translation": "trousseau",
+  "note": "m. Apple's French term."
+ },
+ {
+  "en": "agent / connected agent / coding agents",
+  "translation": "agent / agent connecté / agents de code",
+  "note": "m. Store: « agents de code »."
+ },
+ {
+  "en": "Agent Log",
+  "translation": "Journal des agents",
+  "note": "m. Window title. 'Log agent conversations' = Journaliser les conversations des agents."
+ },
+ {
+  "en": "tool / tool call",
+  "translation": "outil / appel d’outil",
+  "note": "m."
+ },
+ {
+  "en": "pair / pairing / paired device",
+  "translation": "associer / association / appareil associé",
+  "note": "Store: « associe ton iPhone ». 'Pair a device…' = Associer un appareil…; 'pairing code' = code d’association. '^[%@ paired device](inflect: true)' = ^[%@ appareil associé](inflect: true)."
+ },
+ {
+  "en": "approve / revoke",
+  "translation": "approuver / révoquer",
+  "note": "'Approve in System Settings…' = Approuver dans Réglages Système…"
+ },
+ {
+  "en": "call (phone) / call recording",
+  "translation": "appel / enregistrement d’appels",
+  "note": "m. 'Record a call' = Enregistrer un appel. Consent and 'audio never leaves this Mac' are privacy copy: literal."
+ },
+ {
+  "en": "transcript / transcribe / transcription",
+  "translation": "transcription / transcrire / transcription",
+  "note": "f. 'Import transcript' = Importer une transcription; 'Transcribing…' = Transcription…"
+ },
+ {
+  "en": "caption (a photo's private description)",
+  "translation": "légende",
+  "note": "f. Store wording."
+ },
+ {
+  "en": "attach / attachment",
+  "translation": "joindre / pièce jointe",
+  "note": "f. Store: « joins une photo »."
+ },
+ {
+  "en": "photo / image",
+  "translation": "photo / image",
+  "note": "f."
+ },
+ {
+  "en": "Look / camera (iOS 'what am I looking at')",
+  "translation": "Regarder / caméra",
+  "note": "'Open M1K3's eyes' = Ouvrir les yeux de M1K3. Store: « pointe ta caméra »."
+ },
+ {
+  "en": "side panel / review panel / review (a link)",
+  "translation": "panneau latéral / panneau de consultation / consulter",
+  "note": "m. 'Review link %@' = Consulter le lien %@."
+ },
+ {
+  "en": "script / install / quarantine",
+  "translation": "script / installer / mettre en quarantaine",
+  "note": "m. 'Quarantine (hidden from AI)' = Quarantaine (masqué pour l’IA)."
+ },
+ {
+  "en": "export",
+  "translation": "exporter",
+  "note": "'Export %@' = Exporter %@. Exports are privacy copy (not encrypted outside M1K3): literal."
+ },
+ {
+  "en": "delete / remove / clear",
+  "translation": "supprimer / retirer / effacer",
+  "note": "Keep the three distinct: delete data = supprimer; remove from a list/attachment = retirer; clear a log/search = effacer."
+ },
+ {
+  "en": "rate / rating / Good answer / Needs work",
+  "translation": "noter / note / Bonne réponse / À améliorer",
+  "note": "f. 'Rate M1K3 on the App Store…' = Noter M1K3 sur l’App Store…"
+ },
+ {
+  "en": "report (send a report) / Report an issue…",
+  "translation": "rapport / Signaler un problème…",
+  "note": "m."
+ },
+ {
+  "en": "onboarding",
+  "translation": "configuration initiale",
+  "note": "f. 'Re-run onboarding…' = Relancer la configuration initiale…"
+ },
+ {
+  "en": "About you",
+  "translation": "À propos de toi",
+  "note": "tu form."
+ },
+ {
+  "en": "menu bar / Dock / notch HUD",
+  "translation": "barre des menus / Dock / HUD de l’encoche",
+  "note": "HUD stays as the acronym; in descriptions spell it once as « affichage tête haute »."
+ },
+ {
+  "en": "notification / notify",
+  "translation": "notification / avertir",
+  "note": "f."
+ },
+ {
+  "en": "location / precise location",
+  "translation": "localisation / position exacte",
+  "note": "Apple terms (Service de localisation, Position exacte). Location Services in a System Settings path = Service de localisation."
+ },
+ {
+  "en": "dial-up sound / modem",
+  "translation": "son de connexion du modem / modem",
+  "note": "m."
+ },
+ {
+  "en": "sound effects",
+  "translation": "effets sonores",
+  "note": "m. pl."
+ },
+ {
+  "en": "Reduce Motion / Reduce Transparency",
+  "translation": "Réduire les animations / Réduire la transparence",
+  "note": "Apple accessibility setting names."
+ },
+ {
+  "en": "Screen Saver",
+  "translation": "Économiseur d’écran",
+  "note": "m. Apple term."
+ },
+ {
+  "en": "Content Controls / Declared Age Range",
+  "translation": "Contrôles du contenu / Tranche d’âge déclarée",
+  "note": "Declared Age Range: confirm against Apple's fr string in a native read."
+ },
+ {
+  "en": "Dyslexia-friendly / Bionic reader / reading mode",
+  "translation": "Adapté à la dyslexie / Lecture bionique / mode lecture",
+  "note": "Font names (OpenDyslexic) stay English."
+ },
+ {
+  "en": "Third-party licenses / open source",
+  "translation": "Licences tierces / open source",
+  "note": "M1K3 itself is never 'open source': use « source-available » as the store does."
+ },
+ {
+  "en": "Auto / Auto-route",
+  "translation": "Auto / choix automatique",
+  "note": "'Auto-route (M1K3 picks the brain)' = Choix automatique (M1K3 choisit le cerveau)."
+ },
+ {
+  "en": "deep dive",
+  "translation": "exploration approfondie",
+  "note": "f."
+ }
+]

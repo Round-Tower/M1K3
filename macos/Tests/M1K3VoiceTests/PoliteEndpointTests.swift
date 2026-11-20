@@ -13,6 +13,8 @@
 //  `submitWord` are pinned.
 //  Review: claude-opus-5-5, 2026-11-19 — review fold: the submit word is per-locale (`localizedSubmitWord`, "please"
 //  in English); the hint teaches it and `isSubmit` matches it as well as the English word.
+//  Review: claude-opus-5-5, 2026-11-20 — comment only: the recogniser is pinned to English in wave one
+//  (`SpeechLocalePolicy`), so the hint's word is "please" in every language for now.
 
 @testable import M1K3Voice
 import Testing
@@ -72,8 +74,8 @@ struct PoliteEndpointTests {
 
     @Test("the hint teaches the word the listener matches, in the app's language")
     func hintTeachesTheMatchedWord() {
-        // A translated app runs the recogniser in its own language (Locale.current), so the
-        // hint and the match both read `localizedSubmitWord`; the English word always submits too.
+        // The hint and the match both read `localizedSubmitWord` ("please" everywhere while the recogniser is
+        // pinned to English, `SpeechLocalePolicy`); the English word always submits too.
         #expect(PoliteEndpoint.uiHint.contains("“\(PoliteEndpoint.localizedSubmitWord)”"))
         #expect(PoliteEndpoint.isSubmit("tell me a story \(PoliteEndpoint.localizedSubmitWord)"))
         #expect(PoliteEndpoint.isSubmit("tell me a story \(PoliteEndpoint.submitWord)"))
