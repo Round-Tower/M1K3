@@ -63,6 +63,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider: ReplyLanguage.liveClause`: the reply
 //  comes back in the turn's language, else the device's; nil for English. `-replyLanguage NO` turns it off.
 //  Confidence 0.7 until the language arm reads it.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
+//  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -573,7 +575,11 @@ extension AppEnvironment {
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
             // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
-            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0, earlierTurns: $1) },
+            replyLanguageClauseProvider: {
+                // A voice turn falls back to the voice's language, never the device's (2026-11-20).
+                let voice = UserDefaults.standard.bool(forKey: Self.voiceModeActiveKey) ? ReplyLanguage.spokenLanguage : nil
+                return ReplyLanguage.liveClause(for: $0, earlierTurns: $1, voiceLanguage: voice)
+            },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             // The review panel's page, else the one voice mode has open (#839): never both at once.
