@@ -180,6 +180,15 @@ struct SpokenChunkLanguageTests {
         #expect(SpokenLanguage.language(forChunk: "Checking the web, as asked.", answerLanguage: "de") == "de")
     }
 
+    @Test("a page-command reply comes from the catalog, so it speaks the interface's language")
+    func pageRepliesSpeakTheInterfaceLanguage() {
+        #expect(SpokenLanguage.interfaceLanguage(["de"]) == "de")
+        #expect(SpokenLanguage.interfaceLanguage(["pt-BR", "en"]) == "pt-BR")
+        #expect(SpokenLanguage.interfaceLanguage(["en-GB"]) == SpokenLanguage.seed)
+        #expect(SpokenLanguage.interfaceLanguage(["Base"]) == SpokenLanguage.seed)
+        #expect(SpokenLanguage.interfaceLanguage([]) == SpokenLanguage.seed)
+    }
+
     @Test("narration is recognised exactly, never by a prefix inside an answer")
     func narrationIsExact() {
         #expect(ToolNarration.isNarration("Checking the web."))

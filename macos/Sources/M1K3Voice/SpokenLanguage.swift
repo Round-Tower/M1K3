@@ -9,7 +9,9 @@
 //
 //  Asymmetric on purpose: with an English seed the answer leaves English only on a long, confident read (40 letters
 //  of its first ~200 characters at 0.8), so an English answer quoting "Guten Morgen" stays on Kokoro. The call is
-//  made ONCE per answer (`SpokenAnswerLanguage`), never per sentence: no voice flip mid-answer. The thresholds
+//  made ONCE per answer (`SpokenAnswerLanguage`), never per sentence: at most one switch, from the seed, while the
+//  first sentences are read. With an English seed (no person language yet, e.g. a short first turn) a German answer's
+//  opening sentence can go out on Kokoro before the latch leaves English; the seed exists to make that rare. The thresholds
 //  echo ReplyLanguage's house rules (letter weight, CJK x3, allow-list) which M1K3Voice cannot import.
 //
 //  Signed: claude-opus-5-5, 2026-11-20, Confidence 0.7 (the recogniser is Apple's; 40 letters / 0.8 is pinned on
@@ -17,6 +19,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 (review fold) — the latch takes a seed, the person's own language, so a German
 //  answer opening "Klar!" is German from its first sentence (it went out in Kokoro's English while the 40-letter
 //  read waited). `language(forChunk:)` keeps narration and the refusal English. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-PR review) — `interfaceLanguage`: a page-command reply is a catalog string
+//  (#873 translates it), so it is spoken in the app's language, not the speaker's; the shells begin the latch with it.
+//  Confidence 0.8.
 //
 
 import Foundation
@@ -59,6 +64,13 @@ public enum SpokenLanguage {
         let code = top.key.rawValue
         guard top.value >= floor, allowed.contains(code) else { return seed }
         return code
+    }
+
+    /// The language a catalog string is spoken in: the app's own localisation (a page-command reply, "Zurück."),
+    /// whatever language the person spoke. English, Base or none is the Kokoro seed.
+    public static func interfaceLanguage(_ preferred: [String] = Bundle.main.preferredLocalizations) -> String {
+        guard let first = preferred.first, first != "Base", !isEnglish(first) else { return seed }
+        return first
     }
 
     /// The language one spoken chunk goes out in: a narration line or a caller's fixed English line (the persona

@@ -370,7 +370,10 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
-                if let reply = await handleVoicePageCommand(question) { return .success(reply) }
+                if let reply = await handleVoicePageCommand(question) {
+                    spokenAnswerLanguage.begin(seed: SpokenLanguage.interfaceLanguage()) // a catalog string
+                    return .success(reply)
+                }
                 await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: String(localized: "No answer arrived.")))
@@ -426,12 +429,14 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
-                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
-                // A spoken page command is the person's, never the model's: answer it here (#839).
+                // A spoken page command is the person's, never the model's: answer it here (#839). Its reply is a
+                // catalog string, so it speaks the interface's language, not the speaker's.
                 if let reply = await handleVoicePageCommand(question) {
+                    spokenAnswerLanguage.begin(seed: SpokenLanguage.interfaceLanguage())
                     onChunk(reply)
                     return .success(())
                 }
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer), and
                 // the persona leak guard on the stream as it is spoken, as on the
