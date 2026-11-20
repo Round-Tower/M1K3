@@ -82,7 +82,9 @@ public enum PuzzleShape {
 
     /// "Which is bigger, 9.11 or 9.9?" (with two quantities).
     private static let whichIsBigger = regex(
-        #"\bwhich is (bigger|larger|greater|smaller|more)\b|\b(was|welche[rs]?) ist (größer|kleiner|mehr)\b|\b(lequel|laquelle|quel|quelle) est (le |la )?plus (grand|petit)e?\b|\bcu[aá]l es (mayor|menor|m[aá]s grande|m[aá]s peque[nñ]o)\b|\bqual é (maior|menor)\b"#
+        #"\bwhich is (bigger|larger|greater|smaller|more)\b|\b(was|welche[rs]?) ist (größer|kleiner|mehr)\b|"#
+            + #"\b(lequel|laquelle|quel|quelle) est (le |la )?plus (grand|petit)e?\b|"#
+            + #"\bcu[aá]l es (mayor|menor|m[aá]s grande|m[aá]s peque[nñ]o)\b|\bqual é (maior|menor)\b"#
     )
 
     /// A probability ask with a quantity in it ("the probability of rolling a 7").
@@ -115,7 +117,9 @@ public enum PuzzleShape {
     )
 
     private static let countingAsk = regex(
-        #"\bhow (many|much|far|long|old|fast|often)\b|\bwhat (day|time|percent|angle|speed)\b|\bwhich day\b|\bon which\b|\bby what\b|\bwho is the \w+est\b|\bwhat(?: is|'s|’s) (the|your) (smaller|larger|average|total|final)\b|\baverage speed\b|"#
+        #"\bhow (many|much|far|long|old|fast|often)\b|\bwhat (day|time|percent|angle|speed)\b|\bwhich day\b|"#
+            + #"\bon which\b|\bby what\b|\bwho is the \w+est\b|"#
+            + #"\bwhat(?: is|'s|’s) (the|your) (smaller|larger|average|total|final)\b|\baverage speed\b|"#
             + #"\bwie ?(viele?|lange|weit|alt|schnell|oft)\b|\bwelche[nrms]? (wochen)?tag\b|\bwer ist am\b|durchschnittsgeschwindigkeit|"#
             + #"\bcombien\b|\bquel(le)? (jour|heure|âge)\b|\bqui est le plus\b|vitesse moyenne|"#
             + #"\bcu[aá]nt[oa]s?\b|\bqu[eé] (d[ií]a|hora|edad)\b|\bqui[eé]n es el m[aá]s\b|velocidad (media|promedio)|"#
