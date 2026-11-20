@@ -7,7 +7,8 @@ This tool is the plumbing on both sides of that draft:
 
     xcstrings_l10n.py export OUT_DIR [--batch N]   # batches of keys, each with its call sites
     xcstrings_l10n.py apply DRAFTS.json --hold-review PENDING.json   # drafts in; privacy lines held
-    xcstrings_l10n.py apply PENDING.json --approved  # after the native read
+    xcstrings_l10n.py apply PENDING.json --approved --hold-review PENDING.json --locale de   # one reader approved
+    xcstrings_l10n.py sweep PENDING.json            # retract shipped lines the rule now holds
     xcstrings_l10n.py coverage                     # translated / needs_review / missing per locale
     xcstrings_l10n.py review-sheet PENDING.json LOCALE OUT.md   # the held lines, for the native read
 
@@ -49,14 +50,17 @@ _INTENT_TOKEN = re.compile(r"\$\{[A-Za-z0-9_]+\}")
 # what stays, consent, permissions. Deliberately wide — a false flag costs a reader a
 # line, a missed one ships an unread privacy promise.
 _PRIVACY = re.compile(
-    r"privacy|private cloud|leaves? (your|this|the)|never leaves|stays? on|"
-    r"web search|search the web|duckduckgo|wikipedia|internet|online|offline|"
-    r"server|send|sent|upload|share|shared|telemetry|track|consent|permission|"
+    r"privacy|private|leaves? (your|this|the)|\bnever\b|\bstay(s|ed)?\b|"
+    r"web search|search the web|\bsearches\b|duckduckgo|wikipedia|internet|online|offline|wi.?fi|"
+    r"server|send|sent|\bgo(es)? to\b|upload|share|shared|clipboard|e-?mail|mail app|round tower|"
+    r"telemetry|track|analytics|consent|permission|\bagents?\b|spotlight|\bpair|"
     r"microphone|camera|location|contacts|calendar|photos|keychain|encrypt|"
-    r"on-device|on this (mac|device|iphone|ipad)|third[- ]part|apple's|network|egress|"
+    r"on-device|on this (mac|device|iphone)|third[- ]part|apple's|network|egress|"
     r"data|delete|erase|forget",
     re.IGNORECASE,
 )
+# A label of three words or fewer ships unless it makes a claim ("Stays on device", "Nothing is sent").
+_CLAIM = re.compile(r"\b(never|not|nothing|no one|nobody|stays?|shared|sent|leaves?|encrypted)\b", re.IGNORECASE)
 
 # Where each catalog's keys are used: its own folder (a package catalog lives in Resources/).
 _SWIFT_LINE_CAP = 220
@@ -112,11 +116,15 @@ def needs_native_read(catalog: str, english: str) -> bool:
 
     Every system permission prompt (an InfoPlist catalog) and every privacy sentence. A label of three
     words or fewer ("Delete", "Web search", "Always allow") names an action and makes no promise, so it
-    ships with the wave; the sentence that explains it is held. The tool decides, never the draft.
+    ships with the wave unless it makes a claim ("Stays on device"); the sentence that explains it is held. The
+    tool decides with the pending file: `apply` holds any row this says, or the draft flags, or the pending file
+    already holds, so a re-draft that loses its `review` flag cannot ship a held line.
     """
     if os.path.basename(catalog) == "InfoPlist.xcstrings":
         return True
-    return privacy_hint(english) and len(english.split()) > 3
+    if not privacy_hint(english):
+        return False
+    return len(english.split()) > 3 or bool(_CLAIM.search(english))
 
 
 def translatable(strings: dict) -> Iterator[tuple[str, dict]]:
@@ -266,13 +274,18 @@ def _row_id(row: dict) -> tuple[str, str, str]:
     return (row["locale"], row["catalog"], row["key"])
 
 
-def apply(root: str, path: str, rejects_path: str | None, hold_path: str | None = None, approved: bool = False) -> int:
+def apply(
+    root: str, path: str, rejects_path: str | None, hold_path: str | None = None, approved: bool = False,
+    locales: list[str] | None = None,
+) -> int:
     """Write drafts into the catalogs.
 
     A row that `needs_native_read` (or that its draft flags) is held in `hold_path`, merged with what the
     file already holds, so unread privacy copy never ships (the nightly DMG ships master). Without a hold
     file such a row is refused, never written. `approved` (after the native read) writes every row as
-    translated and drops the written rows from the hold file. Each catalog is written whole, atomically.
+    translated and drops the written rows from the hold file (pass the same file to both: one reader's approval at a
+    time with `locales`). Holding a row also retracts any translation the catalog already has for it. Rows for
+    other `locales` are left alone, in the catalogs and in the hold file. Each catalog is written whole, atomically.
     Exit 0 when every row landed or was held, 1 when anything was rejected.
     """
     with open(path, encoding="utf-8") as handle:
@@ -285,6 +298,8 @@ def apply(root: str, path: str, rejects_path: str | None, hold_path: str | None 
     by_catalog: dict[str, list[dict]] = {}
     applied, rejects = 0, []
     for draft in drafts:
+        if locales and draft.get("locale") not in locales:
+            continue
         if not all(isinstance(draft.get(field), str) for field in ("catalog", "key", "locale")):
             rejects.append({**draft, "why": "a row needs catalog, key and locale"})
             continue
@@ -306,13 +321,15 @@ def apply(root: str, path: str, rejects_path: str | None, hold_path: str | None 
             if not entry.get("shouldTranslate", True):
                 rejects.append({**row, "why": "the catalog marks this key do-not-translate"})
                 continue
-            private = bool(row.get("review")) or needs_native_read(catalog, source_text(row["key"], entry))
+            private = (bool(row.get("review")) or _row_id(row) in held
+                       or needs_native_read(catalog, source_text(row["key"], entry)))
             try:
                 if private and not approved:
                     if not hold_path:
                         raise ValueError("privacy copy needs --hold-review (or --approved after the native read)")
                     apply_one(json.loads(json.dumps(entry)), row["key"], row["locale"], row, True)  # validate only
                     held[_row_id(row)] = {**row, "review": True}
+                    _retract(entry, row["locale"])
                     continue
                 apply_one(entry, row["key"], row["locale"], row, False)
                 held.pop(_row_id(row), None)
@@ -333,6 +350,57 @@ def apply(root: str, path: str, rejects_path: str | None, hold_path: str | None 
     for reject in rejects[:20]:
         print(f"  reject {reject.get('locale')} {reject.get('catalog')}: {reject['why']}")
     return 0 if not rejects else 1
+
+
+def _retract(entry: dict, locale: str) -> dict | None:
+    """Remove `locale`'s translation from `entry`; returns what was there."""
+    localizations = entry.get("localizations") or {}
+    removed = localizations.pop(locale, None)
+    if not localizations:
+        entry.pop("localizations", None)
+    return removed
+
+
+def _draft_of(localization: dict) -> dict:
+    """A shipped localization back in draft form (value / values / plural)."""
+    if "stringSet" in localization:
+        return {"values": localization["stringSet"].get("values") or []}
+    plural = (localization.get("variations") or {}).get("plural")
+    if plural:
+        return {"plural": {case: (unit.get("stringUnit") or {}).get("value", "") for case, unit in plural.items()}}
+    return {"value": (localization.get("stringUnit") or {}).get("value", "")}
+
+
+def sweep(root: str, hold_path: str) -> int:
+    """Retract every shipped wave translation the rule now holds (after the rule widens) into the hold file."""
+    held: dict = {}
+    if os.path.exists(hold_path):
+        with open(hold_path, encoding="utf-8") as handle:
+            held = {_row_id(row): row for row in json.load(handle)}
+    moved = 0
+    for catalog in _catalogs(root):
+        full = os.path.join(root, catalog)
+        with open(full, encoding="utf-8") as handle:
+            text = handle.read()
+        data = json.loads(text)
+        changed = False
+        for key, entry in translatable(data.get("strings") or {}):
+            if not needs_native_read(catalog, source_text(key, entry)):
+                continue
+            for locale in LOCALES:
+                if locale in (entry.get("localizations") or {}):
+                    removed = _retract(entry, locale)
+                    held[(locale, catalog, key)] = {"catalog": catalog, "key": key, "locale": locale, "review": True,
+                                                    **_draft_of(removed or {})}
+                    moved += 1
+                    changed = True
+        if changed:
+            out = dumps(data)
+            _write_atomically(full, out if text.endswith("\n") else out.rstrip("\n"))
+    rows = sorted(held.values(), key=lambda r: (r["locale"], r["catalog"], r["key"]))
+    _write_atomically(hold_path, json.dumps(rows, ensure_ascii=False, indent=1) + "\n")
+    print(f"retracted {moved} shipped translations into {hold_path} ({len(rows)} held)")
+    return 0
 
 
 def coverage(root: str) -> int:
@@ -395,7 +463,10 @@ def main(argv: list[str]) -> int:
     p.add_argument("translations")
     p.add_argument("--rejects")
     p.add_argument("--hold-review", help="hold privacy rows in this file instead of the catalogs")
+    p.add_argument("--locale", action="append", dest="locales", help="only these locales (repeatable): one reader at a time")
     p.add_argument("--approved", action="store_true", help="the rows passed the native read: write them as translated")
+    p = sub.add_parser("sweep")
+    p.add_argument("hold_review", help="the pending file the retracted translations join")
     sub.add_parser("coverage")
     p = sub.add_parser("review-sheet")
     p.add_argument("pending")
@@ -405,7 +476,9 @@ def main(argv: list[str]) -> int:
     if args.command == "export":
         return export(args.root, args.out_dir, args.batch)
     if args.command == "apply":
-        return apply(args.root, args.translations, args.rejects, args.hold_review, args.approved)
+        return apply(args.root, args.translations, args.rejects, args.hold_review, args.approved, args.locales)
+    if args.command == "sweep":
+        return sweep(args.root, args.hold_review)
     if args.command == "coverage":
         return coverage(args.root)
     return review_sheet(args.root, args.pending, args.locale, args.out)

@@ -307,3 +307,62 @@ def test_apply_rejects_rows_for_a_missing_catalog_without_touching_the_others(tm
             {"catalog": cat, "key": "Rename chat", "locale": "de", "value": "Chat umbenennen"}]
     assert l10n.apply(str(tmp_path), _drafts(tmp_path, rows), None, str(tmp_path / "p.json")) == 1
     assert json.loads((tmp_path / cat).read_text())["strings"]["Rename chat"]["localizations"]["de"]
+
+
+# --------------------------------------------------------------------------- #
+# Bot pass 1 fold (#873): the rule alone holds every held row; sweep retracts; one reader at a time
+# --------------------------------------------------------------------------- #
+
+def test_apply_never_writes_a_row_the_pending_file_holds_even_without_its_flag(tmp_path):
+    # The draft's `review` flag is not stored in the catalogs, but the pending file is in the repo: a re-draft that
+    # loses the flag must not ship a held line (bot pass 1 on #873).
+    held_only_by_its_flag = "Only approve a device you're holding right now."
+    cat = _catalog(tmp_path, {held_only_by_its_flag: {}})
+    pending = tmp_path / "pending.json"
+    first = [{"catalog": cat, "key": held_only_by_its_flag, "locale": "de", "value": "Koppel nur Geräte in deiner Hand.",
+              "review": True}]
+    l10n.apply(str(tmp_path), _drafts(tmp_path, first, "a.json"), None, str(pending))
+    redraft = [{**first[0], "review": False, "value": "Gib nur ein Gerät frei, das du gerade in der Hand hältst."}]
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, redraft, "b.json"), None, str(pending)) == 0
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][held_only_by_its_flag]
+    assert json.loads(pending.read_text())[0]["value"].startswith("Gib nur")
+
+
+@pytest.mark.parametrize("text", [
+    "Searches go to %@",
+    "Every thumb and note goes. Your conversations stay.",
+    "Your mail app didn't open it. The full text is on your clipboard.",
+    "Pings you when a long reply finishes, never with the reply itself.",
+])
+def test_egress_sentences_the_first_rule_missed_are_held(text):
+    assert l10n.needs_native_read("x/Localizable.xcstrings", text)
+
+
+@pytest.mark.parametrize("text", ["Stays on device", "Nothing is sent", "Not shared"])
+def test_a_short_privacy_claim_is_held(text):
+    assert l10n.needs_native_read("x/Localizable.xcstrings", text)
+
+
+def test_sweep_retracts_a_shipped_translation_the_rule_now_holds(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {"localizations": {"de": {"stringUnit": {
+        "state": "translated", "value": "Deine Notizen bleiben hier."}}}}, "Rename chat": {"localizations": {
+        "de": {"stringUnit": {"state": "translated", "value": "Chat umbenennen"}}}}})
+    pending = tmp_path / "pending.json"
+    assert l10n.sweep(str(tmp_path), str(pending)) == 0
+    strings = json.loads((tmp_path / cat).read_text())["strings"]
+    assert "localizations" not in strings[PRIVACY]
+    assert strings["Rename chat"]["localizations"]["de"]["stringUnit"]["value"] == "Chat umbenennen"
+    assert [(r["locale"], r["key"], r["value"]) for r in json.loads(pending.read_text())] == [
+        ("de", PRIVACY, "Deine Notizen bleiben hier.")]
+
+
+def test_approving_one_locale_leaves_the_others_held(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending = tmp_path / "pending.json"
+    rows = [{"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True},
+            {"catalog": cat, "key": PRIVACY, "locale": "fr", "value": "Tes notes restent ici.", "review": True}]
+    l10n.apply(str(tmp_path), _drafts(tmp_path, rows), None, str(pending))
+    assert l10n.apply(str(tmp_path), str(pending), None, str(pending), approved=True, locales=["de"]) == 0
+    localizations = json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]["localizations"]
+    assert list(localizations) == ["de"]
+    assert [r["locale"] for r in json.loads(pending.read_text())] == ["fr"]

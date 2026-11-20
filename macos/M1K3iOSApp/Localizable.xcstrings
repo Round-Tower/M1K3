@@ -219,38 +219,10 @@
       }
     },
     "%@’s brain, over your Wi-Fi" : {
-      "comment" : "%@ is the paired Mac's name",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le cerveau de %@, via ton Wi-Fi"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O cérebro do %@, pelo seu Wi-Fi"
-          }
-        }
-      }
+      "comment" : "%@ is the paired Mac's name"
     },
     "%@’s brain, over your Wi‑Fi." : {
-      "comment" : "%@ is the paired Mac's name",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le cerveau de %@, via ton Wi‑Fi."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O cérebro do %@, pelo seu Wi‑Fi."
-          }
-        }
-      }
+      "comment" : "%@ is the paired Mac's name"
     },
     "%lld" : {
       "localizations" : {
@@ -3958,33 +3930,7 @@
       }
     },
     "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows." : {
-      "comment" : "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated.",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf dem Mac: M1K3 → Einstellungen → Brain at Home → Gerät koppeln … Scann dann den Code, der dort erscheint."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En el Mac: M1K3 → Ajustes → Brain at Home → Emparejar un dispositivo… Luego escanea el código que muestra."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sur le Mac : M1K3 → Réglages → Brain at Home → Associer un appareil… Puis scanne le code qu’il affiche."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Mac: M1K3 → Ajustes → Brain at Home → Parear um dispositivo… Depois escaneie o código que aparecer."
-          }
-        }
-      }
+      "comment" : "Steps in the Mac app: each must match the Mac app's translation (Settings; the Brain at Home pane; its “Pair a device…” button). Keep M1K3 and Brain at Home untranslated."
     },
     "One moment." : {
       "localizations" : {
@@ -4192,60 +4138,10 @@
 
     },
     "Pair with Pasted Link" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit eingefügtem Link koppeln"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejar con el enlace pegado"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associer avec le lien collé"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parear com link colado"
-          }
-        }
-      }
+
     },
     "Pair with your Mac" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit deinem Mac koppeln"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejar con tu Mac"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associer à ton Mac"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parear com seu Mac"
-          }
-        }
-      }
+
     },
     "Paired" : {
       "localizations" : {
@@ -4276,117 +4172,16 @@
       }
     },
     "Paired with %@ — using its brain now." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit %@ gekoppelt – nutzt jetzt sein Hirn."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejado con %@ — usando su cerebro ahora."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associé à %@ — son cerveau est utilisé maintenant."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pareado com %@ — usando o cérebro dele agora."
-          }
-        }
-      }
+
     },
     "Paired with %@, but its key couldn’t be read — pair again." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit %@ gekoppelt, aber sein Schlüssel ließ sich nicht lesen – kopple erneut."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejado con %@, pero no se ha podido leer su clave — vuelve a emparejarlo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associé à %@, mais sa clé n’a pas pu être lue — associe-le à nouveau."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pareado com %@, mas não foi possível ler a chave dele — pareie de novo."
-          }
-        }
-      }
+
     },
     "Paired with %@. Choose Home under Brain to use it." : {
-      "comment" : "Home and Brain are the brain menu's names: keep Home untranslated, match the menu's Brain",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit %@ gekoppelt. Wähl unter „Hirn“ die Option „Home“, um sein Hirn zu nutzen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejado con %@. Elige Home en Cerebro para usarlo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associé à %@. Choisis Home dans le menu Cerveau pour l’utiliser."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pareado com %@. Escolha Home em Cérebro para usá-lo."
-          }
-        }
-      }
+      "comment" : "Home and Brain are the brain menu's names: keep Home untranslated, match the menu's Brain"
     },
     "Paired, but this device couldn’t store the key — try again." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gekoppelt, aber dieses Gerät konnte den Schlüssel nicht speichern – versuch es noch mal."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emparejado, pero este dispositivo no ha podido guardar la clave — inténtalo de nuevo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Associé, mais cet appareil n’a pas pu enregistrer la clé — réessaie."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pareado, mas este dispositivo não conseguiu guardar a chave — tente de novo."
-          }
-        }
-      }
+
     },
     "Paused for the call — tap the face to carry on." : {
       "localizations" : {
@@ -5513,32 +5308,7 @@
       }
     },
     "Still downloading. Keep M1K3 open and on Wi-Fi." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird noch geladen. Lass M1K3 geöffnet und bleib im WLAN."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todavía se está descargando. Mantén M1K3 abierto y conectado a una red Wi-Fi."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Téléchargement toujours en cours. Garde M1K3 ouvert et connecté au Wi-Fi."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda baixando. Mantenha o M1K3 aberto e conectado ao Wi-Fi."
-          }
-        }
-      }
+
     },
     "Stop asking about the photo" : {
       "localizations" : {
@@ -5738,33 +5508,7 @@
       }
     },
     "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home." : {
-      "comment" : "Pairing error. Keep M1K3 and Brain at Home untranslated; match the Mac's Settings names.",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das sieht nicht nach einem M1K3-Kopplungscode aus – zeig den QR-Code auf dem Mac unter Einstellungen → Brain at Home."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eso no parece un código de emparejamiento de M1K3 — muestra el QR en el Mac, en Ajustes → Brain at Home."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ça ne ressemble pas à un code d’association M1K3 — affiche le code QR dans Réglages → Brain at Home sur le Mac."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Isso não parece um código de pareamento do M1K3 — mostre o QR no Mac, em Ajustes → Brain at Home."
-          }
-        }
-      }
+      "comment" : "Pairing error. Keep M1K3 and Brain at Home untranslated; match the Mac's Settings names."
     },
     "That isn't a web page M1K3 can open." : {
       "localizations" : {
@@ -5976,32 +5720,7 @@
 
     },
     "This device’s pairing key is missing — pair with your Mac again." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Kopplungsschlüssel dieses Geräts fehlt – kopple es erneut mit deinem Mac."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Falta la clave de emparejamiento de este dispositivo — vuelve a emparejarlo con tu Mac."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clé d’association de cet appareil est manquante — associe-le de nouveau à ton Mac."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A chave de pareamento deste dispositivo está faltando — pareie com seu Mac de novo."
-          }
-        }
-      }
+
     },
     "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask." : {
       "localizations" : {
@@ -6518,33 +6237,7 @@
       }
     },
     "pair with your Mac" : {
-      "comment" : "Fills %@ in “… — or %@ in Settings.”",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kopple dieses Gerät mit deinem Mac"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "empareja con tu Mac"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "associe ton Mac"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pareie com seu Mac"
-          }
-        }
-      }
+      "comment" : "Fills %@ in “… — or %@ in Settings.”"
     },
     "remembered" : {
       "localizations" : {

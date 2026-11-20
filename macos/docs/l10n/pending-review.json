@@ -57,6 +57,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "%@ is thinking · private by design",
+  "locale": "de",
+  "review": true,
+  "value": "%@ denkt nach · privat aus Prinzip"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "A line about you seeds my memory — \"I teach primary school\", \"short answers, please\". It stays on this Mac, and you can edit it any time in Settings → You.",
   "locale": "de",
   "review": true,
@@ -77,6 +84,13 @@
   "review": true,
   "value": "Eine Testhilfe: zeigt Kontext-Tokens und tokens/sec unter jeder Antwort von Lil oder Big. Mini (Apples On-Device-Modell) meldet keine Generierungsstatistik.",
   "note": "Lower-case „zeigt“ after the colon, because what follows is not a full sentence (it has no subject)."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so.",
+  "locale": "de",
+  "review": true,
+  "value": "Füg oben eins hinzu. M1K3 und verbundene Agenten können To-dos vorschlagen; Vorschläge warten hier auf dein Okay."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -139,6 +153,13 @@
   "locale": "de",
   "review": true,
   "value": "Kalender (Titel & Uhrzeiten)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Clear every pulse (agent-call history is cleared in the Agent Log)",
+  "locale": "de",
+  "review": true,
+  "value": "Alle Pulse löschen (den Verlauf der Agent-Aufrufe löschst du im Agent-Protokoll)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -205,6 +226,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.",
+  "locale": "de",
+  "review": true,
+  "value": "Jeder verbundene Agent erreicht M1K3 nicht mehr, bis du ihn mit dem neuen Token erneut verbindest."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "de",
   "review": true,
@@ -232,6 +260,13 @@
   "locale": "de",
   "review": true,
   "value": "Vergessen – entfernt es überall, ohne Rückstände"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Full transcript in the Agent Log",
+  "locale": "de",
+  "review": true,
+  "value": "Vollständiges Transkript im Agent-Protokoll"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -317,6 +352,13 @@
   "review": true,
   "value": "Lässt andere Apps auf diesem Mac das Hirn nutzen, das M1K3 geladen hat, mit ihren eigenen Anweisungen: ohne M1K3s Persönlichkeit, Gedächtnis, Wissen oder Werkzeuge, und nichts, was sie senden, wird aufbewahrt. Trag in einem beliebigen OpenAI-kompatiblen Werkzeug die Basis-URL und den API-Schlüssel ein. Nur Loopback, jeweils ein Aufruf, und du bist immer zuerst dran. M1K3s Hirne werden in M1K3 ausgewählt und getestet; wie sich eines unter den Anweisungen einer anderen App verhält, beurteilst du selbst.",
   "note": "In the draft „keine M1K3-Persönlichkeit, kein Gedächtnis …“, the M1K3 applied only to personality. Now „ohne M1K3s Persönlichkeit, Gedächtnis, Wissen oder Werkzeuge“ covers all four, as the English does. 'kept' → „aufbewahrt“. 'Point … at the base URL' → „die Basis-URL … eintragen“, not the calque „richten auf“. 'is for you to judge' → „beurteilst du selbst“, because „musst du“ was stronger than the English."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
+  "locale": "de",
+  "review": true,
+  "value": "Protokollierung ist an. Sobald ein verbundener Agent M1K3s Werkzeuge aufruft, erscheinen hier die Anfragen und Antworten."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -477,11 +519,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private · download & go →",
+  "locale": "de",
+  "review": true,
+  "value": "Privat · laden & loslegen →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Puts your document and call titles — never contents or memories — into Spotlight (⌘Space). Managed by macOS; turning off removes everything M1K3 donated.",
   "locale": "de",
   "review": true,
   "value": "Nimmt die Titel deiner Dokumente und Anrufe – nie Inhalte oder Erinnerungen – in Spotlight auf (⌘-Leertaste). Wird von macOS verwaltet; beim Ausschalten wird alles entfernt, was M1K3 beigesteuert hat.",
   "note": "Changed „Legt … in Spotlight ab“ to „Nimmt … in Spotlight auf“, which is the natural German for adding items to an index. The batch says review:false, but this line says what goes into Spotlight, so it is privacy copy. 'never' → „nie“, kept literal."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Recall a specific memory from M1K3's private memory graph.",
+  "locale": "de",
+  "review": true,
+  "value": "Eine bestimmte Erinnerung aus M1K3s privatem Gedächtnisgraphen abrufen."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -567,11 +623,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Serving on :%@ to ^[%@ paired device](inflect: true)",
+  "locale": "de",
+  "review": true,
+  "value": "Läuft auf :%1$@ für ^[%2$@ gekoppeltes Gerät](inflect: true)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Shared from M1K3 · m1k3.app",
   "locale": "de",
   "review": true,
   "value": "Geteilt über M1K3 · m1k3.app",
   "note": "ShareLink message. „Geteilt über“ (via the app) is the idiomatic German share footer; „Geteilt aus“ reads as a calque."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops.",
+  "locale": "de",
+  "review": true,
+  "value": "Kurze Hinweistöne bei Fehlern, gespeicherten Erinnerungen und wenn der Sprachmodus aufwacht – nie über M1K3s Stimme hinweg. Der Einwahlton ertönt, während ein Hirn geladen wird, und hat einen eigenen Schalter, da er in Schleife läuft."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -588,6 +658,13 @@
   "review": true,
   "value": "Genau anzeigen, was dabei gesendet wird",
   "note": "Disclosure in the Private Cloud consent sheet. „dabei“ keeps the 'that' (the send to Private Cloud Compute), which the draft had dropped."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Start a fresh conversation — this one stays in Conversations (⌘N)",
+  "locale": "de",
+  "review": true,
+  "value": "Neues Gespräch beginnen – dieses bleibt unter Gespräche (⌘N)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -625,6 +702,13 @@
   "locale": "de",
   "review": true,
   "value": "Die Liste konnte auf diesem Mac nicht geöffnet werden."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "The pairing code expired.",
+  "locale": "de",
+  "review": true,
+  "value": "Der Kopplungscode ist abgelaufen."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1022,6 +1106,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
+  "locale": "de",
+  "review": true,
+  "value": "Auf dem Mac: M1K3 → Einstellungen → Brain at Home → Gerät koppeln … Scann dann den Code, der dort erscheint."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Open the camera when I ask aloud",
   "locale": "de",
   "review": true,
@@ -1041,6 +1132,48 @@
   "review": true,
   "value": "PDFs und Textdateien, auf deren Grundlage M1K3 antworten kann. Fotos, die M1K3 sich auf deinen Wunsch merkt, erscheinen auch hier; ihre Beschreibungen bleiben auf diesem Gerät.",
   "note": "'answer from' now follows the store wording („auf ihrer Grundlage antworten“); the privacy clause stays literal."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with Pasted Link",
+  "locale": "de",
+  "review": true,
+  "value": "Mit eingefügtem Link koppeln"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with your Mac",
+  "locale": "de",
+  "review": true,
+  "value": "Mit deinem Mac koppeln"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@ — using its brain now.",
+  "locale": "de",
+  "review": true,
+  "value": "Mit %@ gekoppelt – nutzt jetzt sein Hirn."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@, but its key couldn’t be read — pair again.",
+  "locale": "de",
+  "review": true,
+  "value": "Mit %@ gekoppelt, aber sein Schlüssel ließ sich nicht lesen – kopple erneut."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@. Choose Home under Brain to use it.",
+  "locale": "de",
+  "review": true,
+  "value": "Mit %@ gekoppelt. Wähl unter „Hirn“ die Option „Home“, um sein Hirn zu nutzen."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired, but this device couldn’t store the key — try again.",
+  "locale": "de",
+  "review": true,
+  "value": "Gekoppelt, aber dieses Gerät konnte den Schlüssel nicht speichern – versuch es noch mal."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -1119,6 +1252,20 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Still downloading. Keep M1K3 open and on Wi-Fi.",
+  "locale": "de",
+  "review": true,
+  "value": "Wird noch geladen. Lass M1K3 geöffnet und bleib im WLAN."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home.",
+  "locale": "de",
+  "review": true,
+  "value": "Das sieht nicht nach einem M1K3-Kopplungscode aus – zeig den QR-Code auf dem Mac unter Einstellungen → Brain at Home."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "The camera is restricted on this device.",
   "locale": "de",
   "review": true,
@@ -1144,6 +1291,13 @@
   "locale": "de",
   "review": true,
   "value": "Dieses Gerät hat keine Kamera, die M1K3 nutzen kann."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This device’s pairing key is missing — pair with your Mac again.",
+  "locale": "de",
+  "review": true,
+  "value": "Der Kopplungsschlüssel dieses Geräts fehlt – kopple es erneut mit deinem Mac."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -1291,6 +1445,13 @@
   "review": true,
   "value": "Deine Daumen hoch und runter, samt Notizen, und zu jedem Daumen die Frage und Antwort, die er bewertet. Sie bleiben auf diesem Gerät, es sei denn, du exportierst sie.",
   "note": "Privacy line: „bleiben auf diesem Gerät, es sei denn, du exportierst sie“ is literal and keeps the same strength. The first sentence is rebuilt: „mit der Frage und Antwort, die jeder bewertet“ was ungrammatical, because „jeder“ had no antecedent."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "pair with your Mac",
+  "locale": "de",
+  "review": true,
+  "value": "kopple dieses Gerät mit deinem Mac"
  },
  {
   "catalog": "M1K3visionOS/InfoPlist.xcstrings",
@@ -1643,6 +1804,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "%@ is thinking · private by design",
+  "locale": "es",
+  "review": true,
+  "value": "%@ está pensando · privado por diseño"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "A line about you seeds my memory — \"I teach primary school\", \"short answers, please\". It stays on this Mac, and you can edit it any time in Settings → You.",
   "locale": "es",
   "review": true,
@@ -1663,6 +1831,20 @@
   "locale": "es",
   "review": true,
   "value": "Una ayuda para pruebas: muestra los tokens de contexto y los tokens/s bajo cada respuesta de Lil o Big. Mini (el modelo de Apple en el dispositivo) no informa de métricas de generación."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so.",
+  "locale": "es",
+  "review": true,
+  "value": "Añade una arriba. M1K3 y los agentes conectados pueden sugerir tareas; las sugerencias esperan aquí hasta que des tu visto bueno."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Agent Log — MCP tool calls captured from connected agents (opt-in)",
+  "locale": "es",
+  "review": true,
+  "value": "Registro de agentes: llamadas a herramientas MCP capturadas de los agentes conectados (solo si lo activas)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1710,6 +1892,13 @@
   "review": true,
   "value": "Calendario (títulos y horas)",
   "note": "Context toggle that controls what M1K3 may read (PrivacySettingsPane.swift:260). Translated literally."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Clear every pulse (agent-call history is cleared in the Agent Log)",
+  "locale": "es",
+  "review": true,
+  "value": "Borrar todos los pulsos (el historial de peticiones de agentes se borra en el Registro de agentes)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1781,6 +1970,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.",
+  "locale": "es",
+  "review": true,
+  "value": "Todos los agentes que hayas conectado dejarán de acceder a M1K3 hasta que vuelvas a conectarlos con el token nuevo."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "es",
   "review": true,
@@ -1808,6 +2004,13 @@
   "locale": "es",
   "review": true,
   "value": "Olvidar: lo borra de todas partes, sin rastro"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Full transcript in the Agent Log",
+  "locale": "es",
+  "review": true,
+  "value": "Transcripción completa en el Registro de agentes"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1901,6 +2104,13 @@
   "review": true,
   "value": "Permite que otras apps de este Mac usen el cerebro que M1K3 tiene cargado, con sus propias instrucciones: sin la personalidad, la memoria, el conocimiento ni las herramientas de M1K3, y no se guarda nada de lo que envían. Apunta cualquier herramienta compatible con OpenAI a la URL base y usa la clave de API. Solo loopback, una llamada cada vez, y tú siempre tienes prioridad. Los cerebros de M1K3 se eligen y se prueban dentro de M1K3; cómo se comporta uno con las instrucciones de otra app lo juzgas tú.",
   "note": "'you always go first' was 'tú siempre vas primero', a calque that reads as taking turns. It is now 'tú siempre tienes prioridad' (your own turns are served first)."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
+  "locale": "es",
+  "review": true,
+  "value": "El registro está activado. Cuando un agente conectado llame a las herramientas de M1K3, las solicitudes y las respuestas aparecerán aquí."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2054,11 +2264,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private · download & go →",
+  "locale": "es",
+  "review": true,
+  "value": "Privado · descargar y empezar →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Puts your document and call titles — never contents or memories — into Spotlight (⌘Space). Managed by macOS; turning off removes everything M1K3 donated.",
   "locale": "es",
   "review": true,
   "value": "Añade a Spotlight (⌘Espacio) los títulos de tus documentos y llamadas —nunca su contenido ni los recuerdos—. Lo gestiona macOS; al desactivarlo se elimina todo lo que M1K3 haya aportado.",
   "note": "Reviewer: 'Pone en Spotlight' read as a calque of 'puts into'; 'Añade a Spotlight' is the natural verb. 'never' kept literally. Privacy line (what leaves the app for Spotlight), review true. 'Space' shown as 'Espacio' as Spanish keyboards label it."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Recall a specific memory from M1K3's private memory graph.",
+  "locale": "es",
+  "review": true,
+  "value": "Recupera un recuerdo concreto del grafo de memoria privado de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2083,6 +2307,13 @@
   "review": true,
   "value": "Funciona con Mini, el modelo de Apple en el dispositivo · cámbialo cuando quieras en Ajustes.",
   "note": "Says where the model runs. 'on-device' is kept literally as 'en el dispositivo', per the glossary."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Save a fact to M1K3’s private memory.",
+  "locale": "es",
+  "review": true,
+  "value": "Guarda un dato en la memoria privada de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2139,10 +2370,31 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Serving on :%@ to ^[%@ paired device](inflect: true)",
+  "locale": "es",
+  "review": true,
+  "value": "Sirviendo en :%1$@ a ^[%2$@ dispositivo emparejado](inflect: true)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Shared from M1K3 · m1k3.app",
   "locale": "es",
   "review": true,
   "value": "Compartido desde M1K3 · m1k3.app"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops.",
+  "locale": "es",
+  "review": true,
+  "value": "Sonidos breves para errores, recuerdos guardados y el despertar del modo de voz; nunca por encima de la voz de M1K3. El sonido de módem suena mientras se carga un cerebro y tiene su propio interruptor, porque se repite en bucle."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Show documents & calls in Spotlight",
+  "locale": "es",
+  "review": true,
+  "value": "Mostrar documentos y llamadas en Spotlight"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2151,6 +2403,13 @@
   "review": true,
   "value": "Mostrar exactamente lo que se envía",
   "note": "Disclosure under 'Also send this conversation' in the Private Cloud consent sheet."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Start a fresh conversation — this one stays in Conversations (⌘N)",
+  "locale": "es",
+  "review": true,
+  "value": "Empezar una conversación nueva: esta se queda en Conversaciones (⌘N)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2189,6 +2448,13 @@
   "locale": "es",
   "review": true,
   "value": "No se ha podido abrir la lista en este Mac."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "The pairing code expired.",
+  "locale": "es",
+  "review": true,
+  "value": "El código de emparejamiento ha caducado."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2302,6 +2568,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "macOS didn't get an answer, so %@ stayed off. Switch it on again to be asked.",
+  "locale": "es",
+  "review": true,
+  "value": "macOS no obtuvo respuesta, así que %@ no se activó. Vuelve a activar el interruptor para que se te pregunte."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "macOS has calendar access off for M1K3 — grant it in System Settings → Privacy & Security → Calendars, then switch this back on.",
   "locale": "es",
   "review": true,
@@ -2315,6 +2588,13 @@
   "review": true,
   "value": "macOS tiene desactivado el acceso a la ubicación para M1K3: actívalo en Ajustes del Sistema → Privacidad y seguridad → Localización y vuelve a activar esta opción.",
   "note": "'Location Services' became 'Localización', as the term table says. Check it against the live Spanish macOS 27 Privacy & Security pane."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "“%@” wants to pair",
+  "locale": "es",
+  "review": true,
+  "value": "“%@” quiere emparejarse"
  },
  {
   "catalog": "M1K3iOSApp/InfoPlist.xcstrings",
@@ -2554,6 +2834,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
+  "locale": "es",
+  "review": true,
+  "value": "En el Mac: M1K3 → Ajustes → Brain at Home → Emparejar un dispositivo… Luego escanea el código que muestra."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Open the camera when I ask aloud",
   "locale": "es",
   "review": true,
@@ -2573,6 +2860,48 @@
   "review": true,
   "value": "PDF y archivos de texto en los que M1K3 puede basar sus respuestas. Las fotos que le pidas que recuerde también aparecen aquí; sus descripciones se quedan en este dispositivo.",
   "note": "Fixed 'que le pidas recordar' (ungrammatical with a change of subject) to 'que le pidas que recuerde'. Privacy half ('se quedan en este dispositivo') is literal."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with Pasted Link",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejar con el enlace pegado"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with your Mac",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejar con tu Mac"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@ — using its brain now.",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejado con %@ — usando su cerebro ahora."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@, but its key couldn’t be read — pair again.",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejado con %@, pero no se ha podido leer su clave — vuelve a emparejarlo."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@. Choose Home under Brain to use it.",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejado con %@. Elige Home en Cerebro para usarlo."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired, but this device couldn’t store the key — try again.",
+  "locale": "es",
+  "review": true,
+  "value": "Emparejado, pero este dispositivo no ha podido guardar la clave — inténtalo de nuevo."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -2652,6 +2981,20 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Still downloading. Keep M1K3 open and on Wi-Fi.",
+  "locale": "es",
+  "review": true,
+  "value": "Todavía se está descargando. Mantén M1K3 abierto y conectado a una red Wi-Fi."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home.",
+  "locale": "es",
+  "review": true,
+  "value": "Eso no parece un código de emparejamiento de M1K3 — muestra el QR en el Mac, en Ajustes → Brain at Home."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "The camera is restricted on this device.",
   "locale": "es",
   "review": true,
@@ -2678,6 +3021,13 @@
   "locale": "es",
   "review": true,
   "value": "Este dispositivo no tiene ninguna cámara que M1K3 pueda usar."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This device’s pairing key is missing — pair with your Mac again.",
+  "locale": "es",
+  "review": true,
+  "value": "Falta la clave de emparejamiento de este dispositivo — vuelve a emparejarlo con tu Mac."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -2827,6 +3177,13 @@
   "review": true,
   "value": "Tus valoraciones con el pulgar arriba y abajo, con las notas que hayas añadido, y la pregunta y la respuesta que valora cada una. Se quedan en este dispositivo a menos que las exportes.",
   "note": "Changed 'que añadieras' (imperfect subjunctive, reads oddly here) to 'que hayas añadido'. Privacy clause literal: 'stay on this device unless you export them' → 'Se quedan en este dispositivo a menos que las exportes'."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "pair with your Mac",
+  "locale": "es",
+  "review": true,
+  "value": "empareja con tu Mac"
  },
  {
   "catalog": "M1K3visionOS/InfoPlist.xcstrings",
@@ -3104,6 +3461,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "%@ is thinking · private by design",
+  "locale": "fr",
+  "review": true,
+  "value": "%@ réfléchit · privé par design"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "A line about you seeds my memory — \"I teach primary school\", \"short answers, please\". It stays on this Mac, and you can edit it any time in Settings → You.",
   "locale": "fr",
   "review": true,
@@ -3125,6 +3489,13 @@
   "review": true,
   "value": "Une aide aux tests : affiche les tokens de contexte et les tokens/s sous chaque réponse de Lil ou Big. Mini (le modèle sur l’appareil d’Apple) ne fournit pas de statistiques de génération.",
   "note": "« aide au test » → « aide aux tests » (the idiomatic plural)."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so.",
+  "locale": "fr",
+  "review": true,
+  "value": "Ajoutes-en une ci-dessus. M1K3 et les agents connectés peuvent suggérer des tâches ; les suggestions attendent ici ton feu vert."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3181,6 +3552,13 @@
   "review": true,
   "value": "Calendrier (titres et heures)",
   "note": "Context consent toggle: what the model may see from the calendar."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Clear every pulse (agent-call history is cleared in the Agent Log)",
+  "locale": "fr",
+  "review": true,
+  "value": "Effacer tous les bilans (l’historique des appels d’agents s’efface depuis le Journal des agents)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3244,6 +3622,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.",
+  "locale": "fr",
+  "review": true,
+  "value": "Chaque agent que tu as connecté ne peut plus joindre M1K3 tant que tu ne le reconnectes pas avec le nouveau jeton."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "fr",
   "review": true,
@@ -3271,6 +3656,13 @@
   "locale": "fr",
   "review": true,
   "value": "Oublier ceci — le supprime partout, sans aucune trace"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Full transcript in the Agent Log",
+  "locale": "fr",
+  "review": true,
+  "value": "Transcription complète dans le Journal des agents"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3516,11 +3908,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private · download & go →",
+  "locale": "fr",
+  "review": true,
+  "value": "Privé · télécharger et c’est parti →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Puts your document and call titles — never contents or memories — into Spotlight (⌘Space). Managed by macOS; turning off removes everything M1K3 donated.",
   "locale": "fr",
   "review": true,
   "value": "Ajoute les titres de tes documents et de tes appels — jamais leur contenu ni tes souvenirs — à Spotlight (⌘Espace). Géré par macOS ; le désactiver retire tout ce que M1K3 y a ajouté.",
   "note": "Says what goes into Spotlight and what never does, so it is privacy copy, translated literally."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Recall a specific memory from M1K3's private memory graph.",
+  "locale": "fr",
+  "review": true,
+  "value": "Retrouver un souvenir précis dans le graphe de mémoire privé de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3545,6 +3951,13 @@
   "review": true,
   "value": "Fonctionne avec Mini, le modèle d’Apple sur l’appareil · modifiable à tout moment dans Réglages.",
   "note": "Marked for review because it makes an on-device claim. « sur l’appareil » is literal."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Save a fact to M1K3’s private memory.",
+  "locale": "fr",
+  "review": true,
+  "value": "Enregistrer un fait dans la mémoire privée de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3603,10 +4016,24 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Serving on :%@ to ^[%@ paired device](inflect: true)",
+  "locale": "fr",
+  "review": true,
+  "value": "En service sur :%1$@ pour ^[%2$@ appareil associé](inflect: true)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Shared from M1K3 · m1k3.app",
   "locale": "fr",
   "review": true,
   "value": "Partagé depuis M1K3 · m1k3.app"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops.",
+  "locale": "fr",
+  "review": true,
+  "value": "De courts signaux sonores pour les erreurs, les souvenirs enregistrés et le réveil du mode vocal — jamais par-dessus la voix de M1K3. Le son de connexion du modem est joué pendant le chargement d’un cerveau et a sa propre option, car il tourne en boucle."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3623,6 +4050,13 @@
   "review": true,
   "value": "Afficher exactement ce que cela envoie",
   "note": "Disclosure under 'Also send this conversation'. Changed to the literal 'what that sends'. The draft's 'ce qui est envoyé' implied the content had already been sent."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Start a fresh conversation — this one stays in Conversations (⌘N)",
+  "locale": "fr",
+  "review": true,
+  "value": "Commencer une nouvelle conversation — celle-ci reste dans Conversations (⌘N)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3661,6 +4095,13 @@
   "locale": "fr",
   "review": true,
   "value": "La liste n’a pas pu être ouverte sur ce Mac."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "The pairing code expired.",
+  "locale": "fr",
+  "review": true,
+  "value": "Le code d’association a expiré."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3856,6 +4297,20 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "%@’s brain, over your Wi-Fi",
+  "locale": "fr",
+  "review": true,
+  "value": "Le cerveau de %@, via ton Wi-Fi"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "%@’s brain, over your Wi‑Fi.",
+  "locale": "fr",
+  "review": true,
+  "value": "Le cerveau de %@, via ton Wi‑Fi."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "A serif face; some readers find the strokes easier to track.",
   "locale": "fr",
   "review": true,
@@ -4042,6 +4497,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
+  "locale": "fr",
+  "review": true,
+  "value": "Sur le Mac : M1K3 → Réglages → Brain at Home → Associer un appareil… Puis scanne le code qu’il affiche."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Open the camera when I ask aloud",
   "locale": "fr",
   "review": true,
@@ -4061,6 +4523,48 @@
   "locale": "fr",
   "review": true,
   "value": "Les PDF et fichiers texte à partir desquels M1K3 peut répondre. Les photos que tu lui demandes de mémoriser apparaissent aussi ici ; leurs descriptions restent sur cet appareil."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with Pasted Link",
+  "locale": "fr",
+  "review": true,
+  "value": "Associer avec le lien collé"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with your Mac",
+  "locale": "fr",
+  "review": true,
+  "value": "Associer à ton Mac"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@ — using its brain now.",
+  "locale": "fr",
+  "review": true,
+  "value": "Associé à %@ — son cerveau est utilisé maintenant."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@, but its key couldn’t be read — pair again.",
+  "locale": "fr",
+  "review": true,
+  "value": "Associé à %@, mais sa clé n’a pas pu être lue — associe-le à nouveau."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@. Choose Home under Brain to use it.",
+  "locale": "fr",
+  "review": true,
+  "value": "Associé à %@. Choisis Home dans le menu Cerveau pour l’utiliser."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired, but this device couldn’t store the key — try again.",
+  "locale": "fr",
+  "review": true,
+  "value": "Associé, mais cet appareil n’a pas pu enregistrer la clé — réessaie."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -4142,6 +4646,20 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Still downloading. Keep M1K3 open and on Wi-Fi.",
+  "locale": "fr",
+  "review": true,
+  "value": "Téléchargement toujours en cours. Garde M1K3 ouvert et connecté au Wi-Fi."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home.",
+  "locale": "fr",
+  "review": true,
+  "value": "Ça ne ressemble pas à un code d’association M1K3 — affiche le code QR dans Réglages → Brain at Home sur le Mac."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "The camera is restricted on this device.",
   "locale": "fr",
   "review": true,
@@ -4167,6 +4685,13 @@
   "locale": "fr",
   "review": true,
   "value": "Cet appareil n’a pas de caméra utilisable par M1K3."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This device’s pairing key is missing — pair with your Mac again.",
+  "locale": "fr",
+  "review": true,
+  "value": "La clé d’association de cet appareil est manquante — associe-le de nouveau à ton Mac."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -4316,6 +4841,13 @@
   "review": true,
   "value": "Tes pouces levés et baissés, avec tes éventuels commentaires, et la question et la réponse que chacun évalue. Ils restent sur cet appareil, sauf si tu les exportes.",
   "note": "'notes' → commentaires, because note is the rating term (Notes des réponses), and this matches the sibling « Tous les pouces et commentaires sont supprimés ». 'stay on this device unless you export them' is literal."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "pair with your Mac",
+  "locale": "fr",
+  "review": true,
+  "value": "associe ton Mac"
  },
  {
   "catalog": "M1K3visionOS/InfoPlist.xcstrings",
@@ -4592,6 +5124,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "%@ is thinking · private by design",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "%@ está pensando · privado por design"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "A line about you seeds my memory — \"I teach primary school\", \"short answers, please\". It stays on this Mac, and you can edit it any time in Settings → You.",
   "locale": "pt-BR",
   "review": true,
@@ -4611,6 +5150,20 @@
   "locale": "pt-BR",
   "review": true,
   "value": "Um recurso de teste: mostra os tokens de contexto e os tokens/s abaixo de cada resposta do Lil ou do Big. O Mini (o modelo no dispositivo da Apple) não informa métricas de geração."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Adicione uma acima. O M1K3 e os agentes conectados podem sugerir tarefas; as sugestões esperam aqui até você aprovar."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Agent Log — MCP tool calls captured from connected agents (opt-in)",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Registro de agentes — chamadas de ferramentas MCP capturadas de agentes conectados (opcional)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4658,6 +5211,13 @@
   "review": true,
   "value": "Calendário (títulos e horários)",
   "note": "Per-sense consent toggle in Privacy ▸ Context. It says what M1K3 may read, so it is translated literally. “Calendário” is Apple's app name."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Clear every pulse (agent-call history is cleared in the Agent Log)",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Limpar todos os pulsos (o histórico de chamadas de agentes é limpo no Registro de agentes)"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4728,6 +5288,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Todo agente que você conectou deixa de acessar o M1K3 até você conectá-lo outra vez com o novo token."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "pt-BR",
   "review": true,
@@ -4755,6 +5322,13 @@
   "review": true,
   "value": "Esquecer isto — remove de todos os lugares, sem deixar rastro",
   "note": "The draft dropped 'this' and used 'apaga' for 'removes'. The term table keeps Remove → Remover apart from Delete → Apagar, and privacy copy is translated literally."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Full transcript in the Agent Log",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Transcrição completa no Registro de agentes"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4838,6 +5412,13 @@
   "review": true,
   "value": "Permite que outros apps neste Mac usem o cérebro que o M1K3 carregou, com as instruções deles: sem a personalidade, a memória, o conhecimento nem as ferramentas do M1K3, e nada do que eles enviam é guardado. Aponte qualquer ferramenta compatível com OpenAI para a URL base e use a chave de API. Só via loopback, uma chamada por vez, e você sempre tem prioridade. Os cérebros do M1K3 são escolhidos e testados dentro do M1K3; como um deles se comporta sob as instruções de outro app cabe a você julgar.",
   "note": "'you always go first' changed from the literal 'você sempre vem primeiro' to 'você sempre tem prioridade' (your own turns take priority over Local API calls)."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "O registro está ligado. Conforme um agente conectado chamar as ferramentas do M1K3, as solicitações e respostas aparecerão aqui."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4990,11 +5571,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private · download & go →",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Privado · baixar e começar →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Puts your document and call titles — never contents or memories — into Spotlight (⌘Space). Managed by macOS; turning off removes everything M1K3 donated.",
   "locale": "pt-BR",
   "review": true,
   "value": "Coloca os títulos dos seus documentos e chamadas — nunca o conteúdo nem as lembranças — no Spotlight (⌘Espaço). Gerenciado pelo macOS; desligar remove tudo o que o M1K3 adicionou.",
   "note": "Says what goes into Spotlight, held for review. 'donated' (Spotlight donation) rendered as 'adicionou'."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Recall a specific memory from M1K3's private memory graph.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Recuperar uma lembrança específica do grafo de memória privado do M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5083,11 +5678,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Serving on :%@ to ^[%@ paired device](inflect: true)",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Disponível em :%1$@ para ^[%2$@ dispositivo pareado](inflect: true)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Shared from M1K3 · m1k3.app",
   "locale": "pt-BR",
   "review": true,
   "value": "Compartilhado via M1K3 · m1k3.app",
   "note": "Footer on shared content."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Sinais sonoros curtos para erros, lembranças guardadas e o despertar do modo de voz — nunca por cima da voz do M1K3. O som de conexão discada toca enquanto um cérebro carrega e tem seu próprio interruptor, já que toca em loop."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5107,11 +5716,25 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Start a fresh conversation — this one stays in Conversations (⌘N)",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Começar uma conversa nova — esta fica em Conversas (⌘N)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Stops listening without sending",
   "locale": "pt-BR",
   "review": true,
   "value": "Para de ouvir sem enviar",
   "note": "Accessibility hint, third person ('Para' = stops), as Apple's hints read."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Suggestions from M1K3 and connected agents land in your inbox as pending. Only you can accept or close a todo.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "As sugestões do M1K3 e dos agentes conectados chegam à sua caixa de entrada como pendentes. Só você pode aceitar ou fechar uma tarefa."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5134,6 +5757,13 @@
   "locale": "pt-BR",
   "review": true,
   "value": "Não foi possível abrir a lista neste Mac."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "The pairing code expired.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "O código de pareamento expirou."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5266,6 +5896,13 @@
   "note": "Same fixes as the calendar line."
  },
  {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "“%@” wants to pair",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "“%@” quer parear"
+ },
+ {
   "catalog": "M1K3iOSApp/InfoPlist.xcstrings",
   "key": "NSCameraUsageDescription",
   "locale": "pt-BR",
@@ -5304,6 +5941,20 @@
   "review": true,
   "value": "%@ não roda neste dispositivo. Mantendo o Mini.",
   "note": "'Staying on Mini' → 'Mantendo o Mini' (the app has switched back to Mini); 'Continuando no Mini' read as a calque. Same wording in i=3."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "%@’s brain, over your Wi-Fi",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "O cérebro do %@, pelo seu Wi-Fi"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "%@’s brain, over your Wi‑Fi.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "O cérebro do %@, pelo seu Wi‑Fi."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -5494,6 +6145,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "On the Mac: M1K3 → Settings → Brain at Home → Pair a device… Then scan the code it shows.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "No Mac: M1K3 → Ajustes → Brain at Home → Parear um dispositivo… Depois escaneie o código que aparecer."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Open the camera when I ask aloud",
   "locale": "pt-BR",
   "review": true,
@@ -5514,6 +6172,48 @@
   "review": true,
   "value": "PDFs e arquivos de texto que o M1K3 pode usar para responder. Fotos que você pede para ele guardar na memória também aparecem aqui; as descrições delas ficam neste dispositivo.",
   "note": "'remember' a photo → 'guardar na memória' per the term table (matches 'Foto guardada na memória'). 'stay on this device' kept literal: 'ficam neste dispositivo'."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with Pasted Link",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Parear com link colado"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Pair with your Mac",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Parear com seu Mac"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@ — using its brain now.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Pareado com %@ — usando o cérebro dele agora."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@, but its key couldn’t be read — pair again.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Pareado com %@, mas não foi possível ler a chave dele — pareie de novo."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired with %@. Choose Home under Brain to use it.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Pareado com %@. Escolha Home em Cérebro para usá-lo."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Paired, but this device couldn’t store the key — try again.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Pareado, mas este dispositivo não conseguiu guardar a chave — tente de novo."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -5596,6 +6296,20 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Still downloading. Keep M1K3 open and on Wi-Fi.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Ainda baixando. Mantenha o M1K3 aberto e conectado ao Wi-Fi."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Isso não parece um código de pareamento do M1K3 — mostre o QR no Mac, em Ajustes → Brain at Home."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "The camera is restricted on this device.",
   "locale": "pt-BR",
   "review": true,
@@ -5622,6 +6336,13 @@
   "locale": "pt-BR",
   "review": true,
   "value": "Este dispositivo não tem uma câmera que o M1K3 possa usar."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This device’s pairing key is missing — pair with your Mac again.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "A chave de pareamento deste dispositivo está faltando — pareie com seu Mac de novo."
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -5772,6 +6493,13 @@
   "review": true,
   "value": "Suas avaliações de polegar para cima e para baixo, com os comentários que houver, e a pergunta e a resposta que cada uma avalia. Elas ficam neste dispositivo, a menos que você as exporte.",
   "note": "'Seus polegares para cima e para baixo' was a calque. Reworded around 'avaliações' (feminine, so 'cada uma', 'Elas', 'as exporte'). 'notes' are feedback notes, so 'comentários'. The privacy promise (stay on this device unless exported) is kept exactly."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "pair with your Mac",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "pareie com seu Mac"
  },
  {
   "catalog": "M1K3visionOS/InfoPlist.xcstrings",

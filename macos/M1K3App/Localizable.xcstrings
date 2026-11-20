@@ -246,32 +246,7 @@
       }
     },
     "%@ is thinking · private by design" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ denkt nach · privat aus Prinzip"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ está pensando · privado por diseño"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ réfléchit · privé par design"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ está pensando · privado por design"
-          }
-        }
-      }
+
     },
     "%@ isn’t available here" : {
       "localizations" : {
@@ -1450,32 +1425,7 @@
       }
     },
     "Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füg oben eins hinzu. M1K3 und verbundene Agenten können To-dos vorschlagen; Vorschläge warten hier auf dein Okay."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade una arriba. M1K3 y los agentes conectados pueden sugerir tareas; las sugerencias esperan aquí hasta que des tu visto bueno."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutes-en une ci-dessus. M1K3 et les agents connectés peuvent suggérer des tâches ; les suggestions attendent ici ton feu vert."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicione uma acima. O M1K3 e os agentes conectados podem sugerir tarefas; as sugestões esperam aqui até você aprovar."
-          }
-        }
-      }
+
     },
     "Added \"%@\" to the todo list." : {
       "comment" : "Siri/Shortcuts confirmation after adding a todo. The argument is the todo's title.",
@@ -1563,20 +1513,7 @@
       }
     },
     "Agent Log — MCP tool calls captured from connected agents (opt-in)" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registro de agentes: llamadas a herramientas MCP capturadas de los agentes conectados (solo si lo activas)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registro de agentes — chamadas de ferramentas MCP capturadas de agentes conectados (opcional)"
-          }
-        }
-      }
+
     },
     "Agent activity" : {
       "localizations" : {
@@ -3368,32 +3305,7 @@
       }
     },
     "Clear every pulse (agent-call history is cleared in the Agent Log)" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle Pulse löschen (den Verlauf der Agent-Aufrufe löschst du im Agent-Protokoll)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Borrar todos los pulsos (el historial de peticiones de agentes se borra en el Registro de agentes)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Effacer tous les bilans (l’historique des appels d’agents s’efface depuis le Journal des agents)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Limpar todos os pulsos (o histórico de chamadas de agentes é limpo no Registro de agentes)"
-          }
-        }
-      }
+
     },
     "Clear log" : {
       "localizations" : {
@@ -5519,32 +5431,7 @@
       }
     },
     "Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeder verbundene Agent erreicht M1K3 nicht mehr, bis du ihn mit dem neuen Token erneut verbindest."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todos los agentes que hayas conectado dejarán de acceder a M1K3 hasta que vuelvas a conectarlos con el token nuevo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque agent que tu as connecté ne peut plus joindre M1K3 tant que tu ne le reconnectes pas avec le nouveau jeton."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todo agente que você conectou deixa de acessar o M1K3 até você conectá-lo outra vez com o novo token."
-          }
-        }
-      }
+
     },
     "Every app you’ve pointed at M1K3 stops working until you give it the new key." : {
       "localizations" : {
@@ -5997,32 +5884,7 @@
       }
     },
     "Full transcript in the Agent Log" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vollständiges Transkript im Agent-Protokoll"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Transcripción completa en el Registro de agentes"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Transcription complète dans le Journal des agents"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Transcrição completa no Registro de agentes"
-          }
-        }
-      }
+
     },
     "General" : {
       "localizations" : {
@@ -7707,26 +7569,7 @@
       }
     },
     "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Protokollierung ist an. Sobald ein verbundener Agent M1K3s Werkzeuge aufruft, erscheinen hier die Anfragen und Antworten."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El registro está activado. Cuando un agente conectado llame a las herramientas de M1K3, las solicitudes y las respuestas aparecerán aquí."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O registro está ligado. Conforme um agente conectado chamar as ferramentas do M1K3, as solicitações e respostas aparecerão aqui."
-          }
-        }
-      }
+
     },
     "Looking at the photo" : {
       "localizations" : {
@@ -10692,32 +10535,7 @@
       }
     },
     "Private · download & go →" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privat · laden & loslegen →"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privado · descargar y empezar →"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privé · télécharger et c’est parti →"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privado · baixar e começar →"
-          }
-        }
-      }
+
     },
     "Private →" : {
       "localizations" : {
@@ -11340,32 +11158,7 @@
       }
     },
     "Recall a specific memory from M1K3's private memory graph." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eine bestimmte Erinnerung aus M1K3s privatem Gedächtnisgraphen abrufen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recupera un recuerdo concreto del grafo de memoria privado de M1K3."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retrouver un souvenir précis dans le graphe de mémoire privé de M1K3."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recuperar uma lembrança específica do grafo de memória privado do M1K3."
-          }
-        }
-      }
+
     },
     "Recommended for most people" : {
       "localizations" : {
@@ -12368,20 +12161,7 @@
       }
     },
     "Save a fact to M1K3’s private memory." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guarda un dato en la memoria privada de M1K3."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistrer un fait dans la mémoire privée de M1K3."
-          }
-        }
-      }
+
     },
     "Say hello in the main window first" : {
       "localizations" : {
@@ -12910,34 +12690,10 @@
     },
     "Serving on :%@ to ^[%@ paired device](inflect: true)" : {
       "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Läuft auf :%1$@ für ^[%2$@ gekoppeltes Gerät](inflect: true)"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Serving on :%1$@ to ^[%2$@ paired device](inflect: true)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sirviendo en :%1$@ a ^[%2$@ dispositivo emparejado](inflect: true)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En service sur :%1$@ pour ^[%2$@ appareil associé](inflect: true)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponível em :%1$@ para ^[%2$@ dispositivo pareado](inflect: true)"
           }
         }
       }
@@ -13086,32 +12842,7 @@
 
     },
     "Short earcons for errors, saved memories, and voice mode waking up — never over M1K3's voice. The dial-up sound plays while a brain loads and has its own switch since it loops." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurze Hinweistöne bei Fehlern, gespeicherten Erinnerungen und wenn der Sprachmodus aufwacht – nie über M1K3s Stimme hinweg. Der Einwahlton ertönt, während ein Hirn geladen wird, und hat einen eigenen Schalter, da er in Schleife läuft."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sonidos breves para errores, recuerdos guardados y el despertar del modo de voz; nunca por encima de la voz de M1K3. El sonido de módem suena mientras se carga un cerebro y tiene su propio interruptor, porque se repite en bucle."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De courts signaux sonores pour les erreurs, les souvenirs enregistrés et le réveil du mode vocal — jamais par-dessus la voix de M1K3. Le son de connexion du modem est joué pendant le chargement d’un cerveau et a sa propre option, car il tourne en boucle."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sinais sonoros curtos para erros, lembranças guardadas e o despertar do modo de voz — nunca por cima da voz do M1K3. O som de conexão discada toca enquanto um cérebro carrega e tem seu próprio interruptor, já que toca em loop."
-          }
-        }
-      }
+
     },
     "Show M1K3's avatar behind the chat" : {
       "localizations" : {
@@ -13282,14 +13013,7 @@
       }
     },
     "Show documents & calls in Spotlight" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar documentos y llamadas en Spotlight"
-          }
-        }
-      }
+
     },
     "Show exactly what that sends" : {
 
@@ -13743,32 +13467,7 @@
       }
     },
     "Start a fresh conversation — this one stays in Conversations (⌘N)" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neues Gespräch beginnen – dieses bleibt unter Gespräche (⌘N)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empezar una conversación nueva: esta se queda en Conversaciones (⌘N)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Commencer une nouvelle conversation — celle-ci reste dans Conversations (⌘N)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Começar uma conversa nova — esta fica em Conversas (⌘N)"
-          }
-        }
-      }
+
     },
     "Start listening" : {
       "localizations" : {
@@ -14110,14 +13809,7 @@
       }
     },
     "Suggestions from M1K3 and connected agents land in your inbox as pending. Only you can accept or close a todo." : {
-      "localizations" : {
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As sugestões do M1K3 e dos agentes conectados chegam à sua caixa de entrada como pendentes. Só você pode aceitar ou fechar uma tarefa."
-          }
-        }
-      }
+
     },
     "Switch" : {
       "localizations" : {
@@ -14690,32 +14382,7 @@
 
     },
     "The pairing code expired." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Kopplungscode ist abgelaufen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El código de emparejamiento ha caducado."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le code d’association a expiré."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O código de pareamento expirou."
-          }
-        }
-      }
+
     },
     "The system font — clean and familiar." : {
       "localizations" : {
@@ -16845,14 +16512,7 @@
       }
     },
     "macOS didn't get an answer, so %@ stayed off. Switch it on again to be asked." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS no obtuvo respuesta, así que %@ no se activó. Vuelve a activar el interruptor para que se te pregunte."
-          }
-        }
-      }
+
     },
     "macOS has calendar access off for M1K3 — grant it in System Settings → Privacy & Security → Calendars, then switch this back on." : {
 
@@ -17161,20 +16821,7 @@
       }
     },
     "“%@” wants to pair" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%@” quiere emparejarse"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%@” quer parear"
-          }
-        }
-      }
+
     },
     "“Menu bar only” hides the Dock icon and starts M1K3 quietly — open it anytime from the menu bar." : {
       "localizations" : {
