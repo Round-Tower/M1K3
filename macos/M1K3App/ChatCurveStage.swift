@@ -36,6 +36,7 @@
 //  message 10, the eviction block never reached the render). `historyBudget()` now mirrors `liveHistoryBudget` for
 //  the curve's tier and the header line prints the window it ran with. The 10-25 curves measured the default window;
 //  on Lil the 16-turn ceiling binds either way, so their shape stands.
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — the dispatch arm passes `noneToAgent: true`, as the Mac app does. Confidence 0.85.
 //
 
 import Darwin
@@ -121,7 +122,8 @@ enum ChatCurveStage {
             var plainRoute: (@Sendable () -> PlainTurnRoute?)?
             if routerArm == "dispatch" {
                 let route = ToolRouterWiring.route(
-                    provider: provider, enabled: true, dispatch: true, groupRouter: true, allTiers: true, chain: true
+                    provider: provider, enabled: true, dispatch: true, groupRouter: true, allTiers: true, chain: true,
+                    noneToAgent: true
                 )
                 plainRoute = { route }
             }

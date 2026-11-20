@@ -59,6 +59,7 @@
 //  441 / 410 decoded tokens) — `PlainTurnStream.ingest` gates on scalars (`StreamFold.extends`), not
 //  `String.hasPrefix`: a U+FE0F completing an emoji rewrote its grapheme cluster, the gate refused every later
 //  yield, and the bubble kept half the document. Confidence 0.9 (pinned by delta and snapshot tests).
+//  Review: Kev + claude-opus-5.5, 2026-11-19 — `PlainTurnRoute.noneTakesAgent` (default false). Confidence 0.85.
 //
 
 import Foundation
@@ -272,17 +273,22 @@ public struct PlainTurnRoute: Sendable {
     /// pick reads the web; `.local` takes the web reads back out (`ToolDispatch.searchCorrected`).
     /// nil keeps every pick as the picker named it.
     public let staysLocal: (@Sendable (String) -> SearchRouter.Decision)?
+    /// A picker `none` takes the agent turn (the whole palette) instead of a plain turn (`toolNoneToAgent`).
+    /// A pick the search head emptied stays plain either way: the agent could search again.
+    public let noneTakesAgent: Bool
 
     public init(
         decide: @escaping @Sendable (String) -> ToolNeedRouter.Decision,
         instructions: String?,
         pick: (@Sendable (String, String) async -> ToolPick?)? = nil,
-        staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil
+        staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil,
+        noneTakesAgent: Bool = false
     ) {
         self.decide = decide
         self.instructions = instructions
         self.pick = pick
         self.staysLocal = staysLocal
+        self.noneTakesAgent = noneTakesAgent
     }
 }
 
