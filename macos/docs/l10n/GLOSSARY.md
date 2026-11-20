@@ -111,10 +111,13 @@ exports, deletion) is drafted but held out of the catalogs in
 `docs/l10n/pending-review.json`, so it renders in English until a native speaker reads it
 (Kev, 2026-11-19, decision 3; master ships publicly in the nightly DMG).
 `xcstrings_l10n.py review-sheet docs/l10n/pending-review.json <locale> <out.md>` prints the
-lines; `apply <file> --approved` writes the approved ones. Translate these **literally**:
-never soften or strengthen a promise.
+lines; `apply docs/l10n/pending-review.json --approved --hold-review docs/l10n/pending-review.json
+--locale <code>` writes one reader's approved lines and records each in `docs/l10n/approved.json`
+with the English it was read against, so a later `sweep` or re-draft keeps it until that English
+changes. Translate these **literally**: never soften or strengthen a promise.
 A label of three words or fewer ("Delete", "Web search", "Always allow") names an action and makes
-no promise, so it ships with the wave; the sentence that explains it stays held.
+no promise, so it ships with the wave; the sentence that explains it stays held. A short label
+that makes a claim ("Stays on device", "Private by design", "Fully local") is held.
 "never", "only", "by default", "until you turn it on" carry the exact same force.
 
 ## Not in the catalogs, on purpose
@@ -127,3 +130,5 @@ reply-language clause (#870), not through translated prompts.
 Signed: claude-opus-5-5, 2026-11-20, Confidence 0.8 (register and brand rules are Kev's
 decisions and the shipped store copy; the Apple term table is from memory of Apple's
 localisation and wants a native read, like the privacy copy). Prior: none (new file).
+Review: claude-opus-5-5, 2026-11-20 — the approval command and its record (`approved.json`); short claims
+are held. Confidence 0.8.

@@ -2039,32 +2039,7 @@
       }
     },
     "Ask M1K3 a question and get a grounded answer from your local knowledge." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stell M1K3 eine Frage und erhalte eine fundierte Antwort aus deinem lokalen Wissen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hazle una pregunta a M1K3 y obtén una respuesta fundamentada en tu conocimiento local."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pose une question à M1K3 et obtiens une réponse ancrée dans tes connaissances locales."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faça uma pergunta ao M1K3 e receba uma resposta fundamentada no seu conhecimento local."
-          }
-        }
-      }
+
     },
     "Ask M1K3…" : {
       "localizations" : {
@@ -5434,32 +5409,7 @@
 
     },
     "Every app you’ve pointed at M1K3 stops working until you give it the new key." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jede App, die du auf M1K3 eingestellt hast, funktioniert nicht mehr, bis du ihr den neuen Schlüssel gibst."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todas las apps que hayas configurado para usar M1K3 dejarán de funcionar hasta que les des la clave nueva."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque app que tu as reliée à M1K3 cesse de fonctionner tant que tu ne lui donnes pas la nouvelle clé."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todo app que você apontou para o M1K3 para de funcionar até você dar a ele a nova chave."
-          }
-        }
-      }
+
     },
     "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only." : {
 
@@ -6398,20 +6348,7 @@
       }
     },
     "How Apple protects it" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie Apple das schützt"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Como a Apple protege isso"
-          }
-        }
-      }
+
     },
     "How I learned this" : {
       "localizations" : {
@@ -7429,60 +7366,10 @@
       }
     },
     "Local API" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API"
-          }
-        }
-      }
+
     },
     "Local API (OpenAI-compatible, localhost)" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API (OpenAI-kompatibel, localhost)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API (compatible con OpenAI, localhost)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API (compatible OpenAI, localhost)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local API (compatível com OpenAI, localhost)"
-          }
-        }
-      }
+
     },
     "Location" : {
       "localizations" : {
@@ -7997,32 +7884,7 @@
       }
     },
     "Make a new API key?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neuen API-Schlüssel erstellen?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Crear una clave de API nueva?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer une nouvelle clé API ?"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Criar uma nova chave de API?"
-          }
-        }
-      }
+
     },
     "Make a new access token?" : {
       "localizations" : {
@@ -10507,63 +10369,13 @@
       }
     },
     "Private Cloud Compute" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Private Cloud Compute"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Private Cloud Compute"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Private Cloud Compute"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Private Cloud Compute"
-          }
-        }
-      }
+
     },
     "Private · download & go →" : {
 
     },
     "Private →" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privat →"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privado →"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privé →"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privado →"
-          }
-        }
-      }
+
     },
     "Propose a new item for M1K3's todo list." : {
       "localizations" : {
@@ -12391,32 +12203,7 @@
       }
     },
     "Search M1K3's local knowledge base for documents, notes, and memories." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Durchsucht M1K3s lokale Wissensbasis nach Dokumenten, Notizen und Erinnerungen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca documentos, notas y recuerdos en la base de conocimiento local de M1K3."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chercher des documents, des notes et des souvenirs dans la base de connaissances locale de M1K3."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busque documentos, notas e lembranças na base de conhecimento local do M1K3."
-          }
-        }
-      }
+
     },
     "Seasonal looks" : {
       "localizations" : {

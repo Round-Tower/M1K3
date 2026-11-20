@@ -133,6 +133,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Ask M1K3 a question and get a grounded answer from your local knowledge.",
+  "locale": "de",
+  "review": true,
+  "value": "Stell M1K3 eine Frage und erhalte eine fundierte Antwort aus deinem lokalen Wissen."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Brain at Home — serving ^[%@ device](inflect: true)",
   "locale": "de",
   "review": true,
@@ -233,6 +240,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every app you’ve pointed at M1K3 stops working until you give it the new key.",
+  "locale": "de",
+  "review": true,
+  "value": "Jede App, die du auf M1K3 eingestellt hast, funktioniert nicht mehr, bis du ihr den neuen Schlüssel gibst."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "de",
   "review": true,
@@ -267,6 +281,13 @@
   "locale": "de",
   "review": true,
   "value": "Vollständiges Transkript im Agent-Protokoll"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "How Apple protects it",
+  "locale": "de",
+  "review": true,
+  "value": "Wie Apple das schützt"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -355,6 +376,20 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API",
+  "locale": "de",
+  "review": true,
+  "value": "Local API"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API (OpenAI-compatible, localhost)",
+  "locale": "de",
+  "review": true,
+  "value": "Local API (OpenAI-kompatibel, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
   "locale": "de",
   "review": true,
@@ -417,6 +452,13 @@
   "locale": "de",
   "review": true,
   "value": "MCP-Server (HTTP, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Make a new API key?",
+  "locale": "de",
+  "review": true,
+  "value": "Neuen API-Schlüssel erstellen?"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -519,10 +561,24 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private Cloud Compute",
+  "locale": "de",
+  "review": true,
+  "value": "Private Cloud Compute"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Private · download & go →",
   "locale": "de",
   "review": true,
   "value": "Privat · laden & loslegen →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private →",
+  "locale": "de",
+  "review": true,
+  "value": "Privat →"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -575,6 +631,13 @@
   "review": true,
   "value": "Scanne das in M1K3 auf dem anderen Gerät. Der Code gilt eine Minute lang, und nichts wird wirksam, bis du das Gerät freigibst.",
   "note": "Pairing permission copy (BrainAtHomeSection.swift:119). The draft's „bis du es freigibst“ had an unclear „es“. The thing approved is the pairing device, so it now names it. 'commits nothing' → „nichts wird wirksam“ (nothing takes effect), same strength. A native reader should confirm."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Search M1K3's local knowledge base for documents, notes, and memories.",
+  "locale": "de",
+  "review": true,
+  "value": "Durchsucht M1K3s lokale Wissensbasis nach Dokumenten, Notizen und Erinnerungen."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1181,6 +1244,13 @@
   "locale": "de",
   "review": true,
   "value": "Foto gemerkt. Die Bildunterschrift bleibt auf diesem Gerät."
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Private by design",
+  "locale": "de",
+  "review": true,
+  "value": "Privat aus Prinzip"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -1879,6 +1949,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Ask M1K3 a question and get a grounded answer from your local knowledge.",
+  "locale": "es",
+  "review": true,
+  "value": "Hazle una pregunta a M1K3 y obtén una respuesta fundamentada en tu conocimiento local."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Built-in is Apple's default voice. M1K3 Voice downloads a neural voice model and runs entirely offline. Character shapes the tone — Clean is the full range, M1K3 is the signature sound, Radio leans lo-fi. Hit “Hear a sample” to compare.",
   "locale": "es",
   "review": true,
@@ -1974,6 +2051,13 @@
   "locale": "es",
   "review": true,
   "value": "Todos los agentes que hayas conectado dejarán de acceder a M1K3 hasta que vuelvas a conectarlos con el token nuevo."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every app you’ve pointed at M1K3 stops working until you give it the new key.",
+  "locale": "es",
+  "review": true,
+  "value": "Todas las apps que hayas configurado para usar M1K3 dejarán de funcionar hasta que les des la clave nueva."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2107,6 +2191,20 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API",
+  "locale": "es",
+  "review": true,
+  "value": "Local API"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API (OpenAI-compatible, localhost)",
+  "locale": "es",
+  "review": true,
+  "value": "Local API (compatible con OpenAI, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
   "locale": "es",
   "review": true,
@@ -2172,6 +2270,13 @@
   "locale": "es",
   "review": true,
   "value": "Servidor MCP (HTTP, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Make a new API key?",
+  "locale": "es",
+  "review": true,
+  "value": "¿Crear una clave de API nueva?"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2264,10 +2369,24 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private Cloud Compute",
+  "locale": "es",
+  "review": true,
+  "value": "Private Cloud Compute"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Private · download & go →",
   "locale": "es",
   "review": true,
   "value": "Privado · descargar y empezar →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private →",
+  "locale": "es",
+  "review": true,
+  "value": "Privado →"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2322,6 +2441,13 @@
   "review": true,
   "value": "Escanea esto con M1K3 en el otro dispositivo. El código dura un minuto y no se aplica nada hasta que lo apruebes.",
   "note": "Pairing consent copy (Brain at Home). Changed 'no confirma nada', which a lay reader takes as 'confirms nothing', to 'no se aplica nada hasta que lo apruebes' (nothing takes effect until you approve), and 'en M1K3' to 'con M1K3' to avoid 'en M1K3 en'. The force is the same as 'commits nothing until you approve'. A native reader should confirm."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Search M1K3's local knowledge base for documents, notes, and memories.",
+  "locale": "es",
+  "review": true,
+  "value": "Busca documentos, notas y recuerdos en la base de conocimiento local de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -2912,6 +3038,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Private by design",
+  "locale": "es",
+  "review": true,
+  "value": "Privado por diseño"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Private by design. No account, no analytics.",
   "locale": "es",
   "review": true,
@@ -3297,6 +3430,27 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.",
+  "locale": "es",
+  "review": true,
+  "value": "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu Vision Pro."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.",
+  "locale": "es",
+  "review": true,
+  "value": "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu dispositivo."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.",
+  "locale": "es",
+  "review": true,
+  "value": "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu Mac."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "es",
   "review": true,
@@ -3317,6 +3471,13 @@
   "review": true,
   "value": "Cada búsqueda y cada página leída aparecen en la respuesta en el momento. La fecha, la hora y las herramientas del sistema siguen siendo locales en cualquier caso.",
   "note": "The App Store lane's web-search privacy footer. The batch had review:false, but the line says what stays local, so review is set to true."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "Maximum capability, fully local. The full M1K3.",
+  "locale": "es",
+  "review": true,
+  "value": "Máxima capacidad, totalmente local. M1K3 al completo."
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -3539,6 +3700,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Ask M1K3 a question and get a grounded answer from your local knowledge.",
+  "locale": "fr",
+  "review": true,
+  "value": "Pose une question à M1K3 et obtiens une réponse ancrée dans tes connaissances locales."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Built-in is Apple's default voice. M1K3 Voice downloads a neural voice model and runs entirely offline. Character shapes the tone — Clean is the full range, M1K3 is the signature sound, Radio leans lo-fi. Hit “Hear a sample” to compare.",
   "locale": "fr",
   "review": true,
@@ -3626,6 +3794,13 @@
   "locale": "fr",
   "review": true,
   "value": "Chaque agent que tu as connecté ne peut plus joindre M1K3 tant que tu ne le reconnectes pas avec le nouveau jeton."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every app you’ve pointed at M1K3 stops working until you give it the new key.",
+  "locale": "fr",
+  "review": true,
+  "value": "Chaque app que tu as reliée à M1K3 cesse de fonctionner tant que tu ne lui donnes pas la nouvelle clé."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3758,6 +3933,20 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API",
+  "locale": "fr",
+  "review": true,
+  "value": "Local API"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API (OpenAI-compatible, localhost)",
+  "locale": "fr",
+  "review": true,
+  "value": "Local API (compatible OpenAI, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
   "locale": "fr",
   "review": true,
@@ -3823,6 +4012,13 @@
   "locale": "fr",
   "review": true,
   "value": "Serveur MCP (HTTP, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Make a new API key?",
+  "locale": "fr",
+  "review": true,
+  "value": "Créer une nouvelle clé API ?"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3908,10 +4104,24 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private Cloud Compute",
+  "locale": "fr",
+  "review": true,
+  "value": "Private Cloud Compute"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Private · download & go →",
   "locale": "fr",
   "review": true,
   "value": "Privé · télécharger et c’est parti →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private →",
+  "locale": "fr",
+  "review": true,
+  "value": "Privé →"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -3966,6 +4176,13 @@
   "review": true,
   "value": "Scanne ce code dans M1K3 sur l’autre appareil. Il reste valable une minute et ne valide rien tant que tu n’as pas approuvé.",
   "note": "Pairing consent line. Changed « n’engage rien » to « ne valide rien ». Without « à », « n’engage rien » is not idiomatic, and « n’engage à rien » means 'commits you to nothing', which is a different promise. The source has no call sites in the batch."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Search M1K3's local knowledge base for documents, notes, and memories.",
+  "locale": "fr",
+  "review": true,
+  "value": "Chercher des documents, des notes et des souvenirs dans la base de connaissances locale de M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4575,6 +4792,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Private by design",
+  "locale": "fr",
+  "review": true,
+  "value": "Privé par design"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Private by design. No account, no analytics.",
   "locale": "fr",
   "review": true,
@@ -4959,6 +5183,27 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.",
+  "locale": "fr",
+  "review": true,
+  "value": "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton Vision Pro."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.",
+  "locale": "fr",
+  "review": true,
+  "value": "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton appareil."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.",
+  "locale": "fr",
+  "review": true,
+  "value": "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ta machine."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "fr",
   "review": true,
@@ -4979,6 +5224,13 @@
   "review": true,
   "value": "Chaque recherche et chaque lecture de page s’affichent dans la réponse au moment où elles ont lieu. Les outils de date, d’heure et système restent en local dans tous les cas.",
   "note": "Held for review although the batch flag is false: it says what stays local (privacy footer under the web-search switch, App Store lane)."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "Maximum capability, fully local. The full M1K3.",
+  "locale": "fr",
+  "review": true,
+  "value": "Capacités maximales, entièrement en local. M1K3 au complet."
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
@@ -5198,6 +5450,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Ask M1K3 a question and get a grounded answer from your local knowledge.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Faça uma pergunta ao M1K3 e receba uma resposta fundamentada no seu conhecimento local."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Built-in is Apple's default voice. M1K3 Voice downloads a neural voice model and runs entirely offline. Character shapes the tone — Clean is the full range, M1K3 is the signature sound, Radio leans lo-fi. Hit “Hear a sample” to compare.",
   "locale": "pt-BR",
   "review": true,
@@ -5295,6 +5554,13 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Every app you’ve pointed at M1K3 stops working until you give it the new key.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Todo app que você apontou para o M1K3 para de funcionar até você dar a ele a nova chave."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.",
   "locale": "pt-BR",
   "review": true,
@@ -5329,6 +5595,13 @@
   "locale": "pt-BR",
   "review": true,
   "value": "Transcrição completa no Registro de agentes"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "How Apple protects it",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Como a Apple protege isso"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5415,6 +5688,20 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Local API"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Local API (OpenAI-compatible, localhost)",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Local API (compatível com OpenAI, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Logging is on. As a connected agent calls M1K3's tools, the requests and responses will appear here.",
   "locale": "pt-BR",
   "review": true,
@@ -5478,6 +5765,13 @@
   "locale": "pt-BR",
   "review": true,
   "value": "Servidor MCP (HTTP, localhost)"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Make a new API key?",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Criar uma nova chave de API?"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5571,10 +5865,24 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private Cloud Compute",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Private Cloud Compute"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
   "key": "Private · download & go →",
   "locale": "pt-BR",
   "review": true,
   "value": "Privado · baixar e começar →"
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Private →",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Privado →"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -5628,6 +5936,13 @@
   "review": true,
   "value": "Escaneie isto no M1K3 no outro dispositivo. O código dura um minuto e não efetiva nada até você aprovar.",
   "note": "Pairing consent copy (BrainAtHomeSection.swift:119; the draft said there was no site). 'commits nothing' changed from 'não confirma nada' (ambiguous: 'confirms nothing') to 'não efetiva nada' (puts nothing into effect). 'vale por' changed to 'dura' so 'lives for' stays separate from 'commits'. Privacy line: native read wanted."
+ },
+ {
+  "catalog": "M1K3App/Localizable.xcstrings",
+  "key": "Search M1K3's local knowledge base for documents, notes, and memories.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Busque documentos, notas e lembranças na base de conhecimento local do M1K3."
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -6224,6 +6539,13 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "Private by design",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Privado por design"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
   "key": "Private by design. No account, no analytics.",
   "locale": "pt-BR",
   "review": true,
@@ -6614,6 +6936,27 @@
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente no seu Vision Pro."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente no seu dispositivo."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente na sua máquina."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
   "key": "Apple's built-in on-device model. No download. The quickest way to start.",
   "locale": "pt-BR",
   "review": true,
@@ -6633,6 +6976,13 @@
   "review": true,
   "value": "Cada busca e cada leitura de página aparece na resposta no momento em que acontece. Data, hora e ferramentas do sistema continuam locais de qualquer forma.",
   "note": "Marked for review because it says what stays local, even though the batch item says review:false."
+ },
+ {
+  "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",
+  "key": "Maximum capability, fully local. The full M1K3.",
+  "locale": "pt-BR",
+  "review": true,
+  "value": "Capacidade máxima, totalmente local. O M1K3 completo."
  },
  {
   "catalog": "Sources/M1K3Inference/Resources/Localizable.xcstrings",

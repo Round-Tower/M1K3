@@ -366,3 +366,64 @@ def test_approving_one_locale_leaves_the_others_held(tmp_path):
     localizations = json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]["localizations"]
     assert list(localizations) == ["de"]
     assert [r["locale"] for r in json.loads(pending.read_text())] == ["fr"]
+
+
+# --------------------------------------------------------------------------- #
+# Bot pass 1 fold, round 2 (#873): a native reader's approval is recorded, so sweep and re-drafts keep it
+# --------------------------------------------------------------------------- #
+
+def _approve_de(tmp_path):
+    cat = _catalog(tmp_path, {PRIVACY: {}})
+    pending, approvals = tmp_path / "pending.json", tmp_path / "approved.json"
+    row = {"catalog": cat, "key": PRIVACY, "locale": "de", "value": "Deine Notizen bleiben hier.", "review": True}
+    l10n.apply(str(tmp_path), _drafts(tmp_path, [row]), None, str(pending))
+    assert l10n.apply(str(tmp_path), str(pending), None, str(pending), approved=True, locales=["de"],
+                      approvals_path=str(approvals)) == 0
+    return cat, pending, approvals, row
+
+
+def test_an_approval_is_recorded_against_the_english_it_was_read_against(tmp_path):
+    cat, _, approvals, _ = _approve_de(tmp_path)
+    assert json.loads(approvals.read_text()) == [{"catalog": cat, "english": PRIVACY, "key": PRIVACY, "locale": "de"}]
+
+
+def test_sweep_keeps_an_approved_line(tmp_path):
+    cat, pending, approvals, _ = _approve_de(tmp_path)
+    assert l10n.sweep(str(tmp_path), str(pending), str(approvals)) == 0
+    unit = json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]["localizations"]["de"]["stringUnit"]
+    assert unit["value"] == "Deine Notizen bleiben hier."
+    assert json.loads(pending.read_text()) == []
+
+
+def test_a_redraft_never_replaces_or_holds_an_approved_line(tmp_path):
+    cat, pending, approvals, row = _approve_de(tmp_path)
+    redraft = [{**row, "value": "Ein ungelesener neuer Entwurf.", "review": True}]
+    assert l10n.apply(str(tmp_path), _drafts(tmp_path, redraft, "b.json"), None, str(pending),
+                      approvals_path=str(approvals)) == 0
+    unit = json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]["localizations"]["de"]["stringUnit"]
+    assert unit["value"] == "Deine Notizen bleiben hier."
+    assert json.loads(pending.read_text()) == []
+
+
+def test_an_approval_lapses_when_the_english_changes(tmp_path):
+    cat, pending, approvals, _ = _approve_de(tmp_path)
+    data = json.loads(approvals.read_text())
+    data[0]["english"] = "Your notes stay on this Mac."  # read against an older English line
+    approvals.write_text(json.dumps(data))
+    l10n.sweep(str(tmp_path), str(pending), str(approvals))
+    assert "localizations" not in json.loads((tmp_path / cat).read_text())["strings"][PRIVACY]
+    assert [r["locale"] for r in json.loads(pending.read_text())] == ["de"]
+
+
+@pytest.mark.parametrize("text", [
+    "Local API (OpenAI-compatible, localhost)",
+    "Every app you've pointed at M1K3 stops working until you give it the new key.",
+    "How Apple protects it",
+])
+def test_rows_pass_two_found_shipping_unread_are_held(text):
+    assert l10n.needs_native_read("x/Localizable.xcstrings", text)
+
+
+@pytest.mark.parametrize("text", ["Always local", "Fully offline", "Private by design"])
+def test_a_short_local_or_offline_claim_is_held(text):
+    assert l10n.needs_native_read("x/Localizable.xcstrings", text)

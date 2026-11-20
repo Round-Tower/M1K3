@@ -66,73 +66,13 @@
       }
     },
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro." : {
-      "comment" : "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated.",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu Vision Pro."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton Vision Pro."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente no seu Vision Pro."
-          }
-        }
-      }
+      "comment" : "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated."
     },
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device." : {
-      "comment" : "Brain card copy for Lil, on an iPhone or iPad (\"your device\").",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu dispositivo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton appareil."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente no seu dispositivo."
-          }
-        }
-      }
+      "comment" : "Brain card copy for Lil, on an iPhone or iPad (\"your device\")."
     },
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine." : {
-      "comment" : "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac).",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un motor totalmente local: conversación de varios turnos, memoria y un razonamiento que te sigue el ritmo. Funciona por completo en tu Mac."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ta machine."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Um motor totalmente local — conversas com várias trocas, memória e raciocínio que acompanha seu ritmo. Roda inteiramente na sua máquina."
-          }
-        }
-      }
+      "comment" : "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac)."
     },
     "A small brain for this Mac, which can't run Apple Intelligence." : {
       "localizations" : {
@@ -721,27 +661,7 @@
       }
     },
     "Maximum capability, fully local. The full M1K3." : {
-      "comment" : "Brain card copy for Big. M1K3 is the app's name.",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Máxima capacidad, totalmente local. M1K3 al completo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacités maximales, entièrement en local. M1K3 au complet."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacidade máxima, totalmente local. O M1K3 completo."
-          }
-        }
-      }
+      "comment" : "Brain card copy for Big. M1K3 is the app's name."
     },
     "Mini" : {
       "comment" : "Brain name: never translated.",
