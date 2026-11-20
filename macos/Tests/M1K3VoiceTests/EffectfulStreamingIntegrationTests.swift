@@ -123,6 +123,27 @@ struct EffectfulStreamingIntegrationTests {
         }
     }
 
+    /// 2026-11-20: a non-English answer is spoken by the best installed system voice for its language
+    /// (`SpokenVoice.utterance`), through this same render. Captions, word timing and the mouth need that voice to
+    /// fire word ranges in the offline render; this proves it for German on the machine that runs it.
+    @Test("a German answer's system voice fires a timeline and advancing words")
+    func germanSystemVoiceFiresWords() async throws {
+        guard audioEnabled else { return }
+        let text = "Die Hauptstadt von Frankreich ist Paris, und sie liegt an der Seine."
+        let utterance = SpokenVoice.utterance(text: text, language: "de")
+        try #require(utterance.voiceIdentifier != nil, "no German voice is installed on this Mac")
+        let provider = EffectfulSpeechProvider()
+        let recorder = Recorder()
+        recorder.wire(provider)
+        await provider.speak(utterance)
+        #expect(recorder.starts == 1)
+        #expect(recorder.ends == 1)
+        let timeline = try #require(recorder.timelines.last)
+        #expect(timeline.words.count >= 8)
+        #expect(recorder.words.count >= 4)
+        #expect(recorder.words == recorder.words.sorted { $0.lowerBound < $1.lowerBound })
+    }
+
     @Test("stop() mid-utterance ends exactly once and returns promptly")
     func stopMidUtterance() async throws {
         guard audioEnabled else { return }

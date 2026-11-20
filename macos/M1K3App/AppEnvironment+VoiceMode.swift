@@ -72,6 +72,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a turn that is a spoken page command ("show me that", "scroll
 //  down", "close it") is answered by `handleVoicePageCommand` before the chat sees it, and leaving voice mode closes
 //  the page. Both turn lanes (whole-answer and streaming) check first. Confidence 0.7 (verify-by-launch).
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 
 import AppKit
 import AVFoundation
@@ -233,14 +234,20 @@ extension AppEnvironment {
     /// downstream word timeline is built against the same string the karaoke
     /// view displays. `mood` (the speak tool's emotion) shades the pace and, on
     /// Apple voices, the pitch; the default, neutral, is the plain utterance.
-    func speak(_ text: String, narrator: Narrator = .m1k3, mood: VoiceMood = .neutral) async {
+    ///
+    /// `language` is the answer's spoken language: a streamed answer passes its latch's (one decision per answer);
+    /// nil decides from this text, for the whole-text paths (read aloud, the speak tool).
+    func speak(
+        _ text: String, narrator: Narrator = .m1k3, mood: VoiceMood = .neutral, language: String? = nil
+    ) async {
         let polished = SpeechTextPolish.polish(text)
         // A message that is ONLY a sources block polishes to empty; never hand
         // providers "" — the voice loop waits on a speechDidEnd that would
         // not arrive.
         let spoken = polished.isEmpty ? text : polished
         speechHighlight.beginUtterance(text: spoken, narrator: narrator)
-        await speech.speak(SpeechUtterance(text: spoken, mood: mood))
+        let spokenLanguage = language ?? SpokenLanguage.decide(text: spoken)
+        await speech.speak(SpokenVoice.utterance(text: spoken, mood: mood, language: spokenLanguage))
     }
 
     func stopSpeaking() async {
@@ -412,6 +419,14 @@ extension AppEnvironment {
                      forKey: Self.voiceUpgradeDismissalsKey)
         defaults.set(0, forKey: Self.voiceUpgradeSinceDismissalKey)
         voiceUpgradeOffered = false
+    }
+
+    /// The spoken answer's seed (2026-11-20): the person's own language from this turn or their last readable one,
+    /// English when unknown, so a German question's answer is German from its first short sentence.
+    @MainActor func spokenSeed(for turn: String? = nil) -> String {
+        let earlier = chat.messages.filter { $0.role == .user }.map(\.text)
+        let current = turn ?? earlier.last ?? ""
+        return ReplyLanguage.personLanguage(turn: current, earlierTurns: earlier) ?? SpokenLanguage.seed
     }
 
     /// The voice turn's room line (VoiceTurnPreparer), read by the responder's `voiceClauseProvider`.
@@ -592,6 +607,8 @@ extension AppEnvironment {
                 guard !last.text.isEmpty else {
                     return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
                 }
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question))
+                spokenAnswerLanguage.observe(last.text)
                 recordSpokenExchange()
                 // The rating ask counts spoken wins too — voice turns bypass send().
                 if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: last.interrupted == true) {
@@ -600,7 +617,11 @@ extension AppEnvironment {
                 return .success(last.text)
             },
             speak: { [weak self] answer in
-                await self?.speak(answer)
+                guard let self else { return }
+                // Narration and the refusal stay English; answer sentences take the answer's latched language.
+                let language = SpokenLanguage.language(forChunk: answer, answerLanguage: spokenAnswerLanguage.current,
+                                                       fixedEnglish: [PersonaLeakGuard.refusal])
+                await speak(answer, language: language)
             },
             stopSpeaking: { [weak self] in
                 // The highlight clears via wireSpeechCallbacks' onSpeakingEnded
@@ -620,6 +641,7 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 soundEffects.play(.endpointHeard) // got it — one soft tick down
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
                 // A spoken page command is the person's, never the model's: answer it here (#839).
                 if let reply = await handleVoicePageCommand(question) {
                     onChunk(reply)
@@ -655,6 +677,7 @@ extension AppEnvironment {
                 var pinnedID: UUID?
                 @MainActor func foldForward(_ text: String) {
                     for sentence in folder.ingest(text) {
+                        spokenAnswerLanguage.observe(sentence)
                         onChunk(sentence)
                     }
                 }
@@ -709,6 +732,7 @@ extension AppEnvironment {
                     return .success(())
                 }
                 if let tail = folder.flush() {
+                    spokenAnswerLanguage.observe(tail)
                     onChunk(tail)
                 }
                 guard folder.emittedAny else {

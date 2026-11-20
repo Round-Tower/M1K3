@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 (the table is pure
 //  and pinned; whether each mood reads as itself is verify-by-launch, by ear).
 //  Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-20 — `SpeechUtterance(text:mood:language:voiceIdentifier:)`: the mood init also
+//  carries an answer's spoken language and its system voice (`SpokenVoice.utterance`). English callers unchanged.
 //
 
 import Foundation
@@ -58,9 +60,12 @@ public enum VoiceMood: String, CaseIterable, Sendable {
 public extension SpeechUtterance {
     /// An utterance in this mood. AVSpeech's rate scale is 0...1 around 0.5, so
     /// the pace scales the default rate; Kokoro reads it back as `speedMultiplier`.
-    init(text: String, mood: VoiceMood) {
+    init(text: String, mood: VoiceMood, language: String? = nil, voiceIdentifier: String? = nil) {
         let prosody = mood.prosody
-        self.init(text: text, rate: Self.defaultRate * prosody.speed, pitch: Self.defaultPitch * prosody.pitch)
+        self.init(
+            text: text, rate: Self.defaultRate * prosody.speed, pitch: Self.defaultPitch * prosody.pitch,
+            language: language, voiceIdentifier: voiceIdentifier
+        )
     }
 
     /// The rate as a multiple of the default: the speed for a voice that takes a

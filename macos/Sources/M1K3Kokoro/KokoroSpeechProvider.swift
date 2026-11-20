@@ -78,6 +78,8 @@
 //  system voice (speech stopped for the background must stay stopped). Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-11-15 (#838) — `defaultModelDirectory()` is public so the round-trip
 //  self-test (TTSRoundTripStage) synthesises from the folder the app stages; no behaviour change. Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English utterance (`language`) takes the Apple render path, not Kokoro's
+//  English G2P. Confidence 0.8; whether compact voices fire word ranges in the offline render is UNVERIFIED.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the integrity sentence resolves from M1K3Kokoro's
 //  catalog (`bundle: .module`, beside the G2P resource). English unchanged.
 
@@ -267,6 +269,12 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
     /// failure ends the utterance with what was already scheduled instead of
     /// re-speaking it all in the fallback voice.
     private func synthesize(_ utterance: SpeechUtterance) async {
+        // Kokoro's G2P is English: a non-English answer (SpokenVoice gave it an installed voice) takes the same Apple
+        // render the fallback below uses, so captions, word timing, the mouth and barge-in all keep working.
+        if !SpokenLanguage.isEnglish(utterance.language) {
+            await renderer.speak(utterance)
+            return
+        }
         let chunks = synthesizer.synthesizeStream(
             text: utterance.text, speed: Self.kokoroSpeed(utterance.speedMultiplier)
         )

@@ -22,6 +22,11 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-13, Confidence 0.85 (ranking pure and
 //  pinned in BestSystemVoiceTests; which voices a given device lists is
 //  verify-by-launch). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-20 — `voice(forLanguage:voices:)`: the voice a non-English answer is spoken in
+//  (compact allowed, Eloquence never). `pick` is untouched. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-20 (review fold) — region before quality: the person's own region when a voice
+//  speaks the language there, else the code's or the language's home (pt → BR, zh-Hans → CN, zh-Hant → TW, fr → FR),
+//  so a Brazilian never gets pt-PT and zh-Hans never Cantonese. Confidence 0.8.
 //
 
 import AVFoundation
@@ -67,6 +72,53 @@ public enum BestSystemVoice {
                 return a.identifier < b.identifier
             }
         return best.first?.identifier
+    }
+
+    /// The best installed voice for a NON-English answer: same language only, the language's own region first
+    /// (pt → pt-BR, the wave-one translation; zh-Hans → zh-CN Mandarin, zh-Hant → zh-TW, never Cantonese for either),
+    /// then premium > enhanced > compact (a compact voice in the right language beats English phonetics), the
+    /// Eloquence novelty set never, identifier breaks ties. Nil when no voice speaks the language.
+    public static func voice(
+        forLanguage code: String, voices: [SystemVoiceCandidate],
+        personRegion: String? = Locale.current.region?.identifier
+    ) -> String? {
+        let language = code.split(separator: "-").first.map { $0.lowercased() } ?? code.lowercased()
+        let speaking = voices.filter {
+            languageCode(of: $0.language) == language && !$0.identifier.hasPrefix("com.apple.eloquence.")
+        }
+        // The person's own region when a voice speaks the language there (a Mexican Spanish speaker hears es-MX),
+        // else the code's or the language's home region.
+        let own = personRegion?.lowercased()
+        let region = own.flatMap { candidate in
+            speaking.contains { regionCode(of: $0.language) == candidate } ? candidate : nil
+        } ?? preferredRegion(for: code)
+        return speaking
+            .sorted { a, b in
+                let aHome = regionCode(of: a.language) == region, bHome = regionCode(of: b.language) == region
+                if aHome != bHome { return aHome }
+                if a.quality != b.quality { return a.quality > b.quality }
+                return a.identifier < b.identifier
+            }
+            .first?.identifier
+    }
+
+    /// The region whose voice speaks a language code when the person's own region has none: the code's own region
+    /// when it names one ("pt-BR"), the script's home for Chinese, the translation's target for pt, else the
+    /// language's home country (fr → FR, es → ES, ja → JP).
+    private static let homeRegion: [String: String] = [
+        "de": "de", "fr": "fr", "es": "es", "it": "it", "nl": "nl", "sv": "se", "da": "dk", "fi": "fi", "pl": "pl",
+        "cs": "cz", "ru": "ru", "tr": "tr", "el": "gr", "ja": "jp", "ko": "kr", "th": "th",
+    ]
+
+    static func preferredRegion(for code: String) -> String? {
+        let parts = code.replacingOccurrences(of: "_", with: "-").split(separator: "-").map { $0.lowercased() }
+        if parts.count > 1, parts[1].count == 2 { return parts[1] }
+        switch parts.joined(separator: "-") {
+        case "zh-hans": return "cn"
+        case "zh-hant": return "tw"
+        case "pt": return "br"
+        default: return homeRegion[parts[0]]
+        }
     }
 
     private static func languageCode(of tag: String) -> String {
