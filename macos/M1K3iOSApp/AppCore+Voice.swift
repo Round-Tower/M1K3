@@ -96,6 +96,9 @@
 //  Compile-checked; the spoken commands are verify-on-device.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the pause notes and the voice-turn failure lines (shown,
 //  never spoken or replayed to a brain) are String(localized:). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the polish pass transcribes in `SpeechLocalePolicy.forThisApp`, English
+//  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
+//  Phase 2). English locales unchanged. Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -285,7 +288,7 @@ extension AppCore {
         var lastHeard: SoundContext?
         // The polish pass (#852): the accurate re-run of the listen's audio at the endpoint, Apple's
         // analyzer only and OFF unless `-voicePolishPass YES`. Read when the listen stops, like the room.
-        let polisher = VoicePolisher.apple()
+        let polisher = VoicePolisher.apple(locale: SpeechLocalePolicy.forThisApp)
         var lastAudio: UtteranceAudio?
         // One voice turn into the chat. A turn superseded by barge-in finds the chat still
         // answering and its send returns at once: it must not touch the room line, and the

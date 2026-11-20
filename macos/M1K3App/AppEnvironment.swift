@@ -178,6 +178,9 @@
 //  again (view bodies call it per tick); the resolver decides what loads.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the two "Reindexed N chunks" status lines are inflected
 //  (Foundation; ungrouped digits as before), not English plural ternaries. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the live AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
+//  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
+//  Phase 2). English locales unchanged. Confidence 0.85.
 
 import AppKit
 import Foundation
@@ -1241,7 +1244,7 @@ final class AppEnvironment {
         // The screengrab harness listens through an open mic that needs no TCC
         // grant (a permission sheet would land in the frame) — see +Screengrab.
         transcription = TranscriptionRouter(
-            providers: Self.screengrabTranscriber().map { [$0] } ?? [whisperKit, AppleSpeechTranscriber()]
+            providers: Self.screengrabTranscriber().map { [$0] } ?? [whisperKit, AppleSpeechTranscriber(locale: SpeechLocalePolicy.forThisApp)]
         )
         batchTranscriber = WhisperKitBatchTranscriber(
             model: whisperVariant.modelID, downloadBase: whisperDownloadBase
