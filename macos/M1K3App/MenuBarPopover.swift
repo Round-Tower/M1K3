@@ -217,7 +217,9 @@ struct MenuBarPopover: View {
         if env.heartbeatEnabled, let pulse = latestPulse {
             VStack(alignment: .leading, spacing: 4) {
                 Label {
-                    Text(pulse.createdAt.formatted(.relative(presentation: .named)))
+                    TimelineView(.everyMinute) { _ in // stays current while the popover is open
+                        Text(pulse.createdAt.formatted(.relative(presentation: .named)))
+                    }
                 } icon: {
                     Image(systemName: "waveform.path.ecg")
                         .accessibilityHidden(true)

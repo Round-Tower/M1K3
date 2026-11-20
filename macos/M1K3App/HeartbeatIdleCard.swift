@@ -58,7 +58,11 @@ struct HeartbeatIdleCard: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "waveform.path.ecg")
                                     .symbolRenderingMode(.hierarchical)
-                                Text("\(pulse.createdAt.formatted(.relative(presentation: .named))) · told by \(pulse.renderedBy)")
+                                // A minute tick keeps "5 minutes ago" current, as `style: .relative` did; one whole
+                                // key, so word order is the translator's ("vor 5 Minuten", "il y a 5 minutes").
+                                TimelineView(.everyMinute) { _ in
+                                    Text("\(pulse.createdAt.formatted(.relative(presentation: .named))) · told by \(pulse.renderedBy)")
+                                }
                             }
                             .font(.caption)
                             .foregroundStyle(.readableSecondary)
