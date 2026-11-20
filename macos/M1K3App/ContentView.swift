@@ -137,6 +137,7 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the call-consent message and the Lil/Big upgrade pitch
 //  are single literals (no `+` join; the pitch is String(localized:)). English unchanged.
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the staged-switch pitch and the Switch/Fetch button too. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -2114,7 +2115,7 @@ private struct BrainUpgradeNudgeCard: View {
 
     private var pitch: String {
         if isStagedSwitch {
-            "Want me to switch over? Takes a few seconds; the weights are already on this Mac."
+            String(localized: "Want me to switch over? Takes a few seconds; the weights are already on this Mac.")
         } else {
             // ONE download pitch (reduction pass, 2026-07-03): the headlines
             // carry the flavour; two near-identical pitches were saying the
@@ -2138,7 +2139,9 @@ private struct BrainUpgradeNudgeCard: View {
                 .padding(.top, 2)
             HStack(spacing: 12) {
                 Button(
-                    isStagedSwitch ? "Switch to \(target.displayName)" : "Fetch \(target.displayName)",
+                    isStagedSwitch
+                        ? String(localized: "Switch to \(target.displayName)")
+                        : String(localized: "Fetch \(target.displayName)"),
                     action: { onAccept(semanticMemorySlot == .shown && alsoSemanticMemory) }
                 )
                 .buttonStyle(.glassProminent)

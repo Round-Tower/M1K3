@@ -14,6 +14,7 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.8 (pure parts pinned; the background run is device-only).
 //  Prior: none (new file; the Live Activities plan's slice 1).
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the Live Activity title and whole-sentence subtitles too. Confidence 0.8.
 //
 
 import Foundation
@@ -32,8 +33,9 @@ public struct ContinuedDownload: Sendable, Equatable {
 
     public init(tier: BrainTier) {
         identifier = String(Self.permittedIdentifiers.dropLast()) + tier.rawValue
-        title = "Downloading \(tier.displayName)"
-        subtitle = "\(Self.sizeLine(megabytes: tier.approxDownloadMB)), kept on this device"
+        let name = tier.displayName
+        title = String(localized: "Downloading \(name)", bundle: .module)
+        subtitle = Self.subtitle(megabytes: tier.approxDownloadMB)
     }
 
     public static func completedUnits(fraction: Double) -> Int64 {
@@ -53,10 +55,13 @@ public struct ContinuedDownload: Sendable, Equatable {
         !appIsActive
     }
 
-    private static func sizeLine(megabytes: Int?) -> String {
-        guard let megabytes else { return String(localized: "A one-time download", bundle: .module) }
+    /// One whole sentence per case, so a translator sees the subtitle the Live Activity shows.
+    private static func subtitle(megabytes: Int?) -> String {
+        guard let megabytes else {
+            return String(localized: "A one-time download, kept on this device", bundle: .module)
+        }
         // The shared decimal byte formatter follows the person's language, like the sentence around it.
         let size = BrainTier.downloadSizeLabel(megabytes: megabytes)
-        return String(localized: "About \(size)", bundle: .module)
+        return String(localized: "About \(size), kept on this device", bundle: .module)
     }
 }
