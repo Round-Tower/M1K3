@@ -31,8 +31,10 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation: the catalogued taglines and the Mini/Big card copy keep
 //  their English bytes (each was a `+` join before it became one key).
 //  Review: claude-opus-5-5, 2026-11-20 — byte counts via the one localised formatter; pins compare or assert structure. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-20 (full suite) — imports Foundation for `Locale`; the bundle did not compile.
 //
 
+import Foundation
 @testable import M1K3Inference
 import Testing
 
