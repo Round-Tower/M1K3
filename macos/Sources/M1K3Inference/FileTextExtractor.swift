@@ -11,6 +11,7 @@
 //  Prior: PDFTextExtractor in M1K3Knowledge (the RAG ingest path)
 //  Review: Kev + claude-opus-4-6, 2026-09-17 — LocalizedError on ExtractionError,
 //  readFailed wraps CocoaErrors, 50k-char cap prevents context-budget blowout.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 
 import Foundation
@@ -25,13 +26,14 @@ public enum FileTextExtractor {
         public var errorDescription: String? {
             switch self {
             case let .unsupportedFormat(ext):
-                return "Unsupported file format: .\(ext)"
+                return String(localized: "Unsupported file format: .\(ext)", bundle: .module)
             case let .readFailed(reason):
-                return "Could not read file: \(reason)"
+                return String(localized: "Could not read file: \(reason)", bundle: .module)
             case .emptyContent:
-                return "The file is empty."
+                return String(localized: "The file is empty.", bundle: .module)
             case let .truncated(count):
-                return "File was truncated to \(FileTextExtractor.characterCap) characters (original: \(count))."
+                let cap = FileTextExtractor.characterCap
+                return String(localized: "File was truncated to \(cap) characters (original: \(count)).", bundle: .module)
             }
         }
     }

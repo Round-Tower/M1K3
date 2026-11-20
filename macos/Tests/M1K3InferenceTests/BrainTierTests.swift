@@ -30,6 +30,7 @@
 //  may name, derived from `supportsImageInput` and the platform floor (PR #526 review). Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation: the catalogued taglines and the Mini/Big card copy keep
 //  their English bytes (each was a `+` join before it became one key).
+//  Review: claude-opus-5-5, 2026-11-20 — byte counts via the one localised formatter; pins compare or assert structure. Confidence 0.75.
 //
 
 @testable import M1K3Inference
@@ -483,11 +484,21 @@ struct BrainTierTests {
         #expect(BrainTier.offered(afm: .blocked(userFixable: true), including: .mini) == [.pocket, .lil, .big])
     }
 
-    @Test("one download-size formatter for every shell: MB below a gigabyte, one decimal above")
+    @Test("one download-size formatter for every shell: decimal units (1 GB = 1000 MB), in the person's language")
     func downloadSizeLabel() {
-        #expect(BrainTier.downloadSizeLabel(megabytes: 630) == "630 MB")
-        #expect(BrainTier.downloadSizeLabel(megabytes: 2150) == "2.1 GB") // %.1f rounds half-even here
-        #expect(BrainTier.downloadSizeLabel(megabytes: 1000) == "1.0 GB")
+        let english = Locale(identifier: "en_US")
+        let german = Locale(identifier: "de_DE")
+        // Megabytes below a gigabyte stay megabytes; the number is the quoted one, not a 1024 conversion.
+        #expect(BrainTier.downloadSizeLabel(megabytes: 630, locale: english).contains("630"))
+        #expect(BrainTier.downloadSizeLabel(megabytes: 630, locale: english).contains("MB"))
+        // 1000 MB is exactly one gigabyte (decimal), where the binary divisor would give 0.98.
+        #expect(BrainTier.downloadSizeLabel(megabytes: 1000, locale: english).hasPrefix("1"))
+        #expect(BrainTier.downloadSizeLabel(megabytes: 1000, locale: english).contains("GB"))
+        // 1500 MB: the decimal separator follows the locale ("1.5 GB" vs "1,5 GB").
+        let en = BrainTier.downloadSizeLabel(megabytes: 1500, locale: english)
+        let de = BrainTier.downloadSizeLabel(megabytes: 1500, locale: german)
+        #expect(en.contains("1.5") && en.contains("GB"))
+        #expect(de.contains("1,5") && de.contains("GB"))
     }
 
     @Test("a pocket below its floor eases to Mini (unready → the shell's Home-only path), never to itself")

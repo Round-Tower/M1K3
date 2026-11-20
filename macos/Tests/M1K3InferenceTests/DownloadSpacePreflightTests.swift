@@ -7,6 +7,7 @@
 //  download Mini it fails"). The check runs before any byte moves and says how much is missing.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-03, Confidence 0.85. Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-20 — byte counts via the one localised formatter; pins compare or assert structure. Confidence 0.75.
 //
 
 @testable import M1K3Inference
@@ -35,9 +36,13 @@ struct DownloadSpacePreflightTests {
     @Test("the message names the brain, the size and what's missing, in the bar's units")
     func message() {
         let error = DownloadSpacePreflight.InsufficientSpace(brain: "Mini", downloadMB: 630, shortfallMB: 430)
-        #expect(error.errorDescription == "Not enough space for Mini. It needs about 630 MB, and this device is "
-            + "430 MB short. Free some space, then pick Mini again.")
+        let size = BrainTier.downloadSizeLabel(megabytes: 630)
+        let short = BrainTier.downloadSizeLabel(megabytes: 430)
+        #expect(error.errorDescription == "Not enough space for Mini. It needs about \(size), and this device is "
+            + "\(short) short. Free some space, then pick Mini again.")
         let big = DownloadSpacePreflight.InsufficientSpace(brain: "Lil", downloadMB: 3060, shortfallMB: 1200)
-        #expect(big.errorDescription?.contains("about 3.1 GB, and this device is 1.2 GB short") == true)
+        let bigSize = BrainTier.downloadSizeLabel(megabytes: 3060)
+        let bigShort = BrainTier.downloadSizeLabel(megabytes: 1200)
+        #expect(big.errorDescription?.contains("about \(bigSize), and this device is \(bigShort) short") == true)
     }
 }

@@ -80,6 +80,7 @@
 //  self-test (TTSRoundTripStage) synthesises from the folder the app stages; no behaviour change. Confidence 0.9.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the integrity sentence resolves from M1K3Kokoro's
 //  catalog (`bundle: .module`, beside the G2P resource). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -495,7 +496,7 @@ enum KokoroDownloadValidation {
 struct KokoroDownloadHTTPError: LocalizedError {
     let statusCode: Int
     var errorDescription: String? {
-        "Kokoro download failed with HTTP status \(statusCode)"
+        String(localized: "Kokoro download failed with HTTP status \(statusCode)", bundle: .module)
     }
 }
 
@@ -506,7 +507,10 @@ struct KokoroDownloadHTTPError: LocalizedError {
 struct KokoroWeightTamperError: LocalizedError, DownloadFailureClassifying {
     let file: String
     var errorDescription: String? {
-        "Kokoro's \(file) does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it"
+        String(
+            localized: "Kokoro's \(file) does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it",
+            bundle: .module
+        )
     }
 
     /// Never transient (a retry would fetch the same bytes); the short sentence for a person.

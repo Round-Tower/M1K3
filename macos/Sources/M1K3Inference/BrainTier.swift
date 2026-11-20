@@ -56,6 +56,7 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-17 — supportsImageInput gains .mini on macOS 27+ via
 //  FoundationModels' Attachment(imageURL:) API, gated with #if compiler(>=6.4) + @available.
 //  Confidence now 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `.mini`'s window is MiniContextWindow.current (the
 //  device's, recorded at launch; 4,096 floor), no longer a literal 4,096.
@@ -389,8 +390,12 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// "630 MB" / "2.2 GB" from an approx MB figure (1 GB = 1000 MB, matching
     /// how download sizes are quoted to users) — the one formatter every shell
     /// copies from.
-    public static func downloadSizeLabel(megabytes: Int) -> String {
-        megabytes >= 1000 ? String(format: "%.1f GB", Double(megabytes) / 1000) : "\(megabytes) MB"
+    ///
+    /// Built on `ByteCountFormatStyle` with the `.decimal` style (1 GB = 1000 MB, never the binary 1024), so the
+    /// digits and the unit follow the person's language ("3.1 GB", "3,1 GB", "3,1 Go"). `locale` is injectable
+    /// for tests; the shells use the current one.
+    public static func downloadSizeLabel(megabytes: Int, locale: Locale = .current) -> String {
+        Int64(megabytes * 1_000_000).formatted(ByteCountFormatStyle(style: .decimal, locale: locale))
     }
 
     /// The memory floor below which this brain shouldn't even be SELECTABLE

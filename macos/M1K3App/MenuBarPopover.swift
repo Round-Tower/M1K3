@@ -24,6 +24,7 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the todo line and Brain at Home's serving caption are
 //  inflected whole lines, not English plural ternaries or a joined fragment. English unchanged (the caption is an
 //  AttributedString with `.grouping(.never)`, like BrainServeController's, so 1,000+ devices still print ungrouped).
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import AppKit
 import M1K3Avatar
@@ -216,7 +217,7 @@ struct MenuBarPopover: View {
         if env.heartbeatEnabled, let pulse = latestPulse {
             VStack(alignment: .leading, spacing: 4) {
                 Label {
-                    Text(pulse.createdAt, style: .relative) + Text(" ago")
+                    Text(pulse.createdAt.formatted(.relative(presentation: .named)))
                 } icon: {
                     Image(systemName: "waveform.path.ecg")
                         .accessibilityHidden(true)

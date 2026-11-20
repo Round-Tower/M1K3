@@ -136,6 +136,7 @@
 //  M1K3 quotes them oddly) — the starters state and its redraw task are gone with the chips.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the call-consent message and the Lil/Big upgrade pitch
 //  are single literals (no `+` join; the pitch is String(localized:)). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1078,7 +1079,7 @@ struct ContentView: View {
         GlassEffectContainer(spacing: 12) {
             HStack(spacing: 12) {
                 if env.isListening {
-                    Text(env.liveTranscript.isEmpty ? "Listening…" : env.liveTranscript)
+                    Text(env.liveTranscript.isEmpty ? String(localized: "Listening…") : env.liveTranscript)
                         .foregroundStyle(env.liveTranscript.isEmpty ? Color.readableSecondary : Color.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(1 ... 5)
@@ -1261,11 +1262,11 @@ struct ContentView: View {
     /// The mic button's tooltip: names WHY it's disabled rather than leaving
     /// an unexplained greyed-out control (#126 — the busy state is new).
     private var micButtonHelp: String {
-        guard env.canDictate else { return "Microphone unavailable" }
+        guard env.canDictate else { return String(localized: "Microphone unavailable") }
         if env.chat.isResponding, !env.isListening {
-            return "Voice input — wait for M1K3 to finish answering"
+            return String(localized: "Voice input — wait for M1K3 to finish answering")
         }
-        return "Voice input — tap to speak, tap to send"
+        return String(localized: "Voice input — tap to speak, tap to send")
     }
 
     /// Cue for the ambient animated backdrop: audio capture (dictation / call
@@ -1281,9 +1282,9 @@ struct ContentView: View {
     /// One spoken label for the toolbar status pill — the colour-coded dots carry
     /// no meaning to VoiceOver on their own.
     private var statusAccessibilityLabel: String {
-        if env.isRecording { return "Recording in progress" }
+        if env.isRecording { return String(localized: "Recording in progress") }
         if env.modelLoad.isActive { return env.modelLoad.label(modelName: env.downloadingBrainName) }
-        return "Brain unavailable"
+        return String(localized: "Brain unavailable")
     }
 
     /// Status earns its place only when it deviates from "ready and quiet":
@@ -2096,18 +2097,18 @@ private struct BrainUpgradeNudgeCard: View {
 
     private var sizeText: String {
         guard let mb = target.approxDownloadMB else { return "" }
-        return String(format: "%.1f GB", Double(mb) / 1000)
+        return BrainTier.downloadSizeLabel(megabytes: mb)
     }
 
     private var headline: String {
         if isStagedSwitch {
-            "\(target.displayName)'s already here — my sharper brain is sitting on disk."
+            String(localized: "\(target.displayName)'s already here — my sharper brain is sitting on disk.")
         } else if isReOffer {
-            "That one stretched me."
+            String(localized: "That one stretched me.")
         } else if target == .big {
-            "That was \(currentBrainName) — and this Mac can run my full brain."
+            String(localized: "That was \(currentBrainName) — and this Mac can run my full brain.")
         } else {
-            "That was \(currentBrainName), my quickest brain."
+            String(localized: "That was \(currentBrainName), my quickest brain.")
         }
     }
 

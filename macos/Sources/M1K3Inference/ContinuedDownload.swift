@@ -13,6 +13,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.8 (pure parts pinned; the background run is device-only).
 //  Prior: none (new file; the Live Activities plan's slice 1).
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 
 import Foundation
@@ -53,9 +54,9 @@ public struct ContinuedDownload: Sendable, Equatable {
     }
 
     private static func sizeLine(megabytes: Int?) -> String {
-        guard let megabytes else { return "A one-time download" }
-        if megabytes < 1000 { return "About \(megabytes) MB" }
-        // Fixed format, not the locale's: the app's copy is English-only, so "3,1 GB" would read as a typo.
-        return "About \(String(format: "%.1f", Double(megabytes) / 1000)) GB"
+        guard let megabytes else { return String(localized: "A one-time download", bundle: .module) }
+        // The shared decimal byte formatter follows the person's language, like the sentence around it.
+        let size = BrainTier.downloadSizeLabel(megabytes: megabytes)
+        return String(localized: "About \(size)", bundle: .module)
     }
 }

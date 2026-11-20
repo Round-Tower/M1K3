@@ -27,6 +27,7 @@
 //  FIRST (dropping any visitor requests still waiting; their `wait: true` callers see Cancelled), THEN
 //  stops whatever is actually playing — so a stop never leaves a queued visitor line to speak next.
 //  Confidence now 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: claude-opus-5-5, 2026-11-16 (#852) — the polish pass: at the endpoint, before `VoiceTurnPreparer.prepare`, the
 //  listen's captured audio is re-run through SpeechTranscriber in accurate mode (VoicePolisher; Apple's analyzer only, a 1 s
@@ -405,7 +406,7 @@ extension AppEnvironment {
     /// directly-set notice would mask the ingest banner forever.
     func acceptVoiceUpgrade() {
         voiceUpgradeOffered = false
-        showBrainUpgradeNotice("Fetching my proper voice — I'll switch over when it's ready.")
+        showBrainUpgradeNotice(String(localized: "Fetching my proper voice — I'll switch over when it's ready."))
         prepareM1K3Voice()
     }
 

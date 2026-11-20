@@ -51,6 +51,7 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Inference
@@ -92,7 +93,9 @@ struct BrainPickerView: View {
                 Spacer()
                 header(
                     title: "Brain",
-                    subtitle: isWakingBrain ? "Configuring M1K3's mainframe" : "Pick a brain"
+                    subtitle: isWakingBrain
+                        ? String(localized: "Configuring M1K3's mainframe")
+                        : String(localized: "Pick a brain")
                 )
 
                 if isWakingBrain { brainAwakening } else { brainPicker.frame(maxWidth: Self.pickerWidth) }
@@ -244,10 +247,10 @@ struct BrainPickerView: View {
     /// The wake button's label tracks the selection: auto hands the pick to M1K3,
     /// an un-fetched tier offers a download, a ready tier wakes in place.
     private var brainButtonTitle: String {
-        if autoSelected { return "Let M1K3 choose →" }
+        if autoSelected { return String(localized: "Let M1K3 choose →") }
         return selectedBrain.requiresDownload && !env.isBrainDownloaded(selectedBrain)
-            ? "Download \(selectedBrain.displayName) →"
-            : "Wake up \(selectedBrain.displayName) →"
+            ? String(localized: "Download \(selectedBrain.displayName) →")
+            : String(localized: "Wake up \(selectedBrain.displayName) →")
     }
 
     private func wakeBrain() {
@@ -269,7 +272,7 @@ struct BrainPickerView: View {
             let serving = env.selectedBrain.displayName
             env.stageDirectedBrainFetch(picked)
             env.showBrainUpgradeNotice(
-                "I'll keep us on \(serving) while \(picked.displayName) downloads — switching the moment it's ready."
+                String(localized: "I'll keep us on \(serving) while \(picked.displayName) downloads — switching the moment it's ready.")
             )
             onComplete()
             return
