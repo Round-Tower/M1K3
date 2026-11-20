@@ -1,0 +1,1460 @@
+[
+ {
+  "id": "pz-000",
+  "lang": "en",
+  "puzzle": true,
+  "text": "when i was 10 my sister was half my age. im 34 now, how old is she"
+ },
+ {
+  "id": "pz-001",
+  "lang": "en",
+  "puzzle": true,
+  "text": "A shop takes 20% off a €50 jacket and then puts the price back up by 20% of the sale price. Is it back to €50?"
+ },
+ {
+  "id": "pz-002",
+  "lang": "en",
+  "puzzle": true,
+  "text": "today's wednesday. what day of the week will it be in 100 days"
+ },
+ {
+  "id": "pz-003",
+  "lang": "en",
+  "puzzle": true,
+  "text": "Emma has 4 brothers and each of her brothers has 2 sisters. how many kids are in the family altogether"
+ },
+ {
+  "id": "pz-004",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if two bakers make two cakes in two hours, how many bakers do i need to make twelve cakes in four hours?"
+ },
+ {
+  "id": "pz-005",
+  "lang": "en",
+  "puzzle": true,
+  "text": "my flight leaves dublin at 14:10, its 7h 40m and new york is 5 hours behind. what time do i land, NY time?"
+ },
+ {
+  "id": "pz-006",
+  "lang": "en",
+  "puzzle": true,
+  "text": "drove to my mums at 60 km/h and back the same road at 40. whats my average speed for the whole trip?? its not 50 apparently"
+ },
+ {
+  "id": "pz-007",
+  "lang": "en",
+  "puzzle": true,
+  "text": "Im in a queue, 7 people in front of me and 4 behind. 2 of the people in front give up and leave, then someone cuts in right in front of me. How many in the queue now and what position am I"
+ },
+ {
+  "id": "pz-008",
+  "lang": "en",
+  "puzzle": true,
+  "text": "Ciara is older than Tom but younger than Aoife. Aoife is younger than Dev. who's the second oldest"
+ },
+ {
+  "id": "pz-009",
+  "lang": "en",
+  "puzzle": true,
+  "text": "how many different 3 scoop cones can i make from 5 flavours if the order doesn't matter and i can have the same flavour twice"
+ },
+ {
+  "id": "pz-010",
+  "lang": "en",
+  "puzzle": true,
+  "text": "phone's at 80% and drops 3% every 10 min while I stream. if I plug it in the charger adds 5% every 10 min but I keep streaming, how long till it's full"
+ },
+ {
+  "id": "pz-011",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if three days ago was the day before friday, what day is tomorrow"
+ },
+ {
+  "id": "pz-012",
+  "lang": "en",
+  "puzzle": true,
+  "text": "a jar has red and blue marbles in a 3:5 ratio. i add 10 red ones and now theres the same number of each. how many marbles were in it at the start"
+ },
+ {
+  "id": "pz-013",
+  "lang": "en",
+  "puzzle": true,
+  "text": "bought a bike for 200, sold it for 250, bought it back for 300 then sold it again for 320. did I make or lose money overall and how much"
+ },
+ {
+  "id": "pz-014",
+  "lang": "en",
+  "puzzle": true,
+  "text": "helping my son with homework: a number doubled, minus 7, is 3 more than the number. what's the number?"
+ },
+ {
+  "id": "pz-015",
+  "lang": "en",
+  "puzzle": true,
+  "text": "Lisa reads 12 pages a night on weekdays and 30 pages a day at the weekend. The book's 330 pages and she starts on a Monday. What day does she finish?"
+ },
+ {
+  "id": "pz-016",
+  "lang": "en",
+  "puzzle": true,
+  "text": "my kitchen clock loses 4 minutes every hour. I set it right at noon, what will it say when it's actually 6pm"
+ },
+ {
+  "id": "pz-017",
+  "lang": "en",
+  "puzzle": true,
+  "text": "me and 2 mates split a 65 euro bill evenly. I paid 40, Sam paid 25, Jo paid nothing. who owes who what so we're square"
+ },
+ {
+  "id": "pz-018",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if you write out every number from 1 to 100 how many times do you write the digit 7"
+ },
+ {
+  "id": "pz-019",
+  "lang": "en",
+  "puzzle": true,
+  "text": "thinking of a 2 digit number, the digits add up to 11 and if you swap the digits the number goes up by 27. what is it"
+ },
+ {
+  "id": "pz-020",
+  "lang": "en",
+  "puzzle": true,
+  "text": "born on 29 feb 2000. how many actual birthdays will i have had by march 2030?"
+ },
+ {
+  "id": "pz-021",
+  "lang": "en",
+  "puzzle": true,
+  "text": "a shirt was reduced by 25% and now costs 36, what was it originally"
+ },
+ {
+  "id": "pz-022",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if it takes 6 minutes to boil 3 eggs how long does it take to boil 6 eggs"
+ },
+ {
+  "id": "pz-023",
+  "lang": "en",
+  "puzzle": true,
+  "text": "theres 30 kids in the class, 18 play football, 14 play hurling and 5 play neither. how many play both"
+ },
+ {
+  "id": "pz-024",
+  "lang": "en",
+  "puzzle": true,
+  "text": "my grandad says 40 years ago he was a third of the age he is now. how old is he"
+ },
+ {
+  "id": "pz-025",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if i save 15 quid the first week and 5 more each week after that (20, 25 etc) how much will i have after 10 weeks"
+ },
+ {
+  "id": "pz-026",
+  "lang": "en",
+  "puzzle": true,
+  "text": "car park is 2.50 for the first hour then 1.80 for each extra half hour or part of one. I was there from 10:15 to 13:40, how much do I owe"
+ },
+ {
+  "id": "pz-027",
+  "lang": "en",
+  "puzzle": true,
+  "text": "A tank of fish doubles every week and it's full after 8 weeks. My mate says it was a quarter full at week 4, is he right?"
+ },
+ {
+  "id": "pz-028",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if 5 people each shake... no wait different one. 4 friends each send a christmas card to every other friend. then each person who got a card sends one thank you text per card. how many messages total"
+ },
+ {
+  "id": "pz-029",
+  "lang": "en",
+  "puzzle": true,
+  "text": "train A leaves at 9:05 and gets in at 11:50, train B leaves at 9:40 but is 25% faster. which one gets there first?"
+ },
+ {
+  "id": "pz-030",
+  "lang": "en",
+  "puzzle": true,
+  "text": "how many fridays the 13th are there in 2027"
+ },
+ {
+  "id": "pz-031",
+  "lang": "en",
+  "puzzle": false,
+  "text": "remind me at 7:45 tomorrow to put the bins out"
+ },
+ {
+  "id": "pz-032",
+  "lang": "en",
+  "puzzle": false,
+  "text": "set a timer for 25 mins"
+ },
+ {
+  "id": "pz-033",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how many days until christmas"
+ },
+ {
+  "id": "pz-034",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats 18% of 240"
+ },
+ {
+  "id": "pz-035",
+  "lang": "en",
+  "puzzle": false,
+  "text": "convert 350 fahrenheit to celsius for the oven pls"
+ },
+ {
+  "id": "pz-036",
+  "lang": "en",
+  "puzzle": false,
+  "text": "recipe says 200g flour, 2 eggs and 300ml milk for 3 people. I'm making pancakes for 6, can you list what I need"
+ },
+ {
+  "id": "pz-037",
+  "lang": "en",
+  "puzzle": false,
+  "text": "Ireland beat England 27-22 on saturday, who scored the tries?"
+ },
+ {
+  "id": "pz-038",
+  "lang": "en",
+  "puzzle": false,
+  "text": "what's the population of japan"
+ },
+ {
+  "id": "pz-039",
+  "lang": "en",
+  "puzzle": false,
+  "text": "my monthly stuff: rent 1450, groceries 400, car 220, phone 35, gym 40. can u put that in a table"
+ },
+ {
+  "id": "pz-040",
+  "lang": "en",
+  "puzzle": false,
+  "text": "write a python function that returns the nth fibonacci number"
+ },
+ {
+  "id": "pz-041",
+  "lang": "en",
+  "puzzle": false,
+  "text": "when's the next full moon"
+ },
+ {
+  "id": "pz-042",
+  "lang": "en",
+  "puzzle": false,
+  "text": "give me a 5k training plan, I can run 3 times a week"
+ },
+ {
+  "id": "pz-043",
+  "lang": "en",
+  "puzzle": false,
+  "text": "what year did the berlin wall come down"
+ },
+ {
+  "id": "pz-044",
+  "lang": "en",
+  "puzzle": false,
+  "text": "can you summarise this for me: Q3 revenue rose 12% to €4.2m, operating costs were flat at €3.1m, headcount grew from 41 to 47 and churn fell to 3.8%"
+ },
+ {
+  "id": "pz-045",
+  "lang": "en",
+  "puzzle": false,
+  "text": "move my dentist from 3pm thursday to the same time friday"
+ },
+ {
+  "id": "pz-046",
+  "lang": "en",
+  "puzzle": false,
+  "text": "what time is it in tokyo right now"
+ },
+ {
+  "id": "pz-047",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how many calories in 2 slices of toast with butter"
+ },
+ {
+  "id": "pz-048",
+  "lang": "en",
+  "puzzle": false,
+  "text": "write a short birthday poem for my mum shes turning 60"
+ },
+ {
+  "id": "pz-049",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats 1200 times 12"
+ },
+ {
+  "id": "pz-050",
+  "lang": "en",
+  "puzzle": false,
+  "text": "I've got 3 credit cards, 1200 at 19%, 800 at 24% and 3000 at 12%. which should I pay off first?"
+ },
+ {
+  "id": "pz-051",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how many ounces in a pound"
+ },
+ {
+  "id": "pz-052",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats the score in the liverpool game"
+ },
+ {
+  "id": "pz-053",
+  "lang": "en",
+  "puzzle": false,
+  "text": "explain compound interest like im 12"
+ },
+ {
+  "id": "pz-054",
+  "lang": "en",
+  "puzzle": false,
+  "text": "got any good riddles for my kids party? theyre about 8"
+ },
+ {
+  "id": "pz-055",
+  "lang": "en",
+  "puzzle": false,
+  "text": "my train's at 17:52, wake me an hour before"
+ },
+ {
+  "id": "pz-056",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how old is the pope"
+ },
+ {
+  "id": "pz-057",
+  "lang": "en",
+  "puzzle": false,
+  "text": "square root of 144?"
+ },
+ {
+  "id": "pz-058",
+  "lang": "en",
+  "puzzle": false,
+  "text": "done 8,400 steps today is that good"
+ },
+ {
+  "id": "pz-059",
+  "lang": "en",
+  "puzzle": false,
+  "text": "make me a shopping list for lasagne for 8 people"
+ },
+ {
+  "id": "pz-060",
+  "lang": "en",
+  "puzzle": false,
+  "text": "tell me a fun fact about the number 7"
+ },
+ {
+  "id": "pz-061",
+  "lang": "en",
+  "puzzle": true,
+  "text": "ok quick one for sprint planning. alice burns 5 points a day, bob 3, carol joins on day 3 and does 4 a day. we've got 66 points in the sprint, what day do we actually finish"
+ },
+ {
+  "id": "pz-062",
+  "lang": "en",
+  "puzzle": true,
+  "text": "cron job fires every 18 min starting at 00:07. whats the last run before noon"
+ },
+ {
+  "id": "pz-063",
+  "lang": "en",
+  "puzzle": true,
+  "text": "stats hw - roll two dice, whats the probability the product is even AND the sum is bigger than 8"
+ },
+ {
+  "id": "pz-064",
+  "lang": "en",
+  "puzzle": true,
+  "text": "interview q: 8 servers, exactly one has a bad disk. a test on any group of servers tells you if the bad one is in there, each test takes 10 min, and I have 2 test rigs running at the same time. fastest way to find it?"
+ },
+ {
+  "id": "pz-065",
+  "lang": "en",
+  "puzzle": true,
+  "text": "laptop drops 12% an hour while compiling and 4% an hour idle. I'm on 70% and need 20% left for the train. if I compile for 2 hrs and then just idle how long till I hit 20"
+ },
+ {
+  "id": "pz-066",
+  "lang": "en",
+  "puzzle": true,
+  "text": "three interns ana ben and cy, one on frontend, one on backend, one on data. ben isn't on data, whoever does frontend is older than ana, cy's the youngest, and ana won't touch sql so she's not data. who's on what?"
+ },
+ {
+  "id": "pz-067",
+  "lang": "en",
+  "puzzle": true,
+  "text": "repo gets about 14 commits every weekday and 3 on each weekend day. how many between mon 3 nov and sun 23 nov inclusive"
+ },
+ {
+  "id": "pz-068",
+  "lang": "en",
+  "puzzle": true,
+  "text": "deadline is 45 working days from today (thu 20 nov), no weekends and dec 25 and 26 dont count. what date is that"
+ },
+ {
+  "id": "pz-069",
+  "lang": "en",
+  "puzzle": true,
+  "text": "price went up 20% then we put a 20% discount on it, my boss says thats back to the original price. is he right? need it for a slide"
+ },
+ {
+  "id": "pz-070",
+  "lang": "en",
+  "puzzle": true,
+  "text": "our bot detector is 95% accurate and roughly 1 in 200 users is a bot. if it flags someone how likely is it they're actually a bot"
+ },
+ {
+  "id": "pz-071",
+  "lang": "en",
+  "puzzle": true,
+  "text": "chem lab: got 250 mL of 0.4 M NaCl, need it at 0.15 M. how much water do I add? and if half the water then evaporates what's the concentration"
+ },
+ {
+  "id": "pz-072",
+  "lang": "en",
+  "puzzle": true,
+  "text": "physics - ball thrown straight up at 15 m/s off a 20 m roof, how long till it hits the ground, g = 9.8"
+ },
+ {
+  "id": "pz-073",
+  "lang": "en",
+  "puzzle": true,
+  "text": "how many 4 character passwords can you make from uppercase letters and digits if theres gotta be at least one digit"
+ },
+ {
+  "id": "pz-074",
+  "lang": "en",
+  "puzzle": true,
+  "text": "riddle from the office: my sister is 3x my age, in 6 years she'll be twice my age. how old am i"
+ },
+ {
+  "id": "pz-075",
+  "lang": "en",
+  "puzzle": true,
+  "text": "5-a-side work tournament, 37 teams signed up, single elimination with byes where needed. how many matches total to get a winner?"
+ },
+ {
+  "id": "pz-076",
+  "lang": "en",
+  "puzzle": true,
+  "text": "review queue's at 40 PRs, about 12 new ones land a day and I can get through 15 a day. when is it empty"
+ },
+ {
+  "id": "pz-077",
+  "lang": "en",
+  "puzzle": true,
+  "text": "col A in my sheet is just 1 to 500. how many of those numbers have a 7 in them somewhere"
+ },
+ {
+  "id": "pz-078",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if every call allocates double the last one starting at 1KB, after how many calls am I over 1GB total"
+ },
+ {
+  "id": "pz-079",
+  "lang": "en",
+  "puzzle": true,
+  "text": "standup riddle lol. of A, B and C exactly one always tells the truth about estimates, the other two always lie. A says B is a liar, B says C is a liar, C says A and B are both liars. who's the honest one"
+ },
+ {
+  "id": "pz-080",
+  "lang": "en",
+  "puzzle": true,
+  "text": "class average was 72 with 30 students, then 5 more sat it late and the average went up to 74. what did the late ones average"
+ },
+ {
+  "id": "pz-081",
+  "lang": "en",
+  "puzzle": true,
+  "text": "how many minutes in a day does a 24h clock show a palindrome, like 12:21 or 03:30"
+ },
+ {
+  "id": "pz-082",
+  "lang": "en",
+  "puzzle": true,
+  "text": "k8s sizing: 6 nodes at 16GB each, system reserves 2GB per node, each pod wants 3GB, and we have to survive losing one node. max replicas?"
+ },
+ {
+  "id": "pz-083",
+  "lang": "en",
+  "puzzle": true,
+  "text": "we've got 15 people in the office, what are the odds at least two of us have a birthday in the same month"
+ },
+ {
+  "id": "pz-084",
+  "lang": "en",
+  "puzzle": true,
+  "text": "need to train 3 models, 5 hrs each on a GPU. I have 2 GPUs but model C needs A's output first. whats the shortest total time"
+ },
+ {
+  "id": "pz-085",
+  "lang": "en",
+  "puzzle": true,
+  "text": "if today's wednesday what day is it 100 days from now"
+ },
+ {
+  "id": "pz-086",
+  "lang": "en",
+  "puzzle": true,
+  "text": "my loop goes i from 3 to 300 in steps of 3 and skips anything divisible by 5. how many iterations actually do work"
+ },
+ {
+  "id": "pz-087",
+  "lang": "en",
+  "puzzle": true,
+  "text": "walk to the lab at 4 km/h and back at 6 km/h, whats my average speed for the round trip"
+ },
+ {
+  "id": "pz-088",
+  "lang": "en",
+  "puzzle": true,
+  "text": "flaky test fails 1 in 10 runs at random. CI runs it 3 times and only goes red if all three fail. chance a perfectly fine commit gets marked red?"
+ },
+ {
+  "id": "pz-089",
+  "lang": "en",
+  "puzzle": true,
+  "text": "me and my gf split rent 60/40 by income, I pay the 60. rent's 1400 and she also covers the 90 internet bill. who's actually paying more than their share and by how much"
+ },
+ {
+  "id": "pz-090",
+  "lang": "en",
+  "puzzle": true,
+  "text": "sprint retro maths: we estimated 40 points, finished 34, but 6 of the finished ones were carried over from last sprint. what % of the original plan did we actually do"
+ },
+ {
+  "id": "pz-091",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats 15% of 340"
+ },
+ {
+  "id": "pz-092",
+  "lang": "en",
+  "puzzle": false,
+  "text": "convert 72 fahrenheit to celsius pls"
+ },
+ {
+  "id": "pz-093",
+  "lang": "en",
+  "puzzle": false,
+  "text": "write a python function that returns the nth fibonacci number, iterative not recursive"
+ },
+ {
+  "id": "pz-094",
+  "lang": "en",
+  "puzzle": false,
+  "text": "remind me at 3:45 to submit the timesheet"
+ },
+ {
+  "id": "pz-095",
+  "lang": "en",
+  "puzzle": false,
+  "text": "excel: STDEV.S or STDEV.P for a sample of 30 survey responses?"
+ },
+ {
+  "id": "pz-096",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how many people live in tokyo"
+ },
+ {
+  "id": "pz-097",
+  "lang": "en",
+  "puzzle": false,
+  "text": "explain why quicksort is O(n^2) worst case"
+ },
+ {
+  "id": "pz-098",
+  "lang": "en",
+  "puzzle": false,
+  "text": "summarise this for the exec update: Q3 revenue $4.2M, up 12% YoY, opex $3.1M (+8%), churn 2.4% vs 2.9% last qtr, 3 new enterprise logos, headcount 41"
+ },
+ {
+  "id": "pz-099",
+  "lang": "en",
+  "puzzle": false,
+  "text": "scale this to 24 cupcakes, it's for 12: 250g flour, 3 eggs, 180ml milk, 150g sugar, 2 tsp baking powder"
+ },
+ {
+  "id": "pz-100",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats avogadros number again"
+ },
+ {
+  "id": "pz-101",
+  "lang": "en",
+  "puzzle": false,
+  "text": "is a megabyte 1000 or 1024 kilobytes"
+ },
+ {
+  "id": "pz-102",
+  "lang": "en",
+  "puzzle": false,
+  "text": "fix my sql: SELECT customer_id, COUNT(*) FROM orders WHERE total > 100 GROUP BY customer_id HAVING COUNT > 5"
+ },
+ {
+  "id": "pz-103",
+  "lang": "en",
+  "puzzle": false,
+  "text": "write me a cover letter for a data analyst job, 3 yrs experience, I cut reporting time by 40% at my last place"
+ },
+ {
+  "id": "pz-104",
+  "lang": "en",
+  "puzzle": false,
+  "text": "put a 30 min call with the design team on thursday at 2"
+ },
+ {
+  "id": "pz-105",
+  "lang": "en",
+  "puzzle": false,
+  "text": "speed of light in m/s?"
+ },
+ {
+  "id": "pz-106",
+  "lang": "en",
+  "puzzle": false,
+  "text": "regex for a 5 digit zip code, optional -4 extension"
+ },
+ {
+  "id": "pz-107",
+  "lang": "en",
+  "puzzle": false,
+  "text": "is p = 0.03 significant at alpha 0.05"
+ },
+ {
+  "id": "pz-108",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats 2^10"
+ },
+ {
+  "id": "pz-109",
+  "lang": "en",
+  "puzzle": false,
+  "text": "my VLOOKUP gives #N/A on row 214 but the value is definitely in the lookup range, why"
+ },
+ {
+  "id": "pz-110",
+  "lang": "en",
+  "puzzle": false,
+  "text": "what does the 95 in a 95% confidence interval actually mean, my lecturer lost me"
+ },
+ {
+  "id": "pz-111",
+  "lang": "en",
+  "puzzle": false,
+  "text": "set a 25 min timer, pomodoro time"
+ },
+ {
+  "id": "pz-112",
+  "lang": "en",
+  "puzzle": false,
+  "text": "boiling point of ethanol in celsius"
+ },
+ {
+  "id": "pz-113",
+  "lang": "en",
+  "puzzle": false,
+  "text": "how many hours is 2.5 days"
+ },
+ {
+  "id": "pz-114",
+  "lang": "en",
+  "puzzle": false,
+  "text": "draft a slack msg telling the team the release slipped from 1.4.2 to 1.4.3 and we're now aiming for the 28th"
+ },
+ {
+  "id": "pz-115",
+  "lang": "en",
+  "puzzle": false,
+  "text": "max value of int32 vs int64?"
+ },
+ {
+  "id": "pz-116",
+  "lang": "en",
+  "puzzle": false,
+  "text": "should my dev VM get 8 or 16GB ram, I mostly run docker and vscode"
+ },
+ {
+  "id": "pz-117",
+  "lang": "en",
+  "puzzle": false,
+  "text": "molar mass of water?"
+ },
+ {
+  "id": "pz-118",
+  "lang": "en",
+  "puzzle": false,
+  "text": "numpy array is shape (32, 3, 224, 224), how do I make it channels last"
+ },
+ {
+  "id": "pz-119",
+  "lang": "en",
+  "puzzle": false,
+  "text": "whats 7 times 8 again lol brain is fried"
+ },
+ {
+  "id": "pz-120",
+  "lang": "en",
+  "puzzle": false,
+  "text": "tidy up my lecture notes: newtons 2nd law F=ma, m = 2kg a = 3 m/s^2 so F = 6N, then friction coefficient mu ~ 0.3 on wood"
+ },
+ {
+  "id": "pz-121",
+  "lang": "en",
+  "puzzle": false,
+  "text": "what time is it in tokyo right now"
+ },
+ {
+  "id": "pz-122",
+  "lang": "de",
+  "puzzle": true,
+  "text": "meine oma ist heute dreimal so alt wie meine mutter vor 20 jahren war. mama ist jetzt 52. wie alt ist oma??"
+ },
+ {
+  "id": "pz-123",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Wenn der erste Advent dieses Jahr auf den 30. November fällt, auf welchen Wochentag fällt dann Heiligabend?"
+ },
+ {
+  "id": "pz-124",
+  "lang": "de",
+  "puzzle": true,
+  "text": "War grad beim Bäcker, 4 Brötchen und 3 Brezeln für 5,35 €. Ne Brezel kostet 50 Cent mehr als ein Brötchen. Was kostet dann ein Brötchen?"
+ },
+ {
+  "id": "pz-125",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Lena ist größer als Tim. Tim ist kleiner als Jonas, aber größer als Mia. Jonas ist kleiner als Lena. Wer ist der Zweitgrößte?"
+ },
+ {
+  "id": "pz-126",
+  "lang": "de",
+  "puzzle": true,
+  "text": "zug geht um 7:48, fährt 2 std 35 min, dann noch 25 min zu fuß. schaff ich meinen termin um 10:45 oder nicht"
+ },
+ {
+  "id": "pz-127",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Joghurt ist im Angebot, 3 für 2, einer kostet 0,89. Ich brauch 7 Stück, was zahl ich an der Kasse?"
+ },
+ {
+  "id": "pz-128",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Das Rad kostet nach 20 % Rabatt 480 €. Wenn der Preis danach wieder um 20 % steigt, bin ich dann wieder beim alten Preis?"
+ },
+ {
+  "id": "pz-129",
+  "lang": "de",
+  "puzzle": true,
+  "text": "wie viele möglichkeiten gibts 5 leute an nen runden tisch zu setzen wenn anna und ben nicht nebeneinander sitzen wollen"
+ },
+ {
+  "id": "pz-130",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Ich bin 1994 geboren, mein Bruder ist 8 Jahre jünger. Als ich 20 wurde, war meine Schwester genau halb so alt wie er. In welchem Jahr ist sie geboren?"
+ },
+ {
+  "id": "pz-131",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Wenn vorgestern Freitag war, welcher Tag ist dann übermorgen – von morgen aus gesehen?"
+ },
+ {
+  "id": "pz-132",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Wir haben 2 Pizzen zu dritt gegessen. Kai hat doppelt so viel wie Max, und Max nur halb so viel wie Paul. Wie viel hatte jeder?"
+ },
+ {
+  "id": "pz-133",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Handy hat 35 %, lädt 1 % pro Minute bis 80 %, ab da nur noch halb so schnell. Wie lange bis voll?"
+ },
+ {
+  "id": "pz-134",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Mein Kumpel meint: er hat doppelt so viele Schwestern wie Brüder, aber seine Schwester hat genauso viele Brüder wie Schwestern. Wie viele Kinder sind die?"
+ },
+ {
+  "id": "pz-135",
+  "lang": "de",
+  "puzzle": true,
+  "text": "Auf dem Markt Äpfel für 2,40 das Kilo, Waage hat 3 kg angezeigt, aber die zeigt 10 % zu viel an. Wie viel hab ich zu viel bezahlt?"
+ },
+ {
+  "id": "pz-136",
+  "lang": "de",
+  "puzzle": true,
+  "text": "mein sohn will wissen wie viele sonntage der februar 2027 hat, kannst du das ausrechnen"
+ },
+ {
+  "id": "pz-137",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Wie viel sind 15 % von 240?"
+ },
+ {
+  "id": "pz-138",
+  "lang": "de",
+  "puzzle": false,
+  "text": "rechne mir mal 3 tassen mehl in gramm um"
+ },
+ {
+  "id": "pz-139",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Erinner mich morgen um halb acht an den Zahnarzttermin"
+ },
+ {
+  "id": "pz-140",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Wie viele Einwohner hat München eigentlich?"
+ },
+ {
+  "id": "pz-141",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Kannst du mir ein lustiges Gedicht zum 60. von meinem Papa schreiben? Er liebt Angeln und Schalke 😅"
+ },
+ {
+  "id": "pz-142",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Schreib mir ne Python-Funktion die checkt ob ein Jahr ein Schaltjahr ist"
+ },
+ {
+  "id": "pz-143",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Fass das kurz zusammen: Umsatz Q3 1,2 Mio €, +8 % ggü. Vorjahr, Kosten 900k, Personal von 14 auf 17 aufgestockt, Ausblick Q4 vorsichtig optimistisch."
+ },
+ {
+  "id": "pz-144",
+  "lang": "de",
+  "puzzle": false,
+  "text": "hey na, wie gehts dir heute so"
+ },
+ {
+  "id": "pz-145",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Lohnt sich ein E-Auto überhaupt wenn ich nur so 8000 km im Jahr fahr?"
+ },
+ {
+  "id": "pz-146",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Rezept für Apfelstrudel für 6 Leute bitte"
+ },
+ {
+  "id": "pz-147",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Welcher Wochentag ist heute?"
+ },
+ {
+  "id": "pz-148",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Was ist nochmal der Unterschied zwischen seit und seid"
+ },
+ {
+  "id": "pz-149",
+  "lang": "de",
+  "puzzle": false,
+  "text": "mein zug nach hamburg geht um 14:12, stell mir nen wecker 45 min vorher"
+ },
+ {
+  "id": "pz-150",
+  "lang": "de",
+  "puzzle": false,
+  "text": "was ist 7 mal 8"
+ },
+ {
+  "id": "pz-151",
+  "lang": "de",
+  "puzzle": false,
+  "text": "Wie viel Trinkgeld gibt man in Deutschland im Restaurant normalerweise?"
+ },
+ {
+  "id": "pz-152",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Ma fille a trois fois l'âge de mon fils. Dans 6 ans elle aura le double de son âge. Ils ont quel âge ?"
+ },
+ {
+  "id": "pz-153",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "si le 14 juillet tombe un mardi cette année, le 15 août c'est quel jour ?"
+ },
+ {
+  "id": "pz-154",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "J'ai pris 9 viennoiseries pour 11,40 €, des croissants à 1,20 et des pains au chocolat à 1,35. J'en ai pris combien de chaque ?"
+ },
+ {
+  "id": "pz-155",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "l'essence augmente de 10 % puis rebaisse de 10 %, du coup je paie pareil qu'avant ou pas ?"
+ },
+ {
+  "id": "pz-156",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "J'ai couru 10 km : les 5 premiers à 12 km/h, les 5 derniers à 8 km/h. Ma moyenne c'est 10 km/h non ?"
+ },
+ {
+  "id": "pz-157",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Combien de codes à 4 chiffres possibles si aucun chiffre se répète et que le premier peut pas être 0 ?"
+ },
+ {
+  "id": "pz-158",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Paul est plus âgé que Léa, Léa est plus jeune que Hugo mais plus vieille que Zoé, et Hugo est plus vieux que Paul. Qui est le deuxième plus âgé ?"
+ },
+ {
+  "id": "pz-159",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "si avant-hier on était jeudi, on sera quel jour dans 10 jours ?"
+ },
+ {
+  "id": "pz-160",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Ma recette de crêpes c'est 250 g de farine pour 4. On sera 6 adultes et 4 enfants qui mangent moitié moins, il me faut combien de farine ?"
+ },
+ {
+  "id": "pz-161",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "forfait 20 Go, j'en ai déjà utilisé 13 au 18 du mois (mois de 30 jours). à ce rythme je vais dépasser ?"
+ },
+ {
+  "id": "pz-162",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Dans la classe de mon fils ils sont 28, 15 font du foot, 12 du tennis et 6 ne font ni l'un ni l'autre. Combien font les deux ?"
+ },
+ {
+  "id": "pz-163",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "J'ai mis 3 h aller-retour, 40 km/h à l'aller et 60 au retour. C'était à combien de km ?"
+ },
+ {
+  "id": "pz-164",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "Un sac de pommes : la moitié pour la tarte, un tiers du reste pour les voisins, et il m'en reste 8. J'en avais combien au départ ?"
+ },
+ {
+  "id": "pz-165",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "il y a combien de vendredis 13 en 2027 ?"
+ },
+ {
+  "id": "pz-166",
+  "lang": "fr",
+  "puzzle": true,
+  "text": "J'ai 3 chemises, 2 pantalons et 4 paires de chaussettes, mais je mets jamais la chemise rouge avec le pantalon vert. Ça fait combien de tenues ?"
+ },
+ {
+  "id": "pz-167",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "c'est combien 20 % de 45 ?"
+ },
+ {
+  "id": "pz-168",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Convertis 350 °F en Celsius stp"
+ },
+ {
+  "id": "pz-169",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Rappelle-moi d'appeler maman demain à 18h"
+ },
+ {
+  "id": "pz-170",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Quelle est la population de Lyon ?"
+ },
+ {
+  "id": "pz-171",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Tu peux m'écrire un petit mot sympa pour le pot de départ de ma collègue Nathalie ? 22 ans dans la boîte quand même"
+ },
+ {
+  "id": "pz-172",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Tu peux m'expliquer la différence entre un PEL et un livret A ?"
+ },
+ {
+  "id": "pz-173",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Fais-moi un résumé : « Le chiffre d'affaires du T3 atteint 4,2 M€, en hausse de 12 %. La marge recule à 18 % du fait de la hausse des coûts énergétiques. »"
+ },
+ {
+  "id": "pz-174",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "salut ! t'as passé une bonne journée ?"
+ },
+ {
+  "id": "pz-175",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "recette de la blanquette de veau pour 8 personnes"
+ },
+ {
+  "id": "pz-176",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "Écris une fonction JS qui calcule la moyenne d'un tableau de nombres"
+ },
+ {
+  "id": "pz-177",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "c'est quoi le prix moyen du m² à Paris en ce moment ?"
+ },
+ {
+  "id": "pz-178",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "on est quel jour aujourd'hui ?"
+ },
+ {
+  "id": "pz-179",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "t'en penses quoi, je prends Netflix à l'année ou au mois ? je regarde surtout l'hiver"
+ },
+ {
+  "id": "pz-180",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "temps de cuisson pour un poulet de 1,5 kg au four ?"
+ },
+ {
+  "id": "pz-181",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "mets un minuteur de 12 minutes"
+ },
+ {
+  "id": "pz-182",
+  "lang": "fr",
+  "puzzle": false,
+  "text": "combien font 12 fois 15 ?"
+ },
+ {
+  "id": "pz-183",
+  "lang": "es",
+  "puzzle": true,
+  "text": "oye, mi abuela nació un 29 de febrero de 1944... ¿cuántos cumpleaños de verdad ha podido celebrar hasta hoy?"
+ },
+ {
+  "id": "pz-184",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Si hoy es miércoles, ¿qué día de la semana será dentro de 100 días?"
+ },
+ {
+  "id": "pz-185",
+  "lang": "es",
+  "puzzle": true,
+  "text": "En la frutería me cobraron 3,60 en total por kilo y medio de mandarinas y 2 kilos de plátanos, y los plátanos estaban a 1,20 el kilo. ¿A cuánto me salió el kilo de mandarinas?"
+ },
+ {
+  "id": "pz-186",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Mi hijo tiene ahora el triple de años que mi sobrina y dentro de 6 años tendrá el doble. Qué edad tienen??"
+ },
+ {
+  "id": "pz-187",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Un pantalón subió un 20% en septiembre y ahora en rebajas le quitan un 20%. ¿Está al mismo precio que al principio, no?"
+ },
+ {
+  "id": "pz-188",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Lucía llegó antes que Marcos, Marcos llegó después de Inés pero antes que Pablo, e Inés llegó justo después de Lucía. ¿Quién llegó tercero?"
+ },
+ {
+  "id": "pz-189",
+  "lang": "es",
+  "puzzle": true,
+  "text": "tengo 4 camisetas, 3 pantalones y 2 pares de zapatillas pero la camiseta roja con el pantalón verde ni de broma. cuantos conjuntos distintos puedo hacer"
+ },
+ {
+  "id": "pz-190",
+  "lang": "es",
+  "puzzle": true,
+  "text": "En el obrador 2 hornos sacan 90 barras en 45 minutos. Si mañana enciendo 3 hornos, ¿cuántas barras me salen en hora y media?"
+ },
+ {
+  "id": "pz-191",
+  "lang": "es",
+  "puzzle": true,
+  "text": "En la cola del súper hay 7 personas delante de mí y 4 detrás. Se me cuelan 2 delante y se van 3 de las de atrás. ¿Cuántos somos ahora en la cola?"
+ },
+ {
+  "id": "pz-192",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Cobro cada dos semanas y el último pago fue el viernes 6 de noviembre. ¿Cuál es el último cobro que me entra antes de Nochebuena?"
+ },
+ {
+  "id": "pz-193",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Salgo de Madrid a las 9:15, hago 320 km a una media de 100, paro 40 minutos a comer y luego me quedan 180 km a 90. ¿A qué hora llego?"
+ },
+ {
+  "id": "pz-194",
+  "lang": "es",
+  "puzzle": true,
+  "text": "una vela de cumple tarda 6 minutos en consumirse, si enciendo 4 a la vez cuanto tardan en apagarse todas"
+ },
+ {
+  "id": "pz-195",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Tengo 2,85 € en monedas de 20 y de 5 céntimos, 18 monedas en total. ¿Cuántas tengo de cada?"
+ },
+ {
+  "id": "pz-196",
+  "lang": "es",
+  "puzzle": true,
+  "text": "Ahorro el 15% del sueldo y un tercio de lo que ahorro va a la hucha de vacaciones. Si quiero juntar 900 € al año para vacaciones, ¿cuánto tengo que ganar al mes?"
+ },
+ {
+  "id": "pz-197",
+  "lang": "es",
+  "puzzle": true,
+  "text": "En mi grupo de pádel somos 5 y queremos que cada uno juegue de pareja exactamente una vez con cada uno de los otros. ¿Cuántos partidos de dobles hacen falta?"
+ },
+ {
+  "id": "pz-198",
+  "lang": "es",
+  "puzzle": false,
+  "text": "cuánto es el 15% de 240"
+ },
+ {
+  "id": "pz-199",
+  "lang": "es",
+  "puzzle": false,
+  "text": "¿Cuántas onzas son 500 gramos?"
+ },
+ {
+  "id": "pz-200",
+  "lang": "es",
+  "puzzle": false,
+  "text": "recuérdame mañana a las 8 y media llamar al fontanero"
+ },
+ {
+  "id": "pz-201",
+  "lang": "es",
+  "puzzle": false,
+  "text": "Receta de tortilla de patatas para 6, ¿cuántos huevos le pongo?"
+ },
+ {
+  "id": "pz-202",
+  "lang": "es",
+  "puzzle": false,
+  "text": "¿Cuántos habitantes tiene México?"
+ },
+ {
+  "id": "pz-203",
+  "lang": "es",
+  "puzzle": false,
+  "text": "Hazme una función en Python que cuente las vocales de un texto, con tildes incluidas"
+ },
+ {
+  "id": "pz-204",
+  "lang": "es",
+  "puzzle": false,
+  "text": "Resúmeme este correo: 'Hola equipo, las ventas del Q3 subieron un 12% respecto al Q2 hasta 1,4 millones, aunque el margen bajó dos puntos por los costes de envío. El viernes revisamos el plan de Q4.'"
+ },
+ {
+  "id": "pz-205",
+  "lang": "es",
+  "puzzle": false,
+  "text": "qué opinas, ¿me compensa un coche eléctrico si hago unos 15.000 km al año?"
+ },
+ {
+  "id": "pz-206",
+  "lang": "es",
+  "puzzle": false,
+  "text": "jajaja qué tal estás hoy"
+ },
+ {
+  "id": "pz-207",
+  "lang": "es",
+  "puzzle": false,
+  "text": "Escríbeme un poema cortito para el cumple de mi madre, que cumple 70"
+ },
+ {
+  "id": "pz-208",
+  "lang": "es",
+  "puzzle": false,
+  "text": "cuántos días faltan para Navidad?"
+ },
+ {
+  "id": "pz-209",
+  "lang": "es",
+  "puzzle": false,
+  "text": "pon una alarma a las 6:45 y otra 20 minutos después"
+ },
+ {
+  "id": "pz-210",
+  "lang": "es",
+  "puzzle": false,
+  "text": "¿Cómo se calcula el IVA de una factura en España?"
+ },
+ {
+  "id": "pz-211",
+  "lang": "es",
+  "puzzle": false,
+  "text": "¿Qué significa 'echar una cana al aire'?"
+ },
+ {
+  "id": "pz-212",
+  "lang": "es",
+  "puzzle": false,
+  "text": "divide 1.250 entre 5 personas porfa"
+ },
+ {
+  "id": "pz-213",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Gente, o motoboy faz 4 entregas por hora sem chuva e 3 quando chove. Ontem ele trampou 9 horas e fez 31 entregas. Choveu quantas horas?"
+ },
+ {
+  "id": "pz-214",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Minha vó tem 72, minha mãe 45 e eu 19. Daqui a quantos anos a idade da vó vai ser igual à soma da minha com a da minha mãe?"
+ },
+ {
+  "id": "pz-215",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "o boleto do condomínio era 650, venceu e tem multa de 2% mais juros de 1% ao mês. atrasei 3 meses, quanto vou pagar?"
+ },
+ {
+  "id": "pz-216",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Se o Natal desse ano cai numa sexta, em que dia da semana cai o Natal do ano que vem?"
+ },
+ {
+  "id": "pz-217",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Na fila do pão o Zé tá atrás da Bia, a Carla tá na frente do Zé mas atrás da Bia, e o Dudu é o último. Quem tá em segundo?"
+ },
+ {
+  "id": "pz-218",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "quantas senhas de 4 dígitos dá pra fazer sem repetir número e sem começar com zero?"
+ },
+ {
+  "id": "pz-219",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Um ônibus sai do terminal com 20 pessoas. Na primeira parada descem 6 e sobem 4, na segunda descem 9 e sobem 2, na terceira descem 5 e não sobe ninguém. Quantas paradas o ônibus fez?"
+ },
+ {
+  "id": "pz-220",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Corri 5 km na ida a 10 km/h e voltei andando a 5 km/h. Minha velocidade média foi 7,5 né?"
+ },
+ {
+  "id": "pz-221",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Rachamos uma pizza de 96 reais entre 5, mas o Léo só comeu metade do que os outros e pagou proporcional. Quanto cada um pagou?"
+ },
+ {
+  "id": "pz-222",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Começo a dieta segunda dia 23 e vou fazer 21 dias, folgando só domingo (domingo não conta). Termino que dia?"
+ },
+ {
+  "id": "pz-223",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Três amigos: um é flamenguista, um corintiano e um palmeirense. O Rafa não é flamenguista, o corintiano é mais velho que o Rafa, e o Tiago é o mais novo dos três e não torce pro Palmeiras. O Gui torce pra quem?"
+ },
+ {
+  "id": "pz-224",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "quantas vezes o número 7 aparece quando escrevo de 1 a 100?"
+ },
+ {
+  "id": "pz-225",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "Meu salário teve aumento de 10% em março e mais 10% agora. Então foi 20% no total, certo?"
+ },
+ {
+  "id": "pz-226",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "O relógio da cozinha atrasa 4 minutos por dia. Acertei ele domingo ao meio-dia. Que horas ele vai marcar no sábado seguinte quando for meio-dia de verdade?"
+ },
+ {
+  "id": "pz-227",
+  "lang": "pt",
+  "puzzle": true,
+  "text": "No mercado tá 'leve 3 pague 2' no sabão de 18 reais, e no outro tem 30% de desconto em cada. Levando 6, qual sai mais barato?"
+ },
+ {
+  "id": "pz-228",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "quanto é 25% de 360?"
+ },
+ {
+  "id": "pz-229",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "1 metro dá quantos pés?"
+ },
+ {
+  "id": "pz-230",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "me lembra de tirar o frango do freezer às 18h"
+ },
+ {
+  "id": "pz-231",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "receita de brigadeiro pra umas 50 unidades, quantas latas de leite condensado eu uso?"
+ },
+ {
+  "id": "pz-232",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "Qual a população de São Paulo hoje?"
+ },
+ {
+  "id": "pz-233",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "escreve um regex que valide CPF no formato 000.000.000-00"
+ },
+ {
+  "id": "pz-234",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "resume pra mim: 'A empresa registrou lucro líquido de R$ 2,3 bilhões no trimestre, alta de 8% na comparação anual, puxado pelas vendas no varejo digital, que cresceram 15%.'"
+ },
+ {
+  "id": "pz-235",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "vale a pena trocar meu iPhone 13 pelo 17 ou espero?"
+ },
+ {
+  "id": "pz-236",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "bom diaaa tô morrendo de sono kkkk"
+ },
+ {
+  "id": "pz-237",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "qual a diferença entre CDB e Tesouro Selic?"
+ },
+ {
+  "id": "pz-238",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "faz uma legenda pro insta da minha viagem pra Floripa, algo leve"
+ },
+ {
+  "id": "pz-239",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "quantos anos tem o Caetano Veloso?"
+ },
+ {
+  "id": "pz-240",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "marca reunião com a Fê quinta às 15h e me avisa 30 min antes"
+ },
+ {
+  "id": "pz-241",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "converte 150 dólares pra real, cotação de 5,40"
+ },
+ {
+  "id": "pz-242",
+  "lang": "pt",
+  "puzzle": false,
+  "text": "Qual é a raiz quadrada de 144?"
+ }
+]

@@ -203,6 +203,8 @@
 //  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider`, the Mac's `-thinkingShape` arm mirrored
+//  (unset = off). Confidence 0.85.
 
 import AVFoundation
 #if os(iOS)
@@ -1726,6 +1728,10 @@ final class AppCore {
             fastThinkingProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            // The Mac's A/B arm, mirrored (`-thinkingShape`); unset = off, today's policy.
+            thinkingShapeProvider: {
+                ThinkingShapeMode(argument: UserDefaults.standard.string(forKey: ThinkingShapeMode.defaultsKey))
             },
             historyBudgetProvider: {
                 // Read fresh each turn (hot-swap).

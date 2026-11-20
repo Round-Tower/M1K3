@@ -1020,6 +1020,29 @@ struct AgentRAGResponderTests {
         #expect(provider.allPrompts.first?.contains("reply in German") == true)
     }
 
+    /// Kev, 2026-11-20: the `steps` arm reasons in the answer instead of a think phase, on a puzzle only.
+    @Test("the steps arm adds the work-in-steps clause to a puzzle on a speed tier, and nothing elsewhere")
+    func stepsArmClause() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let puzzle = "A doctor gives you 3 pills and tells you to take one every half hour, starting now. "
+            + "How many minutes until you have taken them all?"
+        for shape in ThinkingShapeMode.allCases {
+            let provider = AgentScriptedProvider(["CONCLUSION: 60. [Plant Notes §3.2 Seals]",
+                                                  "CONCLUSION: Hi. [Plant Notes §3.2 Seals]"])
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [] },
+                fastThinkingProvider: { true },
+                thinkingShapeProvider: { shape }
+            )
+            _ = try await collect(responder.answerStreaming(puzzle).stream)
+            _ = try await collect(responder.answerStreaming("thanks pal!").stream)
+            let marker = "work it out in a few short numbered steps"
+            #expect(provider.allPrompts.first?.contains(marker) == (shape == .steps), "\(shape)")
+            #expect(provider.allPrompts.last?.contains(marker) == false, "\(shape)")
+        }
+    }
+
     /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.
     @Test("the voice clause rides the turn's grounding while it is set, and is gone once cleared")
     func voiceClauseInjected() async throws {

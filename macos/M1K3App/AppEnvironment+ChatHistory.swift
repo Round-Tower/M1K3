@@ -63,6 +63,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider: ReplyLanguage.liveClause`: the reply
 //  comes back in the turn's language, else the device's; nil for English. `-replyLanguage NO` turns it off.
 //  Confidence 0.7 until the language arm reads it.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider` reads `-thinkingShape` (unset = off, today's
+//  policy): the A/B arm for a speed tier thinking, or working in steps, on a puzzle-shaped turn. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -512,6 +514,10 @@ extension AppEnvironment {
                 // lookups — read fresh each turn so a hot-swap applies immediately.
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            // The 2026-11-20 A/B arm (`M1K3 -thinkingShape think|steps`); unset = off, today's policy.
+            thinkingShapeProvider: {
+                ThinkingShapeMode(argument: UserDefaults.standard.string(forKey: ThinkingShapeMode.defaultsKey))
             },
             // Read fresh each turn so a hot-swap re-sizes the window immediately.
             historyBudgetProvider: { Self.liveHistoryBudget() },

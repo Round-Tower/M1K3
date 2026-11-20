@@ -147,6 +147,8 @@
 //  live-path turn records the tools it ran (`tools` skip check). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — the language arm: `_REPLY_LANGUAGE=1` wires the app's reply-language
 //  clause, `_DEVICE_LANGUAGE` stands in for the device's (default en). Off by default, so older arms are unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `_THINKING_SHAPE=off|think|steps` sets the live path's
+//  `thinkingShapeProvider`, the app's `-thinkingShape` arm (unset = off). Confidence 0.85.
 
 import Foundation
 
@@ -472,6 +474,9 @@ enum ChatEvalStage {
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            thinkingShapeProvider: {
+                ThinkingShapeMode(argument: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"))
+            },
             turnNoteProvider: turnNote,
             groundingBudgetProvider: { Self.groundingBudget },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
