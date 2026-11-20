@@ -26,6 +26,10 @@
 //  cross-language homographs out of the number words, one|once|half|double worth one quantity at most, comparison
 //  chains need an ordering ask, reasoning asks bounded (compartir, Steuererklärung, explicit), composed Unicode,
 //  new shapes (day count, clock angle, which-is-bigger, probability, next number). Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review) — a paste is refused before normalising (no O(n) work on a
+//  100 KB turn). Open: logistics asks with a date and a time ("how long is the flight on 14 March, boarding 10:30?")
+//  read as two quantities plus a counting ask; the A/B's think rate on non-reasoning kinds measures it before any
+//  change. Confidence 0.7.
 
 import Foundation
 
@@ -34,6 +38,9 @@ public enum PuzzleShape {
     static let pasteCharacters = 600
 
     public static func detects(_ question: String) -> Bool {
+        // A paste is refused before any O(n) work: normalising and counting a 100 KB paste on every turn is the
+        // cost the cap exists to avoid (pre-push review). Generous by 4x, so no 600-character turn is cut here.
+        guard question.utf16.count <= pasteCharacters * 4 else { return false }
         // Composed form first: NSRegularExpression compares UTF-16, so a decomposed "cuántos" missed every
         // accented pattern (challenger, 2026-11-20).
         let text = question.precomposedStringWithCanonicalMapping.lowercased()

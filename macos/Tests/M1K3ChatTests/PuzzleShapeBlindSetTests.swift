@@ -9,6 +9,10 @@
 //  language. The run prints COUNTS only, never the failing texts, so the set stays blind for the next measurement.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-20, Confidence 0.75 (one set of writers; labels are theirs). Prior: none.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review) — the run is now a ratchet: overall recall at least 66/121
+//  and false fire at most 8/122 (measured 72/121 and 5/122; the slack is about 5 points of recall and 2 of false
+//  fire, room for a tweak but not a regression). The set has been spent once (one fix after its first count), so
+//  the next real measurement needs a fresh set from new writers. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Chat
@@ -28,7 +32,7 @@ struct PuzzleShapeBlindSetTests {
         return try JSONDecoder().decode([Item].self, from: Data(contentsOf: url))
     }
 
-    @Test("blind set: precision and recall per language (counts only)")
+    @Test("blind set: recall and false fire per language (counts only), with a floor on both")
     func blindSetScore() throws {
         let items = try Self.load()
         #expect(items.count == 243)
@@ -40,6 +44,10 @@ struct PuzzleShapeBlindSetTests {
             let fp = slice.filter { !$0.puzzle && PuzzleShape.detects($0.text) }.count
             let tn = slice.filter { !$0.puzzle && !PuzzleShape.detects($0.text) }.count
             line.append("\(lang): recall \(tp)/\(tp + fn) false-fire \(fp)/\(fp + tn)")
+            if lang == "all" {
+                #expect(tp >= 66, "blind recall fell below the floor: \(tp)/\(tp + fn)")
+                #expect(fp <= 8, "blind false fire rose above the ceiling: \(fp)/\(fp + tn)")
+            }
         }
         print("PUZZLESHAPE-BLIND " + line.joined(separator: " | "))
     }
