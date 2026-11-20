@@ -14,6 +14,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — `approxBytes`, the sizeHint's figure as a number for
 //  Settings > Brains & downloads (pinned to the hint by a test). Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `displayName` and `sizeHint` resolve from
+//  M1K3WhisperKit's catalog (`bundle: .module`). English unchanged.
 
 import Foundation
 
@@ -33,18 +35,18 @@ public enum WhisperModelVariant: String, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .tiny: "Tiny"
-        case .base: "Base"
-        case .small: "Small"
+        case .tiny: String(localized: "Tiny", bundle: .module, comment: "Speech-model size name.")
+        case .base: String(localized: "Base", bundle: .module, comment: "Speech-model size name.")
+        case .small: String(localized: "Small", bundle: .module, comment: "Speech-model size name.")
         }
     }
 
     /// Size + character hint for the picker row.
     public var sizeHint: String {
         switch self {
-        case .tiny: "~75 MB · fastest, least accurate"
-        case .base: "~145 MB · balanced"
-        case .small: "~480 MB · most accurate"
+        case .tiny: String(localized: "~75 MB · fastest, least accurate", bundle: .module)
+        case .base: String(localized: "~145 MB · balanced", bundle: .module)
+        case .small: String(localized: "~480 MB · most accurate", bundle: .module)
         }
     }
 

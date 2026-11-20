@@ -176,6 +176,8 @@
 //  predecessor loads from disk, and a re-pick after the update lands is the switch.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — isBrainDownloaded is a cheap lineage read
 //  again (view bodies call it per tick); the resolver decides what loads.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the two "Reindexed N chunks" status lines are inflected
+//  (Foundation; ungrouped digits as before), not English plural ternaries. English unchanged.
 
 import AppKit
 import Foundation
@@ -2116,7 +2118,9 @@ final class AppEnvironment {
             UserDefaults.standard.set(useMLX, forKey: Self.embedderPrefersMLXKey)
             let label = useMLX ? "MLX EmbeddingGemma 2" : "Hashing"
             Self.embedLog.notice("switched embeddings to \(label, privacy: .public), reindexed \(count) chunk(s)")
-            embeddingStatus = "Reindexed \(count) chunk\(count == 1 ? "" : "s") with \(label)."
+            embeddingStatus = String(AttributedString(localized: """
+            Reindexed ^[\(count, format: .number.grouping(.never)) chunk](inflect: true) with \(label).
+            """).characters)
         } catch {
             // Reindex writes atomically, so the store still matches the previous
             // embedder — roll the façade back to it.
@@ -2823,7 +2827,9 @@ extension AppEnvironment {
         Self.embedLog.notice("embedder changed (\(vectorCount) vectors) — reindexing")
         do {
             let count = try await store.reindexEmbeddings(using: embedder, fingerprint: current)
-            embeddingStatus = "Reindexed \(count) chunk\(count == 1 ? "" : "s") for the new embedder."
+            embeddingStatus = String(AttributedString(localized: """
+            Reindexed ^[\(count, format: .number.grouping(.never)) chunk](inflect: true) for the new embedder.
+            """).characters)
         } catch {
             // Reindex writes atomically — the store still matches the stored
             // marker, so the next launch retries.

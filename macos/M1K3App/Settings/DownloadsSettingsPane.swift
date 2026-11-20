@@ -21,6 +21,9 @@
 //  Not yet seen by Kev's eye.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — the update rows: Update available (the Update button fetches), Update
 //  downloaded (Switch).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
+//  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
+//  (a script compared every merged literal with its old join: 0 of 24 differ).
 
 import M1K3Inference
 import M1K3MLX
@@ -48,9 +51,13 @@ struct DownloadsSettingsPane: View {
             } header: {
                 SettingsHeader("Memory, ears & voice", systemImage: "ear")
             } footer: {
-                Text("Downloads come from huggingface.co (and github.com for the voice pack), once, and "
-                    + "then run on this Mac. Nothing is removed without asking.")
-                    .font(.callout).foregroundStyle(.readableSecondary)
+                Text(
+                    """
+                    Downloads come from huggingface.co (and github.com for the voice pack), once, and \
+                    then run on this Mac. Nothing is removed without asking.
+                    """
+                )
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
             retiredSection
         }
@@ -86,8 +93,12 @@ struct DownloadsSettingsPane: View {
         ) {
             Button("Download and re-index") { env.startDownload(.semanticMemory) }
         } message: {
-            Text("This downloads the embedder, then re-indexes your notes so they can be found by meaning. "
-                + "It can take a few minutes, and I can't answer until it's done.")
+            Text(
+                """
+                This downloads the embedder, then re-indexes your notes so they can be found by meaning. \
+                It can take a few minutes, and I can't answer until it's done.
+                """
+            )
         }
         .confirmationDialog(
             "Remove \(pendingRetired?.repoID ?? "these weights")?",

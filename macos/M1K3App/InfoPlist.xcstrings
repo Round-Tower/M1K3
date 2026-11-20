@@ -1,0 +1,83 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSAudioCaptureUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. The audio never leaves your Mac."
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. They stay on this Mac, except that a web search M1K3 runs can carry words from them — web search is a switch in Settings."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brain at Home serves M1K3's brain to devices you pair by QR code — on your local network only, encrypted, off by default."
+          }
+        }
+      }
+    },
+    "NSLocationUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses the microphone for voice input. Audio is transcribed on-device and never leaves your Mac."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses Apple's on-device speech recognition, so your voice stays on this Mac. It is never sent to a server."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

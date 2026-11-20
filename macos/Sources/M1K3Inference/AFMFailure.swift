@@ -26,6 +26,9 @@
 //  guardrail because Apple's description names one) and `userReply(for:)`, the one class that must not end as an
 //  empty bubble. Defensive: live on macOS 27.2 (11-04), Irish, Welsh and Ukrainian prompts got English
 //  answers, no throw, so the reply fires only if Apple does throw. Confidence 0.85 (the typed case is the SDK's).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `unsupportedLanguageReply` is a plain English String,
+//  not String(localized:): a canned reply the next brain reads as history stays English (plan §4) until replies like
+//  it are excluded from replay. English unchanged.
 //
 
 import Foundation
@@ -103,11 +106,13 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
         failure == .unsupportedLanguage ? unsupportedLanguageReply : nil
     }
 
-    /// The `.unsupportedLanguage` reply: the reason and the way out, in M1K3's voice.
-    public static let unsupportedLanguageReply = String(localized: """
+    /// The `.unsupportedLanguage` reply: the reason and the way out, in M1K3's voice. Plain English on purpose
+    /// (localisation plan §4): it lands as an assistant turn the next brain reads as history, so it is not
+    /// translated until such replies are excluded from replay.
+    public static let unsupportedLanguageReply = """
     Mini can't chat in this language yet: Apple's on-device model doesn't support it. \
     Switch to another brain and ask me again.
-    """)
+    """
 }
 
 #if compiler(>=6.4)

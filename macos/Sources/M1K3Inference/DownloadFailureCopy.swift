@@ -18,6 +18,9 @@
 //  DownloadFailureCopyTests; the copy itself is Kev's call on first read).
 //  Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — "this device": the iPhone shell reads this copy now. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: "Download stopped." and the unknown line resolve from
+//  M1K3Inference's catalog (`bundle: .module`); the offline and disk-full lines stay plain English, because
+//  knownMessage feeds AppStateLine's model line (plan §4, fenced in DoNotTranslateFenceTests). English unchanged.
 
 import Foundation
 
@@ -62,16 +65,20 @@ public enum DownloadFailureCopy {
     public static func message(for error: Error) -> String {
         switch kind(of: error) {
         case .offline:
-            return String(localized: "Couldn't reach the download server. Check your connection and try again.")
+            // model-facing: knownMessage feeds AppStateLine (plan §4), stays English
+            return "Couldn't reach the download server. Check your connection and try again."
         case .diskFull:
-            return String(localized: "Not enough space on this device. Remove a download you don't use, or free some space, then try again.")
+            // model-facing: knownMessage feeds AppStateLine (plan §4), stays English
+            return """
+            Not enough space on this device. Remove a download you don't use, or free some space, then try again.
+            """
         case let .integrity(message):
             return message
         case .cancelled:
-            return String(localized: "Download stopped.")
+            return String(localized: "Download stopped.", bundle: .module)
         case .unknown:
             let detail = error.localizedDescription
-            return String(localized: "The download didn't finish (\(detail)). Try again in a moment.")
+            return String(localized: "The download didn't finish (\(detail)). Try again in a moment.", bundle: .module)
         }
     }
 

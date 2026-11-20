@@ -26,6 +26,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the item and chunk counts are inflected keys, not
+//  English plural ternaries. English unchanged (renders byte-identical for 0, 1, 2, 21, 1234).
 
 import M1K3Knowledge
 import SwiftUI
@@ -104,7 +106,7 @@ struct DocumentsView: View {
             Label("Documents", systemImage: "books.vertical")
                 .font(.pixelTitle)
             Spacer()
-            Text("\(docs.count) item\(docs.count == 1 ? "" : "s")")
+            Text("^[\(docs.count) item](inflect: true)")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.readableSecondary)
             Button {
@@ -166,7 +168,7 @@ private struct DocumentRow: View {
                 Text(doc.title)
                     .lineLimit(1)
                     .foregroundStyle(doc.kind == .quarantined ? Color.readableSecondary : Color.primary)
-                Text("\(kindLabel) · \(chunks) chunk\(chunks == 1 ? "" : "s")")
+                Text("\(kindLabel) · ^[\(chunks) chunk](inflect: true)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.readableSecondary)
             }

@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-30, Confidence 0.8 (serializer is
 //  package-pinned; the panel flow, the written folder, and the Finder
 //  reveal are verify-at-⌘R). Prior: none (new file). See docs/adr/0003.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the export panel's message is one String(localized:) (no
+//  `+` join). English unchanged.
 //
 
 import AppKit
@@ -47,8 +49,10 @@ enum MemoryExporter {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Export"
-        panel.message = "Exports every remembered fact as plain-text Markdown. "
-            + "Outside M1K3 this folder is not encrypted — it's yours to guard."
+        panel.message = String(localized: """
+        Exports every remembered fact as plain-text Markdown. Outside M1K3 this folder is not encrypted — it's \
+        yours to guard.
+        """)
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         Task.detached(priority: .utility) {
             let stamp = Date()

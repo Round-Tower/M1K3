@@ -17,6 +17,14 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-13, Confidence 0.85 (pure and pinned;
 //  the felt beat of the 1s polite window is Kev's to settle). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation: `uiHint` resolves from M1K3Voice's catalog with the
+//  submit word filled in as `%@` from `submitWord` (English in every language: the listener matches it);
+//  `isSubmit` reads the same constant. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — review fold: the "listener only hears English" premise was false. Both
+//  shells build `AppleSpeechTranscriber()` bare, whose locale defaults to `Locale.current`, which can follow the
+//  app's language once a translation ships. So the submit word is per-locale: `localizedSubmitWord` (catalog key
+//  "please") is what `uiHint` teaches, and `isSubmit` matches it OR the English `submitWord` (WhisperKit, or a
+//  recogniser still in English, keeps working). English unchanged: the en value of "please" is "please".
 
 import Foundation
 
@@ -25,14 +33,41 @@ public enum PoliteEndpoint {
     /// The one hint both shells show while listening — shared for the same
     /// anti-drift reason as `EndpointCadence`: the Mac and iOS copies of a
     /// user-facing literal agree until someone edits one of them.
-    public static let uiHint = "End with “please” and M1K3 will take its turn"
+    /// Display-only (both voice screens). The quoted word is `localizedSubmitWord`, the word
+    /// `isSubmit` listens for in the app's language.
+    public static var uiHint: String {
+        String(
+            localized: "End with “\(localizedSubmitWord)” and M1K3 will take its turn",
+            bundle: .module,
+            comment: "Voice mode hint while listening. %@ is the spoken submit word, already translated (the key “please” in this catalog). Use this language's quotation marks."
+        )
+    }
+
+    /// The English spoken submit word. Always matched, whatever the app's language: WhisperKit
+    /// and an English recogniser hear English.
+    public static let submitWord = "please"
+
+    /// The submit word in the app's language. The recogniser runs in `Locale.current`
+    /// (`AppleSpeechTranscriber`'s default, and both shells take it), which can follow the app's
+    /// language, so a translated app listens for, and teaches, its own word. "please" in English.
+    public static var localizedSubmitWord: String {
+        String(
+            localized: "please",
+            bundle: .module,
+            comment: "Spoken word that ends a voice turn (“tell me a story, please”). ONE lowercase word, as speech recognition spells it: M1K3 matches the last word said against it."
+        )
+    }
+
+    /// `localizedSubmitWord` in match form, resolved once (the endpointer asks on every partial).
+    private static let localizedMatch = localizedSubmitWord.lowercased().trimmingCharacters(in: edgeTrim)
 
     public static func isSubmit(_ text: String) -> Bool {
         let lastWord = text
             .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
             .last
             .map { $0.lowercased().trimmingCharacters(in: edgeTrim) } ?? ""
-        return lastWord == "please"
+        guard !lastWord.isEmpty else { return false }
+        return lastWord == submitWord || lastWord == localizedMatch
     }
 
     /// Punctuation peeled off the final word ("please." / "please!" / ", please").

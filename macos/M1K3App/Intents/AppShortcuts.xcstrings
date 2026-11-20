@@ -1,0 +1,118 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add a todo with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Add a todo with ${applicationName}",
+              "Have ${applicationName} add a task"
+            ]
+          }
+        }
+      }
+    },
+    "Ask ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Ask ${applicationName}",
+              "Ask ${applicationName} a question"
+            ]
+          }
+        }
+      }
+    },
+    "Have ${applicationName} speak" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Have ${applicationName} speak",
+              "Tell ${applicationName} to speak"
+            ]
+          }
+        }
+      }
+    },
+    "List ${applicationName}'s todos" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "List ${applicationName}'s todos",
+              "What's on ${applicationName}'s list"
+            ]
+          }
+        }
+      }
+    },
+    "Recall a memory from ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Recall a memory from ${applicationName}",
+              "What does ${applicationName} remember about"
+            ]
+          }
+        }
+      }
+    },
+    "Remember this with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Remember this with ${applicationName}",
+              "Have ${applicationName} remember something"
+            ]
+          }
+        }
+      }
+    },
+    "Search ${applicationName}'s knowledge" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Search ${applicationName}'s knowledge",
+              "Search ${applicationName} for something"
+            ]
+          }
+        }
+      }
+    },
+    "Talk to ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Talk to ${applicationName}",
+              "Open ${applicationName} voice mode"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

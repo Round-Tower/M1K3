@@ -9,6 +9,8 @@
 //  a silent skip.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the two failure lines resolve from M1K3Chat's catalog
+//  (`bundle: .module`). English unchanged.
 
 import Foundation
 import M1K3Inference
@@ -25,8 +27,8 @@ public struct ImageCaptioner: Sendable {
         public var errorDescription: String? {
             switch self {
             case let .refused(message): message
-            case .unavailable: String(localized: "This brain can't read photos right now.")
-            case .unusable: String(localized: "I couldn't make out that photo. Try again?")
+            case .unavailable: String(localized: "This brain can't read photos right now.", bundle: .module)
+            case .unusable: String(localized: "I couldn't make out that photo. Try again?", bundle: .module)
             }
         }
     }

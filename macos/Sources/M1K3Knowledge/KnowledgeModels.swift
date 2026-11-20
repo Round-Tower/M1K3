@@ -19,6 +19,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `.conversation` joins
 //  `withheldFromMCP`: a whole imported chat is more private than a Photo caption, so MCP visibility fails closed
 //  until Kev opens it (a one-line change plus a consent decision). Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `displayLabel` resolves from M1K3Knowledge's own
+//  catalog (`bundle: .module`). English unchanged. The stdio M1K3MCP binary links this module but never reads
+//  `displayLabel`.
 
 import Foundation
 import GRDB
@@ -92,13 +95,13 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     /// The user-facing name of the kind, for list rows on both shells.
     public var displayLabel: String {
         switch self {
-        case .document: String(localized: "Document")
-        case .call: String(localized: "Call")
-        case .note: String(localized: "Note")
-        case .memory: String(localized: "Memory")
-        case .image: String(localized: "Photo")
-        case .conversation: String(localized: "Conversation")
-        case .quarantined: String(localized: "internal")
+        case .document: String(localized: "Document", bundle: .module)
+        case .call: String(localized: "Call", bundle: .module)
+        case .note: String(localized: "Note", bundle: .module)
+        case .memory: String(localized: "Memory", bundle: .module)
+        case .image: String(localized: "Photo", bundle: .module)
+        case .conversation: String(localized: "Conversation", bundle: .module)
+        case .quarantined: String(localized: "internal", bundle: .module)
         default: rawValue
         }
     }

@@ -57,6 +57,10 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `init(localized:)` takes a
+//  LocalizedStringResource, so a literal preview line reaches the shell's catalog (the String
+//  init renders it verbatim, single under the pseudo-language pass). Runtime text keeps the
+//  String init. English unchanged.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -80,6 +84,13 @@ struct ReadingText: View {
         forcedMode = mode
         self.answerBlocks = answerBlocks
         self.streaming = streaming
+    }
+
+    /// Fixed copy the app itself writes (the Settings previews): the literal is a catalog key,
+    /// looked up in the shell's own Localizable.xcstrings, and renders exactly like the String
+    /// init. Runtime text (a chat reply, a reasoning trace) keeps `init(_:)`: never translated.
+    init(localized text: LocalizedStringResource, mode: ReadingMode? = nil) {
+        self.init(String(localized: text), mode: mode)
     }
 
     private var mode: ReadingMode {

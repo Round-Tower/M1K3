@@ -49,6 +49,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `Pane.title` is a Text and `SettingsHeader` takes a
+//  LocalizedStringKey (plus `init(verbatim:)` for the Brain at Home brand), so the pane names and 34 of the 35 section
+//  titles reach the string catalog. M1K3 and Brain at Home stay verbatim. English renders unchanged.
 
 import M1K3Screengrab
 import SwiftUI
@@ -57,16 +60,17 @@ struct SettingsView: View {
     enum Pane: String, CaseIterable, Hashable {
         case m1k3, downloads, you, privacy, brainAtHome, mcp, general, advanced
 
-        var title: String {
+        /// The pane's name in the list. The brand names (M1K3, Brain at Home) stay verbatim, out of the catalog.
+        var title: Text {
             switch self {
-            case .m1k3: "M1K3"
-            case .downloads: "Brains & downloads"
-            case .you: "You"
-            case .privacy: "Privacy"
-            case .brainAtHome: "Brain at Home"
-            case .mcp: "Server"
-            case .general: "General"
-            case .advanced: "Advanced"
+            case .m1k3: Text(verbatim: "M1K3")
+            case .downloads: Text("Brains & downloads")
+            case .you: Text("You")
+            case .privacy: Text("Privacy")
+            case .brainAtHome: Text(verbatim: "Brain at Home")
+            case .mcp: Text("Server")
+            case .general: Text("General")
+            case .advanced: Text("Advanced")
             }
         }
 
@@ -193,7 +197,7 @@ struct SettingsView: View {
                 Button {
                     paneRaw = candidate.rawValue
                 } label: {
-                    Label(candidate.title, systemImage: candidate.systemImage)
+                    Label { candidate.title } icon: { Image(systemName: candidate.systemImage) }
                         .font(.body.weight(selected ? .semibold : .regular))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -208,7 +212,10 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selected ? .isSelected : [])
-                .help("\(candidate.title) settings")
+                .help(Text(
+                    "\(candidate.title) settings",
+                    comment: "A Settings pane row's tooltip; %@ is the pane's name."
+                ))
             }
         }
     }
@@ -232,11 +239,18 @@ struct SettingsView: View {
 /// A settings section's title: an icon in a tinted circle and a readable
 /// title — the grouped Form's cards get a face instead of a small caps label.
 struct SettingsHeader: View {
-    let title: String
+    let title: Text
     let systemImage: String
 
-    init(_ title: String, systemImage: String) {
-        self.title = title
+    /// A localised title: every caller passes a literal, which the string catalog extracts.
+    init(_ title: LocalizedStringKey, systemImage: String) {
+        self.title = Text(title)
+        self.systemImage = systemImage
+    }
+
+    /// A title that is never translated: a brand name (Brain at Home).
+    init(verbatim title: String, systemImage: String) {
+        self.title = Text(verbatim: title)
         self.systemImage = systemImage
     }
 
@@ -249,7 +263,7 @@ struct SettingsHeader: View {
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(.tint.opacity(0.15)))
                 .accessibilityHidden(true)
-            Text(title)
+            title
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)
                 .textCase(nil)

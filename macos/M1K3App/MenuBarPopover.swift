@@ -21,6 +21,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the todo line and Brain at Home's serving caption are
+//  inflected whole lines, not English plural ternaries or a joined fragment. English unchanged (the caption is an
+//  AttributedString with `.grouping(.never)`, like BrainServeController's, so 1,000+ devices still print ungrouped).
 
 import AppKit
 import M1K3Avatar
@@ -299,10 +302,17 @@ struct MenuBarPopover: View {
         let visible: Bool
     }
 
+    /// Whole lines, inflected for the count (not an English plural ternary joined to a fragment). Foundation
+    /// resolves the inflection; `.grouping(.never)` keeps the digits as they were ("1234", not "1,234").
     private var todoCountLine: String {
-        var parts = ["\(todoCounts.open) todo\(todoCounts.open == 1 ? "" : "s") open"]
-        if todoCounts.pending > 0 { parts.append("\(todoCounts.pending) suggested") }
-        return parts.joined(separator: " · ")
+        let open = todoCounts.open, pending = todoCounts.pending
+        let line = pending > 0
+            ? AttributedString(localized: """
+            ^[\(open, format: .number.grouping(.never)) todo](inflect: true) open · \
+            \(pending, format: .number.grouping(.never)) suggested
+            """)
+            : AttributedString(localized: "^[\(open, format: .number.grouping(.never)) todo](inflect: true) open")
+        return String(line.characters)
     }
 
     private func refreshTodoCounts(_ env: AppEnvironment) async {
@@ -319,8 +329,11 @@ struct MenuBarPopover: View {
     private func brainServeSection(_ env: AppEnvironment) -> some View {
         if env.brainServe.isRunning {
             Label {
-                Text("Brain at Home — serving \(env.brainServe.pairedDevices.count) "
-                    + "device\(env.brainServe.pairedDevices.count == 1 ? "" : "s")")
+                // AttributedString, not a Text key: a `format:` inside a Text key stops inflection ("2 device").
+                Text(AttributedString(localized: """
+                Brain at Home — serving \
+                ^[\(env.brainServe.pairedDevices.count, format: .number.grouping(.never)) device](inflect: true)
+                """))
             } icon: {
                 Image(systemName: "antenna.radiowaves.left.and.right")
             }

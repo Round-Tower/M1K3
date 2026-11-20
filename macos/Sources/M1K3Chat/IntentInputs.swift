@@ -10,6 +10,8 @@
 //  free text when the user didn't supply one (voice-first ergonomics).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.85, Prior: Unknown
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `EmptyInput`'s message is one whole sentence per field
+//  from M1K3Chat's catalog (`bundle: .module`); an unknown field keeps the old English template. English unchanged.
 //
 
 import Foundation
@@ -23,8 +25,15 @@ public enum IntentInput {
             self.field = field
         }
 
+        /// One whole sentence per field (no English noun spliced into a template), from M1K3Chat's catalog.
         public var errorDescription: String? {
-            "Please provide a \(field) for M1K3."
+            switch field {
+            case "question": String(localized: "Please provide a question for M1K3.", bundle: .module)
+            case "text": String(localized: "Please provide a text for M1K3.", bundle: .module)
+            case "query": String(localized: "Please provide a query for M1K3.", bundle: .module)
+            case "title": String(localized: "Please provide a title for M1K3.", bundle: .module)
+            default: "Please provide a \(field) for M1K3."
+            }
         }
     }
 

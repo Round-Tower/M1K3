@@ -1,0 +1,50 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSCameraUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses the camera to scan the pairing code your Mac shows for Brain at Home, and to look at what you point it at when you ask. M1K3 reads what it sees on this device and sends it nowhere. A frame you ask about is saved with that chat on this device."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 uses Apple's on-device speech recognition, so your voice stays on this device. It is never sent to a server."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

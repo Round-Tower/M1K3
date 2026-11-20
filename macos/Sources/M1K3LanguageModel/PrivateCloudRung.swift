@@ -53,6 +53,10 @@
 //  background can fail there; its local fallback starts only in front or off this GPU
 //  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
 //  answer in the background and asks again on return.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the fallback notice is a whole-clause reason inside one
+//  sentence per outcome (no `+ tail`), and the mid-answer notice and the exhausted tooltip are single literals. English
+//  unchanged; still plain String (M1K3LanguageModel has no catalog yet). `resetPhrase` stays English: the Private
+//  Cloud lending refusal a tool call reads uses it too.
 
 import Foundation
 
@@ -159,8 +163,7 @@ public enum PrivateCloudRung {
             "Private Cloud Compute isn't available right now"
         case let .exhausted(resetsAt):
             resetsAt.map {
-                "You've reached your Private Cloud Compute limit. It resets "
-                    + "\(PrivateCloudFallback.resetPhrase(until: $0, now: now))."
+                "You've reached your Private Cloud Compute limit. It resets \(PrivateCloudFallback.resetPhrase(until: $0, now: now))."
             } ?? "You've reached your Private Cloud Compute limit for now"
         case .hidden:
             ""
@@ -256,28 +259,34 @@ public enum PrivateCloudFallback {
         for failure: PrivateCloudFailure, localBrain: String, now: Date, localStopped: Bool = false,
         localHeld: Bool = false
     ) -> String {
-        // `localHeld`: the local brain could not start, because the app was in the background (#864 review).
-        let tail = localHeld
-            ? ", and \(localBrain) can't answer while M1K3 is in the background. Ask again when you're back."
-            : localStopped
-            ? ", and \(localBrain) stopped before answering."
-            : ", so \(localBrain) answered here instead."
-        switch failure {
+        // Each reason is a whole clause, and each outcome is one sentence around it: no fragment glued on with `+`.
+        let reason: String = switch failure {
         case .rateLimited:
-            return "Private Cloud Compute asked me to slow down" + tail
+            "Private Cloud Compute asked me to slow down"
         case let .quotaLimitReached(resetsAt):
-            let reset = resetsAt.map { " (it resets \(resetPhrase(until: $0, now: now)))" } ?? ""
-            return "You've reached your Private Cloud Compute limit for now\(reset)" + tail
+            resetsAt.map {
+                "You've reached your Private Cloud Compute limit for now (it resets \(resetPhrase(until: $0, now: now)))"
+            } ?? "You've reached your Private Cloud Compute limit for now"
         case .network:
-            return "I couldn't reach Private Cloud Compute" + tail
+            "I couldn't reach Private Cloud Compute"
         case .unavailable:
-            return "Private Cloud Compute isn't available right now" + tail
+            "Private Cloud Compute isn't available right now"
         case .replyCheckUnavailable:
-            return "Private Cloud Compute can't be used on this Mac yet (Apple Intelligence's on-device model, "
-                + "which checks its replies, isn't installed)" + tail
+            """
+            Private Cloud Compute can't be used on this Mac yet (Apple Intelligence's on-device model, which checks \
+            its replies, isn't installed)
+            """
         case .other:
-            return "Private Cloud Compute couldn't answer that one" + tail
+            "Private Cloud Compute couldn't answer that one"
         }
+        // `localHeld`: the local brain could not start, because the app was in the background (#864 review).
+        if localHeld {
+            return "\(reason), and \(localBrain) can't answer while M1K3 is in the background. Ask again when you're back."
+        }
+        if localStopped {
+            return "\(reason), and \(localBrain) stopped before answering."
+        }
+        return "\(reason), so \(localBrain) answered here instead."
     }
 
     /// PCC stopped after some text arrived. What came stays (marked cut short);
@@ -292,8 +301,9 @@ public enum PrivateCloudFallback {
         case .replyCheckUnavailable: "this Mac can't check its replies"
         case .other: "something went wrong on its side"
         }
-        return "Private Cloud Compute stopped partway (\(reason)). Ask again without it and \(localBrain) will "
-            + "answer here."
+        return """
+        Private Cloud Compute stopped partway (\(reason)). Ask again without it and \(localBrain) will answer here.
+        """
     }
 
     /// Coarse and honest: "shortly", "within the hour", hours up to a day, then

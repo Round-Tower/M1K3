@@ -134,6 +134,8 @@
 //  and the files back to the composer instead of dropping them. Confidence 0.7 (compile-checked).
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — the starters state and its redraw task are gone with the chips.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the call-consent message and the Lil/Big upgrade pitch
+//  are single literals (no `+` join; the pitch is String(localized:)). English unchanged.
 
 import M1K3Avatar
 import M1K3Chat
@@ -554,8 +556,10 @@ struct ContentView: View {
             Button("Always allow") { Task { await env.affirmConsentAndRecord(scope: .remembered) } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You’re responsible for having consent from everyone on the call. "
-                + "Recording is on-device only — audio never leaves this Mac.")
+            Text("""
+            You’re responsible for having consent from everyone on the call. Recording is on-device only — audio \
+            never leaves this Mac.
+            """)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -2114,8 +2118,10 @@ private struct BrainUpgradeNudgeCard: View {
             // ONE download pitch (reduction pass, 2026-07-03): the headlines
             // carry the flavour; two near-identical pitches were saying the
             // same thing twice.
-            "\(target.displayName) is sharper — a \(sizeText) one-time fetch, "
-                + "grabbed in the background while we keep talking."
+            String(localized: """
+            \(target.displayName) is sharper — a \(sizeText) one-time fetch, grabbed in the background while we \
+            keep talking.
+            """)
         }
     }
 

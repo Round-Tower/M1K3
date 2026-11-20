@@ -17,7 +17,12 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-25, Confidence 0.85 (A12 proven twice
 //  on device; the A13 floor is inferred, not measured). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `voiceNote` and `brainFallbackNote` resolve from
+//  M1K3Inference's catalog (`bundle: .module`); rg shows only the iOS shell's Settings rows read them (AppCore.brainNote
+//  renders in SettingsScreen alone). The tier name stays an argument. English unchanged.
 //
+
+import Foundation
 
 public enum MLXRuntimeSupport: Equatable, Sendable {
     case available
@@ -33,21 +38,43 @@ public enum MLXRuntimeSupport: Equatable, Sendable {
         self == .available
     }
 
-    /// Why M1K3 Voice (Kokoro on MLX) isn't offered — nil when it is.
+    /// Why M1K3 Voice (Kokoro on MLX) isn't offered — nil when it is. Display-only (the iOS
+    /// voice section), so it resolves from M1K3Inference's catalog.
     public var voiceNote: String? {
         switch self {
         case .available: nil
-        case .simulator: "M1K3 Voice runs on a real device."
-        case .gpuTooOld: "M1K3 Voice needs a newer chip than this device has. Built-in works here."
+        case .simulator:
+            String(
+                localized: "M1K3 Voice runs on a real device.",
+                bundle: .module,
+                comment: "Settings note in the Simulator. M1K3 Voice is a product name: never translated."
+            )
+        case .gpuTooOld:
+            String(
+                localized: "M1K3 Voice needs a newer chip than this device has. Built-in works here.",
+                bundle: .module,
+                comment: "Settings note on an older chip. M1K3 Voice is a product name: never translated. Built-in names the other voice option: match its translation."
+            )
         }
     }
 
-    /// The note when an MLX brain pick falls back to Mini — nil when it wouldn't.
+    /// The note when an MLX brain pick falls back to Mini — nil when it wouldn't. Display-only
+    /// (Settings' brain section), so it resolves from M1K3Inference's catalog.
     public func brainFallbackNote(tierName: String) -> String? {
         switch self {
         case .available: nil
-        case .simulator: "\(tierName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini."
-        case .gpuTooOld: "\(tierName) needs a newer chip than this device has. Staying on Mini."
+        case .simulator:
+            String(
+                localized: "\(tierName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini.",
+                bundle: .module,
+                comment: "Settings note in the Simulator. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+            )
+        case .gpuTooOld:
+            String(
+                localized: "\(tierName) needs a newer chip than this device has. Staying on Mini.",
+                bundle: .module,
+                comment: "Settings note on an older chip. The argument is a brain name (Lil, Big). Mini is a brain name: never translated."
+            )
         }
     }
 }

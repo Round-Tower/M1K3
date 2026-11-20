@@ -13,6 +13,13 @@
 //  Signed: Kev + claude-sonnet-4-6, 2026-06-08, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — M1K3 Voice quotes ~192 MB (decimal, as iOS shows it); 184 was the
 //  MiB figure for the same bytes. Pinned to the Kokoro manifest by KokoroDownloadSizeTests. Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: `tagline` and `detail` resolve from M1K3Voice's
+//  catalog (`bundle: .module`), each detail one literal (the `+` joins merged); `displayName` stays plain English
+//  because MCP `get_status` reports it. English unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — `localizedName`: the views' copy of the tier name ("Built-in" from the
+//  catalog, "M1K3 Voice" catalogued shouldTranslate false); `displayName` stays the plain-English wire value.
+
+import Foundation
 
 public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     case builtin
@@ -22,6 +29,7 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
         rawValue
     }
 
+    /// Plain English on purpose: MCP `get_status` reports it to agents (wire text, localisation plan §4).
     public var displayName: String {
         switch self {
         case .builtin: "Built-in"
@@ -29,10 +37,25 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// The name a VIEW shows (pickers, Settings). Never on a wire or in a prompt: those read
+    /// `displayName`. "M1K3 Voice" is a brand and is catalogued `shouldTranslate: false`.
+    public var localizedName: String {
+        switch self {
+        case .builtin:
+            String(
+                localized: "Built-in",
+                bundle: .module,
+                comment: "Voice tier name: the device's own system speech voice (no download)."
+            )
+        case .m1k3Voice:
+            String(localized: "M1K3 Voice", bundle: .module, comment: "Voice tier name: never translated.")
+        }
+    }
+
     public var tagline: String {
         switch self {
-        case .builtin: "Ready now · no download"
-        case .m1k3Voice: "Neural voice · ~192 MB"
+        case .builtin: String(localized: "Ready now · no download", bundle: .module)
+        case .m1k3Voice: String(localized: "Neural voice · ~192 MB", bundle: .module)
         }
     }
 
@@ -52,11 +75,15 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     /// VoiceTierTests.
     private static var builtinDetail: String {
         #if os(macOS)
-            "macOS's built-in speech. Works immediately, always on-device — clear, "
-                + "if a little robotic."
+            String(
+                localized: "macOS's built-in speech. Works immediately, always on-device — clear, if a little robotic.",
+                bundle: .module
+            )
         #else
-            "Your device's built-in speech. Works immediately, always on-device — "
-                + "clear, if a little robotic."
+            String(
+                localized: "Your device's built-in speech. Works immediately, always on-device — clear, if a little robotic.",
+                bundle: .module
+            )
         #endif
     }
 
@@ -68,11 +95,15 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     /// macOS bytes frozen, pinned in VoiceTierTests.
     private static var m1k3VoiceDetail: String {
         #if os(macOS)
-            "A warm, natural neural voice that runs entirely on your Mac. One "
-                + "download, then offline forever. The voice M1K3 was meant to have."
+            String(localized: """
+            A warm, natural neural voice that runs entirely on your Mac. One download, then offline forever. \
+            The voice M1K3 was meant to have.
+            """, bundle: .module)
         #else
-            "A warm, natural neural voice that runs entirely on your device. One "
-                + "download, then offline forever. The voice M1K3 was meant to have."
+            String(localized: """
+            A warm, natural neural voice that runs entirely on your device. One download, then offline forever. \
+            The voice M1K3 was meant to have.
+            """, bundle: .module)
         #endif
     }
 

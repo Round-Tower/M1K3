@@ -37,6 +37,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the memory count is one inflected key, not an English
+//  plural ternary. English unchanged (renders byte-identical for 0, 1, 2, 21, 1234).
 
 import M1K3Memory
 import SwiftUI
@@ -115,7 +117,7 @@ struct MemoriesView: View {
             .foregroundStyle(showCorrected ? Color.primary : Color.secondary)
             .accessibilityAddTraits(showCorrected ? .isSelected : [])
             .accessibilityLabel(showCorrected ? "Hide corrected facts" : "Show corrected facts")
-            Text("\(liveCount) memor\(liveCount == 1 ? "y" : "ies")")
+            Text("^[\(liveCount) memory](inflect: true)")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.readableSecondary)
         }

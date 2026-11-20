@@ -14,6 +14,8 @@
 //  raw markdown, so `[Yes](https://x "…")` showed "Yes" and put the hidden destination and title into the
 //  user's own turn. And `inline` drops links: a link run inside a card's button opened the browser
 //  instead of ticking or sending. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: each String(localized:) passes `bundle: .module`, the
+//  module's own Localizable.xcstrings. English unchanged. Confidence 0.85.
 //
 
 import Foundation
@@ -39,12 +41,12 @@ enum AnswerBlockText {
 
     /// "Step 2 of 5: Lift the cover."
     static func stepLabel(number: Int, of count: Int, step: String) -> String {
-        String(localized: "Step \(number) of \(count): \(plain(step))")
+        String(localized: "Step \(number) of \(count): \(plain(step))", bundle: .module)
     }
 
     /// The step's tick, session-only.
     static func stepValue(done: Bool) -> String {
-        done ? String(localized: "Done") : String(localized: "Not done")
+        done ? String(localized: "Done", bundle: .module) : String(localized: "Not done", bundle: .module)
     }
 
     /// What a tapped choice sends as the user's next message: the words the
@@ -57,18 +59,18 @@ enum AnswerBlockText {
     }
 
     static func choiceLabel(_ option: String) -> String {
-        String(localized: "Choose: \(plain(option))")
+        String(localized: "Choose: \(plain(option))", bundle: .module)
     }
 
     static var choiceHint: String {
-        String(localized: "Sends it as your next message")
+        String(localized: "Sends it as your next message", bundle: .module)
     }
 
     /// What VoiceOver announces while a block is still streaming.
     static func skeletonLabel(_ kind: AnswerBlockKind) -> String {
         switch kind {
-        case .steps: String(localized: "Writing steps")
-        case .choices: String(localized: "Writing choices")
+        case .steps: String(localized: "Writing steps", bundle: .module)
+        case .choices: String(localized: "Writing choices", bundle: .module)
         }
     }
 }

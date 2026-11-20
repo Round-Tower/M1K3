@@ -2,6 +2,14 @@
 # Direct Mac plate capture — no XCUITest (2026-09-23).
 #
 #   tools/screengrab/direct/capture-direct.sh <path/to/M1K3.app> [marketing/app-store dir]
+#   PSEUDO=1 | RTL=1 | LOCALE=<code> tools/screengrab/direct/capture-direct.sh <path/to/M1K3.app>
+#
+# Localisation passes (opt-in, ../l10n-args.zsh): PSEUDO=1 adds -NSDoubleLocalizedStrings YES,
+# RTL=1 forces right-to-left, LOCALE=de adds -AppleLanguages "(de)" -AppleLocale de. They combine,
+# ride after the recipe's own arguments on every launch, and file into plates/mac-<suffix> so the
+# English plates are never overwritten. None set = the launches are exactly as before.
+# The AX waits match English labels ("brain", "Privacy", "Memory Constellation"): under LOCALE a
+# translated label times out and the constellation plate misses its window; PSEUDO keeps them.
 #
 # capture.sh drives the plates through XCUITest, which needs macOS "automation mode"
 # — an admin authorization that times out when nobody is at the Mac ("Timed out while
@@ -13,11 +21,17 @@
 # Quit the live M1K3 first (same bundle id). Other apps are hidden for the run.
 # Signed: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.75 (drove all 13 Mac plates
 # once; the voice-speaking timing is a burst you pick from). Prior: Unknown
+# Review: claude-opus-5-5, 2026-11-19 — l10n Phase 0: PSEUDO=1 / RTL=1 / LOCALE=<code> append ../l10n-args.zsh's
+# arguments to every launch and file under plates/mac-<suffix>; defaults unchanged. Not run.
+# Review: claude-opus-5-5, 2026-11-20 — first real run: under `set -u`, mainWin's optional $2 and shoot's optional $3
+# aborted every plate ("parameter not set"), and a relative app path broke once the script cds into $S. Both fixed.
 set -u
 here=${0:A:h}
-APP=${1:?path to a built M1K3.app}/Contents/MacOS/M1K3
-OUT=${2:-${here:h:h:h:h}/marketing/app-store}/plates/mac
+source ${here:h}/l10n-args.zsh   # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
+APP=${${1:?path to a built M1K3.app}:A}/Contents/MacOS/M1K3   # :A — the script cds into $S
+OUT=${2:-${here:h:h:h:h}/marketing/app-store}/plates/mac${l10n_suffix:+-$l10n_suffix}
 S=${TMPDIR:-/tmp}/m1k3-direct-capture; mkdir -p $S
+[[ -n $l10n_suffix ]] && mkdir -p $OUT   # a localised run's folder is new; the English one is left as it was
 for tool in ax winlist wheel; do
   [[ $S/$tool -nt $here/$tool.swift ]] || swiftc -O $here/$tool.swift -o $S/$tool || exit 2
 done
@@ -26,7 +40,7 @@ cd $S
 log() { print -r -- "$(date +%H:%M:%S) $*"; }
 appPid() { pgrep -f "$APP" | head -1; }
 quitApp() { local p=$(appPid); [[ -n $p ]] && kill -TERM $p; for i in {1..20}; do [[ -z $(appPid) ]] && return; sleep 0.5; done; pkill -9 -f "$APP" ; sleep 1; }
-mainWin() { $S/winlist $1 | awk -v want="$2" '$5>=1000 || (want!="" && index($0,want)) {print $1; exit}'; }
+mainWin() { $S/winlist $1 | awk -v want="${2:-}" '$5>=1000 || (want!="" && index($0,want)) {print $1; exit}'; }
 namedWin() { $S/winlist $1 | awk -v want="$2" 'index($0,want) {print $1; exit}'; }
 front() { osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $1) to true" >/dev/null 2>&1; }
 waitFor() { local p=$1 needle=$2 t=${3:-90}; for i in $(seq 1 $t); do $S/ax $p find "$needle" >/dev/null 2>&1 && return 0; sleep 1; done; log "timeout waiting for [$needle]"; return 1; }
@@ -35,12 +49,12 @@ launch() { # plate companion hasChosen [extra args...]
   M1K3_SCREENGRAB=1 M1K3_SCREENGRAB_PLATE=$plate M1K3_SCREENGRAB_RUN=$RUN M1K3_SCREENGRAB_ALLOW_LIVE=1 \
     $APP -hasChosenBrain $chosen -selectedBrain lil -voiceMode.companion $comp -companion.shadingStyle off \
     -brainServe.enabled NO -notchHUD.enabled NO -mcpServer.enabled NO -memoryAutoCapture NO \
-    -ApplePersistenceIgnoreState YES -chatEgressAllowed NO -webSearchEnabled YES "$@" > $S/plate-$plate.log 2>&1 &
+    -ApplePersistenceIgnoreState YES -chatEgressAllowed NO -webSearchEnabled YES "$@" "${l10n_args[@]}" > $S/plate-$plate.log 2>&1 &
   local p=""; for i in {1..60}; do p=$(appPid); [[ -n $p ]] && [[ -n $(mainWin $p) ]] && break; sleep 1; done
   print -r -- $p
 }
 shoot() { # pid plate [windowName]
-  local p=$1 plate=$2 name=$3 w
+  local p=$1 plate=$2 name=${3:-} w
   if [[ -n $name ]]; then w=$(namedWin $p "$name"); else w=$(mainWin $p); fi
   front $p; sleep 1
   screencapture -x -o -l $w $OUT/$plate.png && log "shot $plate (win $w) $(sips -g pixelWidth -g pixelHeight $OUT/$plate.png | awk '/pixel/{printf "%s ", $2}')"

@@ -78,6 +78,8 @@
 //  system voice (speech stopped for the background must stay stopped). Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-11-15 (#838) — `defaultModelDirectory()` is public so the round-trip
 //  self-test (TTSRoundTripStage) synthesises from the folder the app stages; no behaviour change. Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the integrity sentence resolves from M1K3Kokoro's
+//  catalog (`bundle: .module`, beside the G2P resource). English unchanged.
 
 import Foundation
 import M1K3Inference
@@ -512,7 +514,7 @@ struct KokoroWeightTamperError: LocalizedError, DownloadFailureClassifying {
         .integrity(message: String(localized: """
         I didn't use the voice files: they don't match what this version of M1K3 expects. \
         Try the download again, and tell us if it keeps happening.
-        """))
+        """, bundle: .module))
     }
 }
 

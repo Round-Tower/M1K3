@@ -11,6 +11,8 @@
 
 //  Review: Kev + claude-fable-5.2, 2026-11-12 — `face` maps a mode onto
 //  `ReadingTypography`'s table, where the sizes and spacing now live.
+//  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `displayName` and `detail` are LocalizedStringKey (they only
+//  feed Text, on the Mac and in the iOS shell), so the catalog extracts them. English renders unchanged.
 
 import M1K3AnswerBlocks
 import SwiftUI
@@ -37,7 +39,7 @@ enum ReadingMode: String, CaseIterable, Identifiable {
         }
     }
 
-    var displayName: String {
+    var displayName: LocalizedStringKey {
         switch self {
         case .standard: "Default"
         case .serif: "Serif"
@@ -46,7 +48,7 @@ enum ReadingMode: String, CaseIterable, Identifiable {
         }
     }
 
-    var detail: String {
+    var detail: LocalizedStringKey {
         switch self {
         case .standard: "The system font — clean and familiar."
         case .serif: "A serif face; some readers find the strokes easier to track."

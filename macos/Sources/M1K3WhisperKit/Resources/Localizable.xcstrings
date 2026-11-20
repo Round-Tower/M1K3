@@ -1,0 +1,24 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Base" : {
+      "comment" : "Speech-model size name."
+    },
+    "Small" : {
+      "comment" : "Speech-model size name."
+    },
+    "Tiny" : {
+      "comment" : "Speech-model size name."
+    },
+    "~145 MB · balanced" : {
+
+    },
+    "~480 MB · most accurate" : {
+
+    },
+    "~75 MB · fastest, least accurate" : {
+
+    }
+  },
+  "version" : "1.0"
+}

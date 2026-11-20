@@ -25,6 +25,8 @@
 //  failure used to drop that colour's motes); an emptied model empties the field; placement prunes to the
 //  model; the bake waits for the latest growth to END, so a memory arriving mid-accretion no longer pops the
 //  rest in at once. The growth comment no longer claims a cancellation it never had. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the VoiceOver hint is `Text(_:bundle: .module)`, from
+//  M1K3MemoryViz's own catalog. English unchanged.
 
 import M1K3Memory
 import RealityKit
@@ -121,7 +123,7 @@ public struct ConstellationView: View {
             // list alternative rather than leaving the scene silent.
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(model.accessibilitySummary)
-            .accessibilityHint("For a full accessible list, open Memories from the toolbar.")
+            .accessibilityHint(Text("For a full accessible list, open Memories from the toolbar.", bundle: .module))
         }
     }
 

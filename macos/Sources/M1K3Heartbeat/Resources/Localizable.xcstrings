@@ -1,0 +1,57 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Active" : {
+
+    },
+    "Agent visit" : {
+
+    },
+    "Charging" : {
+
+    },
+    "Corrected" : {
+
+    },
+    "Digest-told" : {
+
+    },
+    "First today" : {
+
+    },
+    "Learned" : {
+
+    },
+    "Low power" : {
+
+    },
+    "On battery" : {
+
+    },
+    "Overdue" : {
+
+    },
+    "Quiet" : {
+
+    },
+    "Ran cool" : {
+
+    },
+    "Ran hot" : {
+
+    },
+    "Ran warm" : {
+
+    },
+    "Suggested" : {
+
+    },
+    "Todos open" : {
+
+    },
+    "We talked" : {
+
+    }
+  },
+  "version" : "1.0"
+}

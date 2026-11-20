@@ -3,6 +3,13 @@
 #
 #   tools/screengrab/capture.sh mac [plate ...]
 #   tools/screengrab/capture.sh ios <device-udid> [plate ...]
+#   PSEUDO=1 | RTL=1 | LOCALE=<code> tools/screengrab/capture.sh mac [plate ...]
+#
+# Localisation passes (opt-in, l10n-args.zsh): PSEUDO=1 doubles every localised string
+# (-NSDoubleLocalizedStrings YES), RTL=1 forces right-to-left, LOCALE=de launches in that
+# language and region. They combine, and the plates go to plates/<target>-<pseudo|rtl|code>
+# so the English plates are never overwritten. The XCUITest lane hands them to the test as
+# M1K3_SCREENGRAB_EXTRA_ARGS (space-separated); none set = the run is exactly as before.
 #
 # Runs the screengrab UI test suite (one XCUITest per plate) against the app
 # launched under M1K3_SCREENGRAB=1 — an ISOLATED store root beside the live one
@@ -21,14 +28,17 @@
 # Review: Kev + claude-fable-5.1, 2026-09-15 — `constellation` joins the plate export list (Mac lane).
 # Review: Kev + claude-opus-5-5, 2026-09-23 — every run passes a fresh M1K3_SCREENGRAB_RUN token: the
 # app empties its own sibling root on the run's first launch (the shell's rm is TCC-blocked). Confidence 0.85.
+# Review: claude-opus-5-5, 2026-11-19 — l10n Phase 0: PSEUDO=1 / RTL=1 / LOCALE=<code> (l10n-args.zsh) go to the
+# UI test as M1K3_SCREENGRAB_EXTRA_ARGS and file under plates/<target>-<suffix>; defaults unchanged. Not run.
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
 root=${0:A:h:h:h}                       # macos/
 repo=${root:h}
+source ${0:A:h}/l10n-args.zsh           # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
 # marketing/ is gitignored (local-only) — point M1K3_MARKETING_DIR at it from a worktree.
 marketing=${M1K3_MARKETING_DIR:-$repo/marketing/app-store}
-plates=$marketing/plates/$target
+plates=$marketing/plates/$target${l10n_suffix:+-$l10n_suffix}
 scratch=${TMPDIR:-/tmp}/m1k3-screengrab
 dd=${M1K3_SCREENGRAB_DD:-$scratch/dd-$target}   # reuse a warm DerivedData if you have one
 xcresult=$scratch/$target.xcresult
@@ -86,13 +96,23 @@ for plate in "$@"; do
   only+=(-only-testing:"$testTarget/$className/$method")
 done
 
+extra=()                                # passed only on a localised run: a default run's xcodebuild line is unchanged
+if (( ${#l10n_args} )); then
+  extra=(TEST_RUNNER_M1K3_SCREENGRAB_EXTRA_ARGS="${l10n_args[*]}")
+  echo ">>> l10n pass: ${l10n_args[*]} -> $plates"
+  # The UI test appends these to the plate's recipe; a test that does not read them would
+  # capture English plates into the localised folder.
+  grep -rqs M1K3_SCREENGRAB_EXTRA_ARGS "$root/UITests" \
+    || echo "warn: UITests do not read M1K3_SCREENGRAB_EXTRA_ARGS yet — these plates will NOT be localised"
+fi
+
 cd "$root"
 xcodegen generate >/dev/null
 set +e
 xcodebuild test -project M1K3.xcodeproj -scheme "$scheme" -destination "$dest" \
   -derivedDataPath "$dd" -resultBundlePath "$xcresult" \
   -skipPackagePluginValidation -skipMacroValidation \
-  -only-testing:"$testTarget" "${only[@]}" "${sign[@]}" \
+  -only-testing:"$testTarget" "${only[@]}" "${sign[@]}" "${extra[@]}" \
   TEST_RUNNER_M1K3_SCREENGRAB_OUT="$([[ $target == mac ]] && print -r -- "$plates")" \
   TEST_RUNNER_M1K3_SCREENGRAB_RUN="$(date +%s)" \
   2>&1 | xcbeautify --quiet

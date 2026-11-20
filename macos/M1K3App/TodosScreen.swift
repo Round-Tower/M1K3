@@ -20,6 +20,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the empty state is a single literal (no `+` join).
+//  English unchanged.
 
 import M1K3Todos
 import SwiftUI
@@ -83,8 +85,7 @@ struct TodosScreen: View {
             ContentUnavailableView {
                 Label("Nothing on the list", systemImage: "checklist")
             } description: {
-                Text("Add one above. M1K3 and connected agents can suggest todos; "
-                    + "suggestions wait here for your say-so.")
+                Text("Add one above. M1K3 and connected agents can suggest todos; suggestions wait here for your say-so.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

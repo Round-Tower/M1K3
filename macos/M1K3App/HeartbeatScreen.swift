@@ -33,6 +33,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the empty states and the agent-log offer are single
+//  literals (no `+` join); a visit's call and error counts are inflected keys, not English plural ternaries. English
+//  unchanged.
 
 import M1K3Heartbeat
 import M1K3MCPLog
@@ -142,17 +145,20 @@ struct HeartbeatScreen: View {
             ContentUnavailableView {
                 Label("The heartbeat is off", systemImage: "waveform.path.ecg")
             } description: {
-                Text("Every couple of hours M1K3 can take stock — what it learned, who "
-                    + "called in, how the machine is doing — and write a short note. "
-                    + "Turn it on in Settings → M1K3. Kept on this machine only.")
+                Text("""
+                Every couple of hours M1K3 can take stock — what it learned, who called in, how the machine is \
+                doing — and write a short note. Turn it on in Settings → M1K3. Kept on this machine only.
+                """)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if days.isEmpty {
             ContentUnavailableView {
                 Label("No pulses yet", systemImage: "waveform.path.ecg")
             } description: {
-                Text("The first pulse lands within a couple of hours of the machine "
-                    + "being awake — sooner if something's already happened today.")
+                Text("""
+                The first pulse lands within a couple of hours of the machine being awake — sooner if something's \
+                already happened today.
+                """)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -183,11 +189,12 @@ struct HeartbeatScreen: View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
                 Toggle("Log agent conversations", isOn: $agentLogOn)
-                Text("When the Agent Interaction Log is on, calls from connected agents "
-                    + "fold into this timeline as visits — who called in, and what they "
-                    + "used. Captured on this Mac only, newest 500 kept, off by default.")
-                    .font(.caption)
-                    .foregroundStyle(.readableSecondary)
+                Text("""
+                When the Agent Interaction Log is on, calls from connected agents fold into this timeline as visits \
+                — who called in, and what they used. Captured on this Mac only, newest 500 kept, off by default.
+                """)
+                .font(.caption)
+                .foregroundStyle(.readableSecondary)
             }
             .padding(.vertical, 2)
         }
@@ -268,11 +275,11 @@ struct HeartbeatScreen: View {
                         .symbolRenderingMode(.hierarchical)
                     Text(visit.clientName ?? "An agent")
                         .font(.callout.bold())
-                    Text("· \(visit.callCount) call\(visit.callCount == 1 ? "" : "s")")
+                    Text("· ^[\(visit.callCount) call](inflect: true)")
                         .font(.caption)
                         .foregroundStyle(.readableSecondary)
                     if visit.errorCount > 0 {
-                        Text("· \(visit.errorCount) error\(visit.errorCount == 1 ? "" : "s")")
+                        Text("· ^[\(visit.errorCount) error](inflect: true)")
                             .font(.caption)
                             .foregroundStyle(.red)
                     }

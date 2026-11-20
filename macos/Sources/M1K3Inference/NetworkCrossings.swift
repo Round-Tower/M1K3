@@ -26,6 +26,11 @@
 //  snag, sent the same way. Confidence unchanged.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — and the report a phone offers when a brain won't get ready.
 //  Confidence unchanged.
+//  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: Hello's line is one key (no `+ " " +`), the Tools
+//  footer is a whole sentence per lane (no glued tail, no prefix-uppercasing), "Web search" is localised. English
+//  unchanged. `joined(_:)` still builds the list in English (Phase 1: ListFormatter, see the l10n plan).
+//  Review: claude-opus-5-5, 2026-11-19 — (package slice) every String(localized:) here passes `bundle: .module`,
+//  M1K3Inference's own catalog; the phrases and the Hello line carry translator comments. English unchanged.
 
 import Foundation
 
@@ -69,22 +74,37 @@ public enum NetworkCrossings {
         var list = [
             Crossing(
                 kind: .modelDownloads, optIn: true, madeByApp: true,
-                phrase: String(localized: "download the models you choose (brains, speech, voice)"),
+                phrase: String(
+                    localized: "download the models you choose (brains, speech, voice)", bundle: .module,
+                    comment: "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+                ),
                 hasSettingsSwitch: false
             ),
             Crossing(
                 kind: .webTools, optIn: false, madeByApp: true,
-                phrase: String(localized: "search the web and look things up"), hasSettingsSwitch: true
+                phrase: String(
+                    localized: "search the web and look things up", bundle: .module,
+                    comment: "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+                ),
+                hasSettingsSwitch: true
             ),
             Crossing(
                 kind: .updates, optIn: false, madeByApp: false,
-                phrase: String(localized: "update"), hasSettingsSwitch: false
+                phrase: String(
+                    localized: "update", bundle: .module,
+                    comment: "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+                ),
+                hasSettingsSwitch: false
             ),
         ]
         if lane == .appStore {
             list.append(Crossing(
                 kind: .privateCloud, optIn: true, madeByApp: true,
-                phrase: String(localized: "use the optional Private Cloud Compute brain"), hasSettingsSwitch: true
+                phrase: String(
+                    localized: "use the optional Private Cloud Compute brain", bundle: .module,
+                    comment: "Completes the privacy line \"It goes online only to …\" (an infinitive phrase)."
+                ),
+                hasSettingsSwitch: true
             ))
         }
         // Last in both lanes: the one crossing M1K3 never makes itself. A thumbs-down can offer to
@@ -95,7 +115,9 @@ public enum NetworkCrossings {
         list.append(Crossing(
             kind: .fieldReport, optIn: true, madeByApp: false,
             phrase: String(
-                localized: "email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to"
+                localized: "email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to",
+                bundle: .module,
+                comment: "One way M1K3 goes online (an infinitive phrase). Round Tower is the developer's name."
             ),
             hasSettingsSwitch: false
         ))
@@ -124,26 +146,37 @@ public enum NetworkCrossings {
         let made = crossings(for: lane).filter(\.madeByApp)
         let switches = made.filter(\.hasSettingsSwitch)
         let goes = joined(made.map(\.phrase))
-        let which = switches.map { $0.kind == .webTools ? "Web search" : "Private Cloud Compute" }
+        let which = switches.map {
+            $0.kind == .webTools ? String(
+                localized: "Web search",
+                bundle: .module,
+                comment: "A switch name, listed with \"Private Cloud Compute\" in \"… is a switch in Settings.\""
+            ) : "Private Cloud Compute"
+        }
         let switchLine = which.count == 1
-            ? String(localized: "\(which[0]) is a switch in Settings.")
-            : String(localized: "\(joined(which)) are each a switch in Settings.")
-        return String(localized: "Your local AI companion. Runs on this Mac — no account. It goes online only to \(goes).")
-            + " " + switchLine
+            ? String(localized: "\(which[0]) is a switch in Settings.", bundle: .module)
+            : String(localized: "\(joined(which)) are each a switch in Settings.", bundle: .module)
+        // One key for the whole line (the switch sentence is its last argument), not a `+` join.
+        return String(localized: """
+        Your local AI companion. Runs on this Mac — no account. It goes online only to \(goes). \(switchLine)
+        """, bundle: .module, comment: "First-run privacy line: a list of infinitive phrases, then the Settings-switch sentence.")
     }
 
     /// The Privacy pane's Tools footer under the web-search switch. "The one capability" is
     /// true only when no Private Cloud Compute rung exists (ADR 0006), and even then only beside downloads.
+    /// Two whole sentences, one per lane: no shared tail glued on or prefix-uppercased.
     public static func webSearchFootnote(for lane: Lane) -> String {
-        let tail = String(localized: """
-        every search and page read shows in the reply as it happens. Date, time, and system \
-        tools stay local either way.
-        """)
         switch lane {
         case .developerID:
-            return String(localized: "Besides model downloads, the one capability that sends anything off this Mac: ") + tail
+            String(localized: """
+            Besides model downloads, the one capability that sends anything off this Mac: every search and page \
+            read shows in the reply as it happens. Date, time, and system tools stay local either way.
+            """, bundle: .module)
         case .appStore:
-            return tail.prefix(1).uppercased() + tail.dropFirst()
+            String(localized: """
+            Every search and page read shows in the reply as it happens. Date, time, and system tools stay local \
+            either way.
+            """, bundle: .module)
         }
     }
 
