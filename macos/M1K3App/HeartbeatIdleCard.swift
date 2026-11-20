@@ -22,7 +22,8 @@
 //  heartbeat surfaces; rendered feel is ⌘R verify-owed). Prior: none
 //  (new file).
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
-//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the VoiceOver label too. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the VoiceOver label
+//  too. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.

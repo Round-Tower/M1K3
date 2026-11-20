@@ -14,7 +14,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.8 (pure parts pinned; the background run is device-only).
 //  Prior: none (new file; the Live Activities plan's slice 1).
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
-//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the Live Activity title and whole-sentence subtitles too. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the Live Activity title and whole-sentence subtitles
+//  too. Confidence 0.8.
 //
 
 import Foundation

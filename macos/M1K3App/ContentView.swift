@@ -137,7 +137,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the call-consent message and the Lil/Big upgrade pitch
 //  are single literals (no `+` join; the pitch is String(localized:)). English unchanged.
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
-//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the staged-switch pitch and the Switch/Fetch button too. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the staged-switch pitch and the Switch/Fetch button
+//  too. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
