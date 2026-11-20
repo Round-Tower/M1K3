@@ -2,19 +2,123 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Cel" : {
-      "comment" : "Companion skin picker: cel shading, the flat cartoon (toon) look."
+      "comment" : "Companion skin picker: cel shading, the flat cartoon (toon) look.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cel"
+          }
+        }
+      }
     },
     "Happy Halloween! I carved the pumpkin; you bring the questions." : {
-      "comment" : "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line."
+      "comment" : "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fröhliches Halloween! Ich hab den Kürbis geschnitzt, du bringst die Fragen mit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Feliz Halloween! Yo tallé la calabaza; tú pon las preguntas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joyeux Halloween ! J’ai sculpté la citrouille ; à toi les questions."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feliz Halloween! Esculpi a abóbora; você traz as perguntas."
+          }
+        }
+      }
     },
     "Off (textured)" : {
-      "comment" : "Companion skin picker: no shader, the creature keeps its own painted textures."
+      "comment" : "Companion skin picker: no shader, the creature keeps its own painted textures.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus (texturiert)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado (con texturas)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé (texturé)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desligado (com texturas)"
+          }
+        }
+      }
     },
     "Offline? I'm still right here, on your device." : {
       "comment" : "Seasonal greeting shown 3 Nov - 1 Dec, ONLY while the device is offline (Offline AI Flight Club). M1K3 is a theatrical villain who is entirely on the user's side; keep it playful, honest (it must be true when offline, even with no brain downloaded yet, so it promises presence, never answers) and family-safe, one short line of at most 70 characters."
     },
     "Phosphor" : {
-      "comment" : "Companion skin picker: a glowing rim like an old phosphor screen."
+      "comment" : "Companion skin picker: a glowing rim like an old phosphor screen.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phosphor"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fosforescente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phosphor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fosforescente"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

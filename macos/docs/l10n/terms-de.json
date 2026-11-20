@@ -1,0 +1,516 @@
+[
+ {
+  "en": "brain (Mini/Lil/Big, the model tier)",
+  "translation": "Hirn",
+  "note": "das Hirn, pl. die Hirne. The glossary and Mac store copy use Hirn, but the iOS store description says Gehirn. The app uses Hirn on both platforms. „Hirn wechseln …“ (Change brain…), „Wähl das Passende“."
+ },
+ {
+  "en": "Brains (settings section / tab)",
+  "translation": "Hirne",
+  "note": "„Brains & downloads“ → „Hirne & Downloads“."
+ },
+ {
+  "en": "tier (brain tier)",
+  "translation": "Stufe",
+  "note": "die Stufe; compound „Hirnstufe“, as in the Mac store copy."
+ },
+ {
+  "en": "model",
+  "translation": "Modell",
+  "note": "das Modell. Use it only where English says model (embedding model, model unavailable). Elsewhere the product word is Hirn."
+ },
+ {
+  "en": "memory (M1K3's store of what it remembers)",
+  "translation": "Gedächtnis",
+  "note": "das Gedächtnis, no plural. „M1K3s Gedächtnis“. Never Speicher. Speicher means RAM or disk, as in „Arbeitsspeicher“ for 'needs 8GB memory'."
+ },
+ {
+  "en": "a memory / memories (one remembered fact)",
+  "translation": "Erinnerung / Erinnerungen",
+  "note": "die Erinnerung. „Erinnerungen exportieren …“, „Noch keine Erinnerungen“. This word is taken, so never use Erinnerung for 'reminder'."
+ },
+ {
+  "en": "memory (RAM / device memory)",
+  "translation": "Arbeitsspeicher",
+  "note": "In hardware sentences only: 'needs 16GB+ memory' → „braucht 16 GB+ Arbeitsspeicher“."
+ },
+ {
+  "en": "remember",
+  "translation": "sich merken",
+  "note": "In first person: „Ich merke mir …“ (store). As a label: „Dieses Foto merken“, „Mit M1K3 merken“. Use „Gemerkt“ for the 'remembered' status."
+ },
+ {
+  "en": "recall (a memory)",
+  "translation": "abrufen",
+  "note": "'Recall Memory' → „Erinnerung abrufen“."
+ },
+ {
+  "en": "forget",
+  "translation": "vergessen",
+  "note": "Use it as the button label: „Vergessen“. 'Forget this photo' → „Dieses Foto vergessen“. Privacy copy: 'no residue' must stay literal („ohne Rückstände“)."
+ },
+ {
+  "en": "knowledge",
+  "translation": "Wissen",
+  "note": "das Wissen. 'knowledge base' → „Wissensbasis“. 'Search M1K3's Knowledge' → „M1K3s Wissen durchsuchen“."
+ },
+ {
+  "en": "document / Documents (section)",
+  "translation": "Dokument / Dokumente",
+  "note": "das Dokument."
+ },
+ {
+  "en": "companion",
+  "translation": "Begleiter",
+  "note": "der Begleiter. Companion names (Fox, Inkfish …) stay English. 'Companion face' → „Begleiter-Gesicht“."
+ },
+ {
+  "en": "face (avatar look)",
+  "translation": "Gesicht",
+  "note": "'Pick my face' → „Wähl mein Gesicht“."
+ },
+ {
+  "en": "pixel face",
+  "translation": "Pixelgesicht",
+  "note": "Written as one word, following the iOS store and the compound rule. The Mac store has „Pixel-Gesicht“; don't use that form."
+ },
+ {
+  "en": "avatar",
+  "translation": "Avatar",
+  "note": "der Avatar, pl. Avatare."
+ },
+ {
+  "en": "constellation / Memory Constellation",
+  "translation": "Konstellation / Erinnerungskonstellation",
+  "note": "die Konstellation. The store says „Konstellation deiner Erinnerungen“."
+ },
+ {
+  "en": "chat (noun)",
+  "translation": "Chat",
+  "note": "der Chat, pl. Chats (iOS store). The verb is „chatten“. 'New chat' → „Neuer Chat“."
+ },
+ {
+  "en": "conversation / Conversations (list)",
+  "translation": "Gespräch / Gespräche",
+  "note": "das Gespräch (Mac store: „Deine Gespräche“)."
+ },
+ {
+  "en": "answer / reply",
+  "translation": "Antwort",
+  "note": "die Antwort; verb „antworten“."
+ },
+ {
+  "en": "voice (M1K3's spoken voice)",
+  "translation": "Stimme",
+  "note": "die Stimme. 'neural voice' → „neuronale Stimme“ (store)."
+ },
+ {
+  "en": "M1K3 Voice (the downloadable voice pack)",
+  "translation": "M1K3-Stimme",
+  "note": "This is a descriptive option set against 'Built-in' („Integriert“), so translate it. If Kev rules it a product name, revert to M1K3 Voice everywhere."
+ },
+ {
+  "en": "voice mode",
+  "translation": "Sprachmodus",
+  "note": "der Sprachmodus. 'Leave voice mode' → „Sprachmodus verlassen“."
+ },
+ {
+  "en": "voice input / voice output",
+  "translation": "Spracheingabe / Sprachausgabe",
+  "note": "Not covered by the store copy. These are Apple's standard German terms."
+ },
+ {
+  "en": "speech recognition",
+  "translation": "Spracherkennung",
+  "note": "From the store copy. It is also Apple's privacy-pane name."
+ },
+ {
+  "en": "speak / read aloud",
+  "translation": "sprechen / vorlesen",
+  "note": "'Auto-speak answers' → „Antworten automatisch vorlesen“. 'Speak this answer' → „Antwort vorlesen“."
+ },
+ {
+  "en": "listening / start listening",
+  "translation": "Hört zu / Zuhören",
+  "note": "Use the status form „Hört zu“, or „Ich höre zu“ when M1K3 is speaking. 'Stop listening' → „Zuhören beenden“."
+ },
+ {
+  "en": "dictate / dictation (in-app)",
+  "translation": "diktieren / Diktat",
+  "note": "das Diktat. 'Discard dictation' → „Diktat verwerfen“. Use Apple's feature name „Diktierfunktion“ (glossary) only for the system feature."
+ },
+ {
+  "en": "thinking (status)",
+  "translation": "Denkt nach …",
+  "note": "'Thinking…' / 'THINKING…' → „Denkt nach …“. '%@ is thinking' → „%@ denkt nach“. Keep the single … character."
+ },
+ {
+  "en": "reasoning / think (model reasoning)",
+  "translation": "Nachdenken / nachdenken",
+  "note": "das Nachdenken. 'Always think' → „Immer nachdenken“. 'MODEL REASONING' → „DENKPROZESS DES MODELLS“. 'Reasoning models' → „Modelle, die nachdenken“. Don't keep 'Reasoning' in English."
+ },
+ {
+  "en": "persona / character (voice character)",
+  "translation": "Persona / Charakter",
+  "note": "die Persona (rare in the UI). 'Character' in voice settings → „Charakter“. 'personality' → „Persönlichkeit“."
+ },
+ {
+  "en": "todo / todo list",
+  "translation": "To-do / To-do-Liste",
+  "note": "das To-do, pl. die To-dos (Duden spelling). Never Erinnerung, which is a memory. Avoid Aufgabe so it doesn't clash with 'task'. Use „Neues To-do“ for 'Add Todo'."
+ },
+ {
+  "en": "reminder",
+  "translation": "(avoid) → To-do; Apple app: Erinnerungen",
+  "note": "Erinnerung already means a memory. Render a generic reminder as To-do or rephrase it. Use „Erinnerungen“ only as the name of Apple's app."
+ },
+ {
+  "en": "mark done / done (todo state) / resolved",
+  "translation": "Erledigt / erledigt",
+  "note": "'Resolved (%lld)' → „Erledigt (%lld)“. The 'Done' dismiss button is Apple's „Fertig“."
+ },
+ {
+  "en": "suggest / suggested / suggestion",
+  "translation": "vorschlagen / vorgeschlagen / Vorschlag",
+  "note": "der Vorschlag. 'Suggested — yours to accept' → „Vorgeschlagen – du entscheidest“."
+ },
+ {
+  "en": "pending",
+  "translation": "ausstehend"
+ },
+ {
+  "en": "inbox",
+  "translation": "Eingang",
+  "note": "der Eingang."
+ },
+ {
+  "en": "heartbeat (feature)",
+  "translation": "Herzschlag",
+  "note": "der Herzschlag. It's not on the never-translate list, so translate it. 'The heartbeat is off' → „Der Herzschlag ist aus“. 'Show the Heartbeat' → „Herzschlag anzeigen“."
+ },
+ {
+  "en": "heartbeat note",
+  "translation": "Herzschlag-Notiz",
+  "note": "die Notiz, pl. Notizen. Write the compound with a hyphen."
+ },
+ {
+  "en": "pulse (one heartbeat entry)",
+  "translation": "Puls",
+  "note": "der Puls, pl. die Pulse. 'Clear pulses' → „Pulse löschen“. 'No pulses yet' → „Noch keine Pulse“."
+ },
+ {
+  "en": "web search",
+  "translation": "Websuche",
+  "note": "die Websuche, as in the glossary and store."
+ },
+ {
+  "en": "search (verb / field)",
+  "translation": "suchen / durchsuchen",
+  "note": "„durchsuchen“ takes an object (Wissen durchsuchen). 'Clear search' → „Suche löschen“."
+ },
+ {
+  "en": "download (noun)",
+  "translation": "Download",
+  "note": "der Download, pl. Downloads (store). 'one-time download' → „einmaliger Download“. '%@ download' → „%@-Download“."
+ },
+ {
+  "en": "download (verb / button)",
+  "translation": "laden (button) / herunterladen (sentence)",
+  "note": "Buttons use Apple's short „Laden“. Sentences use „herunterladen“ (store). 'Downloading…' → „Wird geladen …“. 'Downloaded' → „Geladen“."
+ },
+ {
+  "en": "fetch (background download)",
+  "translation": "laden",
+  "note": "'Fetching in the background' → „Wird im Hintergrund geladen“."
+ },
+ {
+  "en": "kit (Get my kit / My full kit)",
+  "translation": "Ausrüstung",
+  "note": "die Ausrüstung. 'Get my kit' → „Hol meine Ausrüstung“. Keep the playful tone."
+ },
+ {
+  "en": "update (weights)",
+  "translation": "Update",
+  "note": "das Update. 'Update available' → „Update verfügbar“. 'Switch %@ to its update' → „%@ auf das Update umstellen“."
+ },
+ {
+  "en": "pair / paired / pairing code",
+  "translation": "koppeln / gekoppelt / Kopplungscode",
+  "note": "From the store copy („Kopple dein iPhone“). 'Pair a device…' → „Gerät koppeln …“. Never „verbinden“, which is 'connect'."
+ },
+ {
+  "en": "connect / connection / connected agent",
+  "translation": "verbinden / Verbindung / verbundener Agent",
+  "note": "die Verbindung. 'Connections' (memory graph links) → „Verbindungen“."
+ },
+ {
+  "en": "approve / approval / re-approve",
+  "translation": "freigeben / Freigabe / erneut freigeben",
+  "note": "Applies to scripts and devices. 'Approved' → „Freigegeben“. Use „bestätigen“ only for 'confirm'."
+ },
+ {
+  "en": "consent",
+  "translation": "Zustimmung",
+  "note": "From the store copy. This is privacy copy, so translate it literally."
+ },
+ {
+  "en": "agent / connected agents / coding agents",
+  "translation": "Agent / verbundene Agenten / Coding-Agenten",
+  "note": "der Agent, pl. die Agenten (weak noun: den/dem Agenten)."
+ },
+ {
+  "en": "Agent Log / log / logging",
+  "translation": "Agent-Protokoll / Protokoll / Protokollierung",
+  "note": "das Protokoll. 'Clear log' → „Protokoll löschen“."
+ },
+ {
+  "en": "tool / tool call",
+  "translation": "Werkzeug / Werkzeugaufruf",
+  "note": "das Werkzeug (store: „18 Werkzeugen“). The 'Tools' tab is „Werkzeuge“. MCP stays English: „MCP-Werkzeuge“."
+ },
+ {
+  "en": "server / MCP server",
+  "translation": "Server / MCP-Server",
+  "note": "der Server. The 'Server' settings pane is also „Server“."
+ },
+ {
+  "en": "Local API",
+  "translation": "Local API",
+  "note": "The store kept it in English as a feature name. Write compounds with a hyphen („Local-API-Schlüssel“) where needed."
+ },
+ {
+  "en": "API key / key",
+  "translation": "API-Schlüssel / Schlüssel",
+  "note": "der Schlüssel. 'New Key…' → „Neuer Schlüssel …“."
+ },
+ {
+  "en": "access token",
+  "translation": "Zugriffstoken",
+  "note": "das Token, pl. Tokens. 'New Token…' → „Neues Token …“."
+ },
+ {
+  "en": "base URL",
+  "translation": "Basis-URL",
+  "note": "die URL."
+ },
+ {
+  "en": "script / scripts folder",
+  "translation": "Skript / Skriptordner",
+  "note": "das Skript, pl. Skripte."
+ },
+ {
+  "en": "quarantine",
+  "translation": "Quarantäne / unter Quarantäne stellen",
+  "note": "die Quarantäne. The button form is „In Quarantäne“."
+ },
+ {
+  "en": "internal — hidden from AI",
+  "translation": "Intern – vor der KI verborgen",
+  "note": "Use KI for AI (store: „KI-Agent“), never 'AI'."
+ },
+ {
+  "en": "embeddings / embedder",
+  "translation": "Embeddings / Embedding-Modell",
+  "note": "Keep the technical term (die Embeddings). 'Semantic memory' → „semantisches Gedächtnis“."
+ },
+ {
+  "en": "re-index",
+  "translation": "neu indexieren",
+  "note": "'Re-indexing your notes…' → „Deine Notizen werden neu indexiert …“."
+ },
+ {
+  "en": "chunk",
+  "translation": "Abschnitt",
+  "note": "der Abschnitt, used in ^[%@ Abschnitt](inflect: true)."
+ },
+ {
+  "en": "source",
+  "translation": "Quelle",
+  "note": "die Quelle, used in ^[%lld Quelle](inflect: true)."
+ },
+ {
+  "en": "item",
+  "translation": "Eintrag",
+  "note": "der Eintrag, pl. Einträge. 'Indexed items' → „Indexierte Einträge“."
+ },
+ {
+  "en": "grounded answer / ground answers in",
+  "translation": "fundierte Antwort / Antworten stützen auf",
+  "note": "Store wording: „auf ihrer Grundlage antworten“."
+ },
+ {
+  "en": "caption / photo description",
+  "translation": "Bildunterschrift / Beschreibung",
+  "note": "From the store copy. 'The caption stays on this device' → „Die Bildunterschrift bleibt auf diesem Gerät“."
+ },
+ {
+  "en": "transcript / transcribe / transcription",
+  "translation": "Transkript / transkribieren / Transkription",
+  "note": "das Transkript."
+ },
+ {
+  "en": "call / call recording / record a call",
+  "translation": "Anruf / Anrufaufzeichnung / Anruf aufzeichnen",
+  "note": "der Anruf. 'Recording' (status) → „Aufnahme läuft“. Calls memory → „Anruf-Gedächtnis“ (store)."
+ },
+ {
+  "en": "export / import",
+  "translation": "exportieren / importieren",
+  "note": "'Export Memories…' → „Erinnerungen exportieren …“."
+ },
+ {
+  "en": "on-device / on this Mac",
+  "translation": "auf dem Gerät / auf diesem Mac",
+  "note": "Use „On-Device-“ only as a compound prefix (On-Device-Suche). These are privacy lines, so keep 'only' as „nur“, exactly."
+ },
+ {
+  "en": "history (a corrected fact's old wording)",
+  "translation": "Verlauf",
+  "note": "der Verlauf. 'Corrected — kept as history' → „Korrigiert – im Verlauf behalten“."
+ },
+ {
+  "en": "corrected",
+  "translation": "korrigiert"
+ },
+ {
+  "en": "review panel / side panel / review (a link or file)",
+  "translation": "Seitenbereich / ansehen",
+  "note": "'Review link %@' → „Link %@ ansehen“. 'Toggle Review Panel' → „Seitenbereich ein-/ausblenden“."
+ },
+ {
+  "en": "Sidebar",
+  "translation": "Seitenleiste",
+  "note": "Apple's term."
+ },
+ {
+  "en": "onboarding",
+  "translation": "Einrichtung",
+  "note": "'Re-run onboarding…' → „Einrichtung erneut starten …“."
+ },
+ {
+  "en": "notch HUD / heads-up display",
+  "translation": "Notch-HUD / Heads-up-Display",
+  "note": "das HUD. 'Narration HUD' → „Sprech-HUD“."
+ },
+ {
+  "en": "senses",
+  "translation": "Sinne",
+  "note": "die Sinne (battery, calendar, location context)."
+ },
+ {
+  "en": "turn on / turn off / switch (toggle)",
+  "translation": "einschalten / ausschalten / Schalter",
+  "note": "From the store copy. Labels 'On'/'Off' → „Ein“/„Aus“, as Apple does. 'Off by default' → „Standardmäßig aus“."
+ },
+ {
+  "en": "Notifications",
+  "translation": "Mitteilungen",
+  "note": "Apple's German term, not „Benachrichtigungen“. 'Notify me' → „Mitteilung senden“."
+ },
+ {
+  "en": "Keychain",
+  "translation": "Schlüsselbund",
+  "note": "Apple's German name."
+ },
+ {
+  "en": "Screen Saver",
+  "translation": "Bildschirmschoner",
+  "note": "Apple's term."
+ },
+ {
+  "en": "Dock / menu bar only",
+  "translation": "Dock / Nur Menüleiste",
+  "note": "das Dock. Menüleiste is from the glossary."
+ },
+ {
+  "en": "Privacy & Security / Location Services / Calendars",
+  "translation": "Datenschutz & Sicherheit / Ortungsdienste / Kalender",
+  "note": "Apple's System Settings pane names. Copy them exactly in paths, joined with →."
+ },
+ {
+  "en": "location / precise location",
+  "translation": "Standort / Genauer Standort",
+  "note": "These are Apple's terms."
+ },
+ {
+  "en": "Reduce Motion",
+  "translation": "Bewegung reduzieren",
+  "note": "Apple's accessibility setting name."
+ },
+ {
+  "en": "launch at login",
+  "translation": "bei der Anmeldung starten",
+  "note": "'Launch M1K3 at login' → „M1K3 bei der Anmeldung starten“."
+ },
+ {
+  "en": "Privacy (settings pane) / private",
+  "translation": "Datenschutz / privat",
+  "note": "Settings pane: „Datenschutz“. Keep the store's „Privat aus Prinzip“ register."
+ },
+ {
+  "en": "Private Cloud (short for Private Cloud Compute)",
+  "translation": "Private Cloud",
+  "note": "Keep it in English. The store has „Apples private Cloud“ in running text, but use „Private Cloud“ in the UI."
+ },
+ {
+  "en": "Declared Age Range",
+  "translation": "Angegebene Altersgruppe",
+  "note": "Not verified against Apple's German string. A native reader must check it."
+ },
+ {
+  "en": "echo cancellation",
+  "translation": "Echounterdrückung"
+ },
+ {
+  "en": "Dyslexia-friendly (reading mode)",
+  "translation": "Legastheniefreundlich",
+  "note": "'Reading mode' → „Lesemodus“. Bionic reader stays „Bionic Reader“ (trademark-like). OpenDyslexic stays as is."
+ },
+ {
+  "en": "Serif / system font",
+  "translation": "Serifenschrift / Systemschrift"
+ },
+ {
+  "en": "sound effects / earcons",
+  "translation": "Soundeffekte / Hinweistöne"
+ },
+ {
+  "en": "dial-up sound / modem",
+  "translation": "Einwahlton / Modem",
+  "note": "das Modem. 'Mute the modem' → „Modem stummschalten“."
+ },
+ {
+  "en": "seasonal looks / skin",
+  "translation": "Saison-Looks / Look",
+  "note": "der Look. Keep it playful."
+ },
+ {
+  "en": "self-test",
+  "translation": "Selbsttest"
+ },
+ {
+  "en": "report (an issue) / crash / hang",
+  "translation": "melden / Absturz / Hänger",
+  "note": "'Report an issue…' → „Problem melden …“. Round Tower stays English."
+ },
+ {
+  "en": "Settings tabs: General / Advanced / Diagnostics / Startup / Intelligence / You",
+  "translation": "Allgemein / Erweitert / Diagnose / Start / Intelligenz / Du",
+  "note": "These are Apple's standard pane words. 'You' → „Du“, capitalised as a title."
+ },
+ {
+  "en": "generation stats",
+  "translation": "Generierungsstatistik",
+  "note": "'tokens/sec' stays as is. das Token."
+ },
+ {
+  "en": "offline",
+  "translation": "offline",
+  "note": "Lower case, as in the store („komplett offline“)."
+ },
+ {
+  "en": "Delete / Remove / Clear",
+  "translation": "Löschen / Entfernen / Löschen",
+  "note": "Use the short forms. 'Clear' resets a list or field („Löschen“), but 'Clear search' → „Suche zurücksetzen“ when space allows."
+ }
+]
