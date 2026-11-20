@@ -236,7 +236,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En pausa mientras el dispositivo está caliente."
+            "value" : "En pausa mientras el dispositivo se calienta."
           }
         },
         "fr" : {

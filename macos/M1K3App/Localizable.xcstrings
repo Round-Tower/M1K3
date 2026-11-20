@@ -3632,7 +3632,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Konfiguriere M1K3s Mainframe"
+            "value" : "M1K3s Mainframe wird konfiguriert"
           }
         },
         "es" : {
@@ -5026,7 +5026,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Baixar %@ →"
+            "value" : "Baixar o %@ →"
           }
         }
       }
@@ -6777,7 +6777,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seguiremos con %@ mientras se descarga %@: cambiaré en cuanto esté listo."
+            "value" : "Me quedo con %@ mientras se descarga %@: cambiaré en cuanto esté listo."
           }
         },
         "fr" : {
@@ -17099,7 +17099,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "poco tamaño"
+            "value" : "tamaño reducido"
           }
         },
         "fr" : {

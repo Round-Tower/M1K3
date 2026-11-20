@@ -62,13 +62,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ von Kokoro stimmt nicht mit dem für round-tower/Kokoro-82M-bf16 festgelegten Digest überein – wird nicht verwendet"
+            "value" : "Die Datei %@ von Kokoro stimmt nicht mit dem für round-tower/Kokoro-82M-bf16 festgelegten Digest überein – sie wird nicht verwendet"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El %@ de Kokoro no coincide con el digest fijado para round-tower/Kokoro-82M-bf16; se rechaza su uso"
+            "value" : "El archivo %@ de Kokoro no coincide con el digest fijado para round-tower/Kokoro-82M-bf16; se rechaza su uso"
           }
         },
         "fr" : {
@@ -80,7 +80,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O %@ do Kokoro não corresponde ao digest fixado para round-tower/Kokoro-82M-bf16 — uso recusado"
+            "value" : "O arquivo %@ do Kokoro não corresponde ao digest fixado para round-tower/Kokoro-82M-bf16 — uso recusado"
           }
         }
       }
