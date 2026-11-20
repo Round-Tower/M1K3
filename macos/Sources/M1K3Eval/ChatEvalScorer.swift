@@ -123,9 +123,14 @@
 //  every older document decodes (pinned). Confidence 0.85: the guard is the app's own, applied to the think-stripped text.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `EvalObservation.toolsOffered` (default true): a path
 //  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replies in <code>` for a fixture's `replyLanguage`: Apple's
+//  recogniser reads the answer's prose (fences, inline code and links dropped). Only the language kind sets it, so
+//  every other kind scores as before. Confidence 0.8 (the recogniser misreads very short answers; the fixtures ask
+//  for a sentence or more).
 
 import Foundation
 import M1K3Inference
+import NaturalLanguage
 import Synchronization
 
 public enum CheckOutcome: String, Sendable, Equatable, Codable {
@@ -740,6 +745,32 @@ public enum ChatEvalScorer {
         needle.hasPrefix("\n") ? "\n" + haystack : haystack
     }
 
+    /// The language an answer's prose is written in ("de", "pt", "zh-Hans"), or nil with no letters to read.
+    /// Fenced code, inline code and links are dropped; region tags fold to the language. Read sentence by
+    /// sentence and won by letters: the recogniser weighs a text's opening heavily (one German line above six
+    /// English ones read German at 0.96), so an English answer that opens "Bonjour!" would read French whole.
+    static func replyLanguage(of answer: String) -> String? {
+        var prose = RefusalHeuristic.proseOutsideFences(answer)
+        for pattern in [#"`[^`\n]*`"#, #"\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+"#] {
+            prose = prose.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
+        }
+        let sentences = prose.split { "\n.!?。！？".contains($0) }.map(String.init)
+        var letters: [String: Int] = [:]
+        for sentence in sentences {
+            let weight = sentence.unicodeScalars.count(where: \.properties.isAlphabetic)
+            guard weight > 0 else { continue }
+            let recognizer = NLLanguageRecognizer()
+            recognizer.processString(sentence)
+            guard var code = recognizer.dominantLanguage?.rawValue else { continue }
+            // Kana is only ever Japanese; a kanji-heavy Japanese sentence can read as Chinese.
+            let kana = sentence.unicodeScalars.contains { (0x3040 ... 0x30FF).contains($0.value) }
+            if code.hasPrefix("zh"), kana { code = "ja" }
+            if !code.hasPrefix("zh") { code = code.split(separator: "-").first.map(String.init) ?? code }
+            letters[code, default: 0] += weight
+        }
+        return letters.max { $0.value < $1.value || ($0.value == $1.value && $0.key > $1.key) }?.key
+    }
+
     /// Score one observation against one fixture. Emits the two always-on
     /// checks (non-empty, no-think-leak) plus one per populated expectation.
     /// `latencyCeilingMS`: when set, a turn slower than the ceiling FAILS the
@@ -861,6 +892,17 @@ public enum ChatEvalScorer {
                     name: "spoken has no markup", outcome: .skip, detail: "no spoken text (swift test)"
                 ))
             }
+        }
+
+        // The language kind (2026-11-19): the reply's prose, read by Apple's recogniser, must be in the
+        // person's language. Code and links say nothing, so they are dropped first.
+        if let wanted = exp.replyLanguage {
+            let read = Self.replyLanguage(of: answer)
+            checks.append(EvalCheck(
+                name: "replies in \(wanted)",
+                outcome: read == wanted ? .pass : .fail,
+                detail: "read \(read ?? "nothing")"
+            ))
         }
 
         // Whole-word when the fixture opts in (vision, reasoning); raw substring otherwise,

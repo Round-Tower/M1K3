@@ -268,6 +268,11 @@
 //  route says `noneTakesAgent`, with the palette off the web (`offlinePalette`; nothing left = plain); a pick the
 //  search head emptied stays plain. Confidence 0.8: the gain is the 11-19
 //  route control's, re-measured by the arm in the PR.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider`: the turn's reply-language line
+//  (`ReplyLanguage.clause`) joins `turnClauses` last, nearest the question, on every route that calls it, reading
+//  the person's earlier turns too (a short turn keeps their language). nil by default and for English, so an
+//  unwired or English prompt is byte-identical. The look, read and Private Cloud routes build their own prompts
+//  and carry none of the turn clauses (a follow-up). Confidence 0.75 until the language arm reads it.
 
 import Foundation
 import M1K3Agent
@@ -355,6 +360,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// What the mic heard during a voice turn ("music (guitar)"), set by the voice shell for
     /// that turn only (TurnClauseSlot); nil for typed turns.
     private let voiceClauseProvider: @Sendable () -> String?
+    /// The turn's reply-language line (`ReplyLanguage.clause`, 2026-11-19), read from the turn's own text and the
+    /// person's earlier turns (oldest first); nil for English and wherever no shell wires it.
+    private let replyLanguageClauseProvider: @Sendable (String, [String]) -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -397,7 +405,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         ageClauseProvider: @escaping @Sendable () -> String? = { nil },
         egressClauseProvider: @escaping @Sendable () -> String? = { nil },
         styleClauseProvider: @escaping @Sendable () -> String? = { nil },
-        voiceClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
+        voiceClauseProvider: @escaping @Sendable () -> String? = { nil },
+        replyLanguageClauseProvider: @escaping @Sendable (String, [String]) -> String? = { _, _ in nil },
+        // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         appStateProvider: (@Sendable () -> String?)? = nil,
@@ -423,6 +433,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.egressClauseProvider = egressClauseProvider
         self.styleClauseProvider = styleClauseProvider
         self.voiceClauseProvider = voiceClauseProvider
+        self.replyLanguageClauseProvider = replyLanguageClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.appStateProvider = appStateProvider
@@ -865,7 +876,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // A dispatched turn: the date (not the identity line) and the age clause.
             Self.dispatchTurnPrompt(
                 question: question,
-                preamble: ([PromptContext.line(now: Date(), brainName: "")] + turnClauses(for: question))
+                preamble: ([PromptContext.line(now: Date(), brainName: "")]
+                    + turnClauses(for: question, history: history))
                     .compactMap { $0 }.joined(separator: "\n\n"),
                 history: history, historyBudget: historyBudget, observation: observation
             )
@@ -875,7 +887,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // `datetime`, and the persona keeps the month and year.
             Self.plainTurnPrompt(
                 question: question,
-                contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())] + turnClauses(for: question))
+                contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())]
+                    + turnClauses(for: question, history: history))
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudget,
@@ -1229,7 +1242,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // The result keeps its framed header (the injection guard) and the age clause
             // rides along: this path once handed the raw web text over bare (PR #424 review).
             let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())]
-                + turnClauses(for: question)).compactMap { $0 }.joined(separator: "\n\n")
+                + turnClauses(for: question, history: history)).compactMap { $0 }.joined(separator: "\n\n")
             let framed = zip(steps, blocks).map { step, block in
                 ReasoningStep(iteration: step.iteration, thought: "", action: step.action, observation: block)
             }
@@ -1262,7 +1275,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// gates on the question: Kev's iPhone (build 544) answered "a recipe for banana bread" on the DISPATCH
     /// route with the clause's quoted answer word for word, then the web result — the clause sits right
     /// above the observation and the rules there, nearer the question than anything else.
-    private func turnClauses(for question: String) -> [String?] {
+    private func turnClauses(for question: String, history: [ChatTurn]) -> [String?] {
         // The egress answer as this brain's persona reads it: pocket's starts at the facts
         // (`EgressDisclosure.adapted`).
         let variant = (provider as? ToolCallingProvider)?.personaVariant ?? .standard
@@ -1273,7 +1286,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         // #768: the turn straight after a look cannot see the picture, and is told so (that turn only).
         let afterLook = LookAftermath.withholdsWeb ? LookAftermath.clause : nil
-        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook]
+        // Last, nearest the question: the language the reply must come back in (nil for English).
+        let replyLanguage = replyLanguageClauseProvider(question, history.filter { $0.role == .user }.map(\.text))
+        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, replyLanguage]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
@@ -1298,7 +1313,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Prepended here (not inside `grounding`, which stays pure/testable) so it
         // rides the variable grounding, never the cached persona prefix.
         let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
-        let contextPreamble = ([contextLine] + turnClauses(for: question)).compactMap { $0 }.joined(separator: "\n\n")
+        let contextPreamble = ([contextLine] + turnClauses(for: question, history: history))
+            .compactMap { $0 }.joined(separator: "\n\n")
         let toolNames = Set(tools.map(\.name))
         let historyBudget = historyBudgetProvider().reservingImages(images.count)
         let ambient = ambientSection()

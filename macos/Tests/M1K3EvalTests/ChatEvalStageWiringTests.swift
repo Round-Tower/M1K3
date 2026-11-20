@@ -24,6 +24,8 @@
 //  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #728's master merge: the bare arm hands in the spoken text AND says no
 //  tool was offered (`toolsOffered: false`, #713), so its pin names both. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language kind shares heard's live-path arm and warms the
+//  embedder; the reply-language clause is wired from `M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE`.
 //
 
 import Foundation
@@ -140,10 +142,21 @@ struct ChatEvalStageWiringTests {
     func heardArmWiring() throws {
         let text = try Self.code(Self.stageSource())
         let run = try Self.body(of: "private static func runFixture(", in: text)
-        let arm = try #require(run.range(of: "case .heard:"), "no heard arm in runFixture")
+        let arm = try #require(run.range(of: "case .heard, .language:"), "no heard arm in runFixture")
         let next = try #require(run[arm.upperBound...].range(of: "case "))
         #expect(run[arm.upperBound ..< next.lowerBound].contains("livePathObservation("))
         let embeds = try Self.body(of: "private static func runEmbeds(", in: text)
         #expect(embeds.contains("kinds.contains(.heard)"), "a heard-only run must still warm the embedder")
+    }
+
+    /// 2026-11-19: the language kind shares heard's arm (the live path, where the reply-language clause rides), and
+    /// the clause is wired from the env, off unless asked for.
+    @Test("a language fixture takes the live path, and its clause is wired from the env")
+    func languageArmWiring() throws {
+        let text = try Self.code(Self.stageSource())
+        let embeds = try Self.body(of: "private static func runEmbeds(", in: text)
+        #expect(embeds.contains("kinds.contains(.language)"), "a language-only run must still warm the embedder")
+        #expect(text.contains("M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE"))
+        #expect(text.contains("replyLanguageClauseProvider:"))
     }
 }

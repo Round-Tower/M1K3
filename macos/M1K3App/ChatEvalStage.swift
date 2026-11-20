@@ -145,6 +145,8 @@
 //  Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `_ROUTER_NONE_AGENT=1` wires `toolNoneToAgent` like the Mac app, and every
 //  live-path turn records the tools it ran (`tools` skip check). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the language arm: `_REPLY_LANGUAGE=1` wires the app's reply-language
+//  clause, `_DEVICE_LANGUAGE` stands in for the device's (default en). Off by default, so older arms are unchanged.
 
 import Foundation
 
@@ -482,6 +484,15 @@ enum ChatEvalStage {
                 )
             },
             styleClauseProvider: { steer.clause },
+            // The language arm (2026-11-19): `_REPLY_LANGUAGE=1` wires the app's clause; `_DEVICE_LANGUAGE`
+            // stands in for the device's language list (unset = English, so a short turn adds nothing).
+            replyLanguageClauseProvider: { turn, earlier in
+                guard SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE") == "1" else { return nil }
+                return ReplyLanguage.clause(
+                    for: turn, earlierTurns: earlier,
+                    deviceLanguage: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE") ?? "en"
+                )
+            },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
@@ -580,7 +591,7 @@ enum ChatEvalStage {
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
         if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong)
-            || kinds.contains(.mechanic) || kinds.contains(.heard) { return true }
+            || kinds.contains(.mechanic) || kinds.contains(.heard) || kinds.contains(.language) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -976,8 +987,9 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation,
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
-            case .heard:
-                // Always the live path, with the app's router (no room line in the eval) (#852).
+            case .heard, .language:
+                // Always the live path, with the app's router (no room line in the eval) (#852). The language
+                // kind too (2026-11-19): its clause rides the live responder's `turnClauses`, nowhere else.
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )

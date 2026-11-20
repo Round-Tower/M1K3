@@ -111,6 +111,8 @@ Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on for
 shipped head is still the untrained stub, which never vetoes. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-11-19 — `--router-none-agent` (M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT): a picker
 `none` takes the agent turn, on under dispatch like the Mac app; `--no-router-none-agent` is the off arm. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-11-19 — `--reply-language` (on by default on the live path, like the app) and
+`--device-language` (the clause's short-turn fallback): the language arm's switches. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -274,6 +276,8 @@ class RunOptions:
     router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
     router_search: bool | None = None  # the search head's veto (toolSearchHead, #713); None → on, like the Mac app
     router_none_agent: bool | None = None  # a picker `none` takes the agent turn (toolNoneToAgent); None → on, like the Mac
+    reply_language: bool | None = None  # the reply-language clause (2026-11-19); None → on on the live path, like the app
+    device_language: str | None = None  # stands in for the device's language list (the clause's short-turn fallback)
 
 
 def route_warning(opts: RunOptions) -> str | None:
@@ -388,6 +392,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
     ) and opts.router != "dispatch":
         # An explicit off is fine anywhere.
         raise ValueError("router head/chain/search/none-agent need --router dispatch (the app reads them only there)")
+    if opts.device_language and opts.reply_language is False:
+        raise ValueError("--device-language needs the reply-language clause on (it is the clause's fallback)")
     report = out_path(container, opts.name)
     trig = {
         "M1K3_SELFTEST": "1",
@@ -426,6 +432,11 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         # A picker `none` takes the agent turn on the Mac (2026-11-19, `toolNoneToAgent`, `whenUnset: true`).
         if opts.router == "dispatch" and opts.router_none_agent is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_NONE_AGENT"] = "1"
+    # The Mac and iPhone wire the clause on when unset (`ReplyLanguage.liveClause`); the bare arm has no responder.
+    if opts.live_path and opts.reply_language is not False:
+        trig["M1K3_SELFTEST_CHATEVAL_REPLY_LANGUAGE"] = "1"
+        if opts.device_language:
+            trig["M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE"] = opts.device_language
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -885,6 +896,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--router-none-agent", action=argparse.BooleanOptionalAction, default=None,
                     help="with --router dispatch: a picker `none` takes the agent turn, not a plain turn "
                          "(toolNoneToAgent; default on, as the Mac app)")
+    ap.add_argument("--reply-language", action=argparse.BooleanOptionalAction, default=None,
+                    help="the reply-language clause (default: on on the live path, like the app; --no- for the baseline)")
+    ap.add_argument("--device-language", help="the device language the clause falls back to on short turns (default en)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -921,6 +935,7 @@ def main(argv: list[str] | None = None) -> int:
         calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
         router_search=args.router_search, router_none_agent=args.router_none_agent,
+        reply_language=args.reply_language, device_language=args.device_language,
     )
     if args.app_arg and not args.direct:
         print("✗ --app-arg needs --direct (an `open -a` launch carries no argv)", file=sys.stderr)

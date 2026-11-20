@@ -198,6 +198,8 @@
 //  .failed message and "Brain at Home" stay English: AppStateLine renders them into the model's prompt.
 //  Review: claude-opus-5-5, 2026-11-19 — build stage: Int arguments go in as String, because a localized Int
 //  interpolation groups digits ("3,060") where the old plain String did not.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — `replyLanguageClauseProvider`, the Mac's wiring mirrored: the reply
+//  comes back in the turn's language, else the device's. Confidence 0.7 until the language arm reads it.
 
 import AVFoundation
 #if os(iOS)
@@ -1759,6 +1761,8 @@ final class AppCore {
             },
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
+            // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
+            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0, earlierTurns: $1) },
             appStateProvider: { Self.appStateLine(afm: afm) },
             // The Mac's tool router, mirrored. Every brain takes it (Kev, 2026-11-02): without it Lil's every
             // message was an agent turn over pasted history, and Lil copied its last answer back word for word.

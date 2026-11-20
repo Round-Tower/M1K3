@@ -41,6 +41,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-11-05 — the two egress tests ask a privacy question: the clause is gated on
 //  the question on every route now (`EgressDisclosure.applies(to:)`), and `egressClauseInjected` pins the seal
 //  question carrying none.
+//  Review: Kev + claude-opus-5-5, 2026-11-19 — the reply-language clause: a German turn carries it, an English one
+//  does not, and a short turn carries the language of the person's earlier turn.
 
 import Foundation
 import M1K3Agent
@@ -975,6 +977,47 @@ struct AgentRAGResponderTests {
             #expect(prompt.contains("I decide when to search"))
             #expect(prompt.contains("Yes, some of it can") == (variant == .standard), "\(variant)")
         }
+    }
+
+    /// Kev, 2026-11-19: replies come back in the person's language. The clause reads the turn's own text, and an
+    /// English turn adds nothing.
+    @Test("a German turn carries the reply-language clause, an English one carries none")
+    func replyLanguageClauseFollowsTheTurn() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider([
+            "CONCLUSION: Die Dichtung ist ausgefallen. [Plant Notes §3.2 Seals]",
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+        ])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            replyLanguageClauseProvider: { ReplyLanguage.clause(for: $0, earlierTurns: $1, deviceLanguage: "en") }
+        )
+        let german = "Welche Hydraulikdichtung ist am Förderband unter Last ausgefallen?"
+        let english = "What hydraulic seal failed on the conveyor under load?"
+        _ = try await collect(responder.answerStreaming(german).stream)
+        _ = try await collect(responder.answerStreaming(english).stream)
+        #expect(provider.allPrompts.first?.contains("reply in German") == true)
+        #expect(provider.allPrompts.last?.contains("reply in") == false)
+    }
+
+    /// A short turn keeps the person's language from the history: "danke!" after a German question stays German.
+    @Test("a short turn carries the reply language of the person's earlier turn")
+    func replyLanguageCarriesThroughHistory() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: Gern geschehen. [Plant Notes §3.2 Seals]"])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            replyLanguageClauseProvider: { ReplyLanguage.clause(for: $0, earlierTurns: $1, deviceLanguage: "en") }
+        )
+        let history = [
+            ChatTurn(role: .user, text: "Welche Hydraulikdichtung ist am Förderband unter Last ausgefallen?"),
+            ChatTurn(role: .assistant, text: "Die Dichtung in Abschnitt 3.2."),
+        ]
+        let (_, stream) = try await responder.answerStreaming("danke!", history: history) { _ in }
+        _ = await collect(stream)
+        #expect(provider.allPrompts.first?.contains("reply in German") == true)
     }
 
     /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.
