@@ -151,6 +151,8 @@
 //  `thinkingShapeProvider`, the app's `-thinkingShape` arm (unset = off). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — an unset `_THINKING_SHAPE` now runs the app's shipped shape for the
 //  tier (steps on Lil), so a plain eval still wires like the app. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — the activity switch lists `.deliberating` ("The Tell"); the eval
+//  wires no `thinkAsideProvider`, so it never fires here. Confidence 0.9.
 
 import Foundation
 
@@ -519,7 +521,7 @@ enum ChatEvalStage {
                     switch activity {
                     case let .usingTool(name, _): tools.append(name)
                     case let .note(line): notes.withLock { $0.append(line) }
-                    case .retrieving, .thinking: break
+                    case .retrieving, .thinking, .deliberating: break
                     }
                 }
             )

@@ -181,6 +181,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the live AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": the send's avatar holds `.thinking` while the answer carries a
+//  `thinkAside` (a think was announced), so the pose matches the quiet; other turns keep the 600 ms advance.
+//  Verify-by-launch. Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -1548,6 +1551,11 @@ final class AppEnvironment {
         // bounces while the LLM streams. Self-cancelling if the response is fast.
         let advance = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
+            // "The Tell": a turn that announced a think holds the thinking pose until the answer's first words,
+            // instead of miming speech through a ~35 s think. Every other turn advances as before.
+            while !Task.isCancelled, self?.chat.messages.last?.thinkAside != nil {
+                try? await Task.sleep(for: .milliseconds(150))
+            }
             guard let self else { return }
             if case .thinking = avatar.state.activity {
                 avatar.setActivity(.generating)
