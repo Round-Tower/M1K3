@@ -149,6 +149,8 @@
 //  clause, `_DEVICE_LANGUAGE` stands in for the device's (default en). Off by default, so older arms are unchanged.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — `_THINKING_SHAPE=off|think|steps` sets the live path's
 //  `thinkingShapeProvider`, the app's `-thinkingShape` arm (unset = off). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — an unset `_THINKING_SHAPE` now runs the app's shipped shape for the
+//  tier (steps on Lil), so a plain eval still wires like the app. Confidence 0.85.
 
 import Foundation
 
@@ -475,7 +477,10 @@ enum ChatEvalStage {
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
             thinkingShapeProvider: {
-                ThinkingShapeMode(argument: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"))
+                ThinkingShapeMode(
+                    argument: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"),
+                    fallback: .shippedDefault(isLil: thinking.isLil)
+                )
             },
             turnNoteProvider: turnNote,
             groundingBudgetProvider: { Self.groundingBudget },

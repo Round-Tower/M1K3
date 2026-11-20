@@ -8,6 +8,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85, Prior: none (new
 //  file; GEMMA_1_1_PLAN critical pass, item 3).
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — pins `isLil` (the eval's shipped-shape fallback). Confidence 0.85.
 
 @testable import M1K3Eval
 import M1K3Inference
@@ -27,6 +28,15 @@ struct EvalThinkingPlanTests {
         #expect(big.liveForced == nil)
 
         #expect(EvalThinkingPlan(tier: .mini, mode: .tier).liveFastByDefault == BrainTier.mini.prefersFastThinking)
+    }
+
+    @Test("the plan knows its brain is Lil in every mode, so the live arm can take the app's shipped shape")
+    func knowsLil() {
+        for mode in EvalThinkingMode.allCases {
+            #expect(EvalThinkingPlan(tier: .lil, mode: mode).isLil)
+            #expect(!EvalThinkingPlan(tier: .big, mode: mode).isLil)
+            #expect(!EvalThinkingPlan(tier: .mini, mode: mode).isLil)
+        }
     }
 
     @Test("always and fast force every arm the same way, whatever the tier")

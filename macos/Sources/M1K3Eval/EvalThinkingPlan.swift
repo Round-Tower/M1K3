@@ -17,6 +17,8 @@
 //  file; GEMMA_1_1_PLAN critical pass, item 3).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the construction-flag gap is closed (#555); `bareThinks` scopes
 //  the bare arms only.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `isLil`, so the live arm falls back to the app's shipped reasoning
+//  shape for the tier. Confidence 0.85.
 
 import M1K3Inference
 
@@ -48,8 +50,12 @@ public struct EvalThinkingPlan: Sendable, Equatable {
     public let liveFastByDefault: Bool
     /// nil runs the live arm in production Auto; true/false forces always/fast.
     public let liveForced: Bool?
+    /// The plan's brain is Lil: the live arm then reasons in the app's shipped shape when no arm is named
+    /// (`ThinkingShapeMode.shippedDefault`, in M1K3Chat, which this target doesn't import).
+    public let isLil: Bool
 
     public init(tier: BrainTier, mode: EvalThinkingMode) {
+        isLil = tier == .lil
         switch mode {
         case .tier:
             bareThinks = !tier.prefersFastThinking

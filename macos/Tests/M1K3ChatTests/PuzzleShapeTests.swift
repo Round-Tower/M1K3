@@ -12,6 +12,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-20, Confidence 0.7 (a lexical heuristic; its real
 //  precision is the blind set's number, not these). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `shippedDefault`: Lil reasons in steps by default (Kev's call on the
+//  A/B); an explicit arm still wins. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Chat
@@ -254,5 +256,16 @@ struct ThinkingShapePolicyTests {
         #expect(ThinkingShapeMode(argument: "off") == .off)
         #expect(ThinkingShapeMode(argument: nil) == .off)
         #expect(ThinkingShapeMode(argument: "bogus") == .off)
+    }
+
+    @Test("Lil ships reasoning in steps; every other brain keeps today's policy; an explicit arm still wins")
+    func shippedDefault() {
+        // Kev, 2026-11-20: steps on Lil (reasoning +7 −0 vs off at 8.9 s; think won 50/52 but at 40 s).
+        #expect(ThinkingShapeMode.shippedDefault(isLil: true) == .steps)
+        #expect(ThinkingShapeMode.shippedDefault(isLil: false) == .off, "Mini and Big are unmeasured")
+        #expect(ThinkingShapeMode(argument: nil, fallback: .steps) == .steps)
+        #expect(ThinkingShapeMode(argument: "bogus", fallback: .steps) == .steps)
+        #expect(ThinkingShapeMode(argument: "off", fallback: .steps) == .off, "the A/B can still run off")
+        #expect(ThinkingShapeMode(argument: "think", fallback: .steps) == .think)
     }
 }

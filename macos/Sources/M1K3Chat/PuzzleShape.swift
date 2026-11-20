@@ -30,6 +30,9 @@
 //  100 KB turn). Open: logistics asks with a date and a time ("how long is the flight on 14 March, boarding 10:30?")
 //  read as two quantities plus a counting ask; the A/B's think rate on non-reasoning kinds measures it before any
 //  change. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — Kev shipped `steps` for Lil (`shippedDefault`; Mini and Big
+//  unmeasured, so off). The second steps trial waits until after 1.5. Confidence 0.75 (one clean trial).
+//
 
 import Foundation
 
@@ -167,7 +170,8 @@ public enum PuzzleShape {
     }
 }
 
-/// The `thinkingShape` A/B arm (launch argument / defaults key). `off` is today's policy.
+/// How a speed tier reasons on a puzzle-shaped turn. Lil ships `steps` (`shippedDefault`); the launch argument /
+/// defaults key still selects any arm for an A/B.
 public enum ThinkingShapeMode: String, CaseIterable, Sendable {
     /// Today: a speed tier thinks only on an explicit English "explain / step by step" ask.
     case off
@@ -179,7 +183,14 @@ public enum ThinkingShapeMode: String, CaseIterable, Sendable {
     /// UserDefaults key (`M1K3 -thinkingShape think`).
     public static let defaultsKey = "thinkingShape"
 
-    public init(argument: String?) {
-        self = argument.flatMap(Self.init(rawValue:)) ?? .off
+    /// An explicit arm wins; unset or unknown falls back (`.off` unless the shell passes the shipped default).
+    public init(argument: String?, fallback: ThinkingShapeMode = .off) {
+        self = argument.flatMap(Self.init(rawValue:)) ?? fallback
+    }
+
+    /// The shipped shape (Kev, 2026-11-20): Lil reasons in steps, which won reasoning +7 −0 over off at 8.9 s, where
+    /// `think` won more (50/52) but at a 40 s median, and Lil is the fast brain. Mini and Big were not measured: off.
+    public static func shippedDefault(isLil: Bool) -> ThinkingShapeMode {
+        isLil ? .steps : .off
     }
 }

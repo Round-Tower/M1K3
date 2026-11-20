@@ -205,6 +205,8 @@
 //  Phase 2). English locales unchanged. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider`, the Mac's `-thinkingShape` arm mirrored
 //  (unset = off). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — Lil reasons in steps here too (Kev: "the same everywhere"); the
+//  A/B was Mac-only, so the phone's read is owed in the TestFlight notes. Confidence 0.75.
 
 import AVFoundation
 #if os(iOS)
@@ -1729,9 +1731,14 @@ final class AppCore {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
             },
-            // The Mac's A/B arm, mirrored (`-thinkingShape`); unset = off, today's policy.
+            // Lil reasons in steps, the same as the Mac (Kev, 2026-11-20); `-thinkingShape` still picks an A/B arm.
             thinkingShapeProvider: {
-                ThinkingShapeMode(argument: UserDefaults.standard.string(forKey: ThinkingShapeMode.defaultsKey))
+                let defaults = UserDefaults.standard
+                let isLil = BrainTier(persisted: defaults.string(forKey: Self.selectedBrainKey) ?? "") == .lil
+                return ThinkingShapeMode(
+                    argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
+                    fallback: .shippedDefault(isLil: isLil)
+                )
             },
             historyBudgetProvider: {
                 // Read fresh each turn (hot-swap).

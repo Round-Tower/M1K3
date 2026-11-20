@@ -65,6 +65,8 @@
 //  Confidence 0.7 until the language arm reads it.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider` reads `-thinkingShape` (unset = off, today's
 //  policy): the A/B arm for a speed tier thinking, or working in steps, on a puzzle-shaped turn. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — Lil reasons in steps by default (`ThinkingShapeMode.shippedDefault`,
+//  Kev's call on the A/B); `-thinkingShape` still overrides. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -515,9 +517,14 @@ extension AppEnvironment {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
             },
-            // The 2026-11-20 A/B arm (`M1K3 -thinkingShape think|steps`); unset = off, today's policy.
+            // Lil reasons in steps (Kev, 2026-11-20); `M1K3 -thinkingShape off|think|steps` still picks an A/B arm.
             thinkingShapeProvider: {
-                ThinkingShapeMode(argument: UserDefaults.standard.string(forKey: ThinkingShapeMode.defaultsKey))
+                let defaults = UserDefaults.standard
+                let isLil = BrainTier(persisted: defaults.string(forKey: Self.selectedBrainKey) ?? "") == .lil
+                return ThinkingShapeMode(
+                    argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
+                    fallback: .shippedDefault(isLil: isLil)
+                )
             },
             // Read fresh each turn so a hot-swap re-sizes the window immediately.
             historyBudgetProvider: { Self.liveHistoryBudget() },
