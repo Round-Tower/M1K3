@@ -127,6 +127,7 @@
 //  recogniser reads the answer's prose (fences, inline code and links dropped). Only the language kind sets it, so
 //  every other kind scores as before. Confidence 0.8 (the recogniser misreads very short answers; the fixtures ask
 //  for a sentence or more).
+//  Review: claude-opus-5-5, 2026-11-20 — `routeStages` doc names `picker-failed` (a pick that threw). Doc only.
 
 import Foundation
 import M1K3Inference
@@ -171,7 +172,8 @@ public struct EvalObservation: Sendable, Equatable {
     /// Wall-clock for the turn, milliseconds.
     public let latencyMS: Int
     /// The router's stages for this turn, in order (`PickStage` raw values: head / picker /
-    /// agent). Empty when the turn never reached a pick: a chat verdict, or no router at all.
+    /// agent / picker-failed, …). Empty when the turn never reached a pick: a chat verdict, or no router at all.
+    /// `picker-failed` means Apple's pick threw and the agent route answered: the turn measured the fallback.
     public let routeStages: [String]
     /// First token → first answer token on the live stream (`ThinkPhaseClock`);
     /// nil when nothing was thought or the path has no stream timing.

@@ -210,6 +210,8 @@
 //  (unset = off). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — Lil reasons in steps here too (Kev: "the same everywhere"); the
 //  A/B was Mac-only, so the phone's read is owed in the TestFlight notes. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-20 — the chat-history and memory-graph opens log WHY they failed (`ErrorChain`
+//  domains and codes) instead of `try?`: a failed open made chat non-persistent or the graph go quiet, unseen.
 
 import AVFoundation
 #if os(iOS)
@@ -804,7 +806,14 @@ final class AppCore {
 
         let base = try Self.appSupportDirectory()
         store = try KnowledgeStore(path: base.appendingPathComponent("knowledge.sqlite").path)
-        memoryStore = try? MemoryStore(path: base.appendingPathComponent("memory.sqlite").path)
+        do {
+            memoryStore = try MemoryStore(path: base.appendingPathComponent("memory.sqlite").path)
+        } catch {
+            // Without this line a failed open only shows as the graph going quiet (no mirror, no style refresh).
+            let reason = ErrorChain.summary(error)
+            M1K3Log.logger(.memoryGraph).error("memory graph unavailable: \(reason, privacy: .public)")
+            memoryStore = nil
+        }
 
         // Hashing embeddings by default — no ~600 MB embedder download on the
         // first-run critical path.
@@ -883,9 +892,16 @@ final class AppCore {
         activeProvider = slot
 
         let responder = Self.makeResponder(store: store, embedder: baseEmbedder, provider: slot)
-        let history = try? GRDBChatHistoryStore(
-            path: base.appendingPathComponent("chat-history.sqlite").path
-        )
+        let history: GRDBChatHistoryStore?
+        do {
+            history = try GRDBChatHistoryStore(path: base.appendingPathComponent("chat-history.sqlite").path)
+        } catch {
+            // The one line that says why chat stopped saving (a full disk, a lock, a migration that threw).
+            let reason = ErrorChain.summary(error)
+            M1K3Log.logger(.chatSession)
+                .error("chat history unavailable, this session won't be saved: \(reason, privacy: .public)")
+            history = nil
+        }
         // Screengrab harness: the hero conversation must exist BEFORE the
         // session's resume-most-recent read below (AppCore+Screengrab).
         Self.seedScreengrabHistory(into: history, root: base)

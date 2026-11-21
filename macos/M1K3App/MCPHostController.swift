@@ -68,6 +68,8 @@
 //  transcript (M1K3Voice.ListenEndpoint): a silent mic came back as "you you" twice, and a ghost ended the
 //  listen 2 s after it appeared. Confidence 0.75: the policy is pinned in ListenEndpointTests; this wiring and
 //  a real silent listen are verify-by-launch.
+//  Review: claude-opus-5-5, 2026-11-20 — a failed start (the port taken by another M1K3, a bind error) is logged at
+//  error with the port and `ErrorChain`, not only shown in Settings: agents saw ECONNREFUSED with nothing in the log.
 
 import Foundation
 import M1K3Agent // PrivateCloudRawChat — ask_private_cloud's one send
@@ -76,6 +78,7 @@ import M1K3Avatar
 import M1K3Chat // HeadlessAsk + RAGResponding (the ask_m1k3 core)
 import M1K3Knowledge // KnowledgeStore — forget_memory deletes the dual-written corpus twin too
 import M1K3LanguageModel // PrivateCloudLending / PrivateCloudRung — ask_private_cloud's gate
+import M1K3LogCore
 import M1K3MCPKit
 import M1K3Memory // MemoryStore, Memory — the temporal memory graph the new tools expose
 import M1K3Preview // ReviewTargetResolver — validate the open_link URL (web-only)
@@ -355,6 +358,12 @@ final class MCPHostController {
             server = nil
             isRunning = false
             statusText = "Couldn’t start: \(error.localizedDescription)"
+            // Settings shows this; the log must too: an agent only sees ECONNREFUSED (usually :4242 is taken by
+            // another M1K3, such as a worktree build).
+            let failedPort = port
+            let reason = ErrorChain.summary(error)
+            M1K3Log.logger(.mcp)
+                .error("MCP server couldn't start on :\(failedPort, privacy: .public): \(reason, privacy: .public)")
         }
     }
 

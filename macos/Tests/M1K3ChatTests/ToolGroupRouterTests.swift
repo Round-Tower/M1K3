@@ -27,6 +27,8 @@
 //  the bare default (iOS) stays off. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `toolNoneToAgent` joins the flag pins, and
 //  `noneToAgentNeedsDispatchFlagAndNotMini` pins where a none pick may take the agent turn. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-21 (pre-push review fold) — the stub pickers fail with a real error, and a cancelled pick is
+//  pinned as the agent turn, not picker-failed. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -191,6 +193,9 @@ struct ToolGroupRouterFixtureTests {
 }
 
 /// The cascade's order and the two new flags.
+/// A picker that fails for real (an outage), never a cancelled turn.
+private struct StubPickFailure: Error {}
+
 struct ToolPickCascadeTests {
     private actor RecordingPicker: ToolPicking {
         private(set) var calls = 0
@@ -202,7 +207,7 @@ struct ToolPickCascadeTests {
 
         func pickTool(message _: String, instructions _: String) async throws -> (tool: String, query: String) {
             calls += 1
-            guard let answer else { throw CancellationError() }
+            guard let answer else { throw StubPickFailure() }
             return answer
         }
     }
@@ -240,6 +245,40 @@ struct ToolPickCascadeTests {
         let failing = RecordingPicker(answer: nil)
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: failing) == nil)
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil) == nil)
+    }
+
+    @Test("a pick that throws is recorded as picker-failed, apart from an honest no-tool turn (2026-11-20)")
+    func failedPickIsItsOwnStage() async {
+        let failed = PickStageRecorder()
+        let pick = await ToolRouterWiring.$pickRecorder.withValue(failed) {
+            let failing = RecordingPicker(answer: nil)
+            return await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: failing)
+        }
+        #expect(pick == nil)
+        #expect(failed.stages == [.pickerFailed])
+        #expect(PickStage.pickerFailed.rawValue == "picker-failed")
+        let absent = PickStageRecorder()
+        _ = await ToolRouterWiring.$pickRecorder.withValue(absent) {
+            await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
+        }
+        #expect(absent.stages == [.agent])
+    }
+
+    @Test("a stopped turn is not an outage: a picker cancelled mid-pick records the agent turn, not picker-failed")
+    func cancelledPickIsNotAFailure() async {
+        let recorder = PickStageRecorder()
+        let pick = await ToolRouterWiring.$pickRecorder.withValue(recorder) {
+            await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: CancelledPicker())
+        }
+        #expect(pick == nil)
+        #expect(recorder.stages == [.agent])
+        #expect(await ToolRouterWiring.attempt(with: CancelledPicker(), question: "q", menu: "m").failure == nil)
+    }
+
+    private struct CancelledPicker: ToolPicking {
+        func pickTool(message _: String, instructions _: String) async throws -> (tool: String, query: String) {
+            throw CancellationError()
+        }
     }
 
     @Test("the gate and the head share one sentence vector per turn; a new turn embeds again (#512)")
@@ -476,12 +515,12 @@ struct PickStageRecorderTests {
         }
 
         func pickTool(message _: String, instructions _: String) async throws -> (tool: String, query: String) {
-            guard let answer else { throw CancellationError() }
+            guard let answer else { throw StubPickFailure() }
             return answer
         }
     }
 
-    @Test("the cascade tells a recorder which stage named the pick: head, Apple's picker, or the agent")
+    @Test("the cascade tells a recorder which stage named the pick: head, Apple's picker, a failed picker, or the agent")
     func recordsStages() async {
         let recorder = PickStageRecorder()
         await ToolRouterWiring.$pickRecorder.withValue(recorder) {
@@ -497,7 +536,8 @@ struct PickStageRecorderTests {
             )
             _ = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
         }
-        #expect(recorder.stages == [.head, .picker, .agent, .agent])
+        // A picker that throws is a failed pick, its own stage (an outage must not read as agent routes).
+        #expect(recorder.stages == [.head, .picker, .pickerFailed, .agent])
     }
 
     @Test("with no recorder (every shipping turn) the cascade picks exactly as before")

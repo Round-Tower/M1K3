@@ -62,6 +62,9 @@ Open: the fixtureHash reword check is unexercised on real data until ChatEvalSco
 Swift key differs from `fixtureHash`, the check stays silently inert — pin the key name when 1j lands.
 Review: Kev + claude-fable-5.1, 2026-11-06 — `--shipped`: content and strict read off `shippedChecks` where the
 stage scored the leak guard's refusal (run_chateval's `_shipped`); every trial without one reads as before. Confidence 0.85.
+Review: claude-opus-5-5, 2026-11-20 — a "!" line per arm with `picker-failed` turns (the app now records a pick that
+threw): a profile switch made Apple's model modelNotReady and three arms measured the agent fallback unseen.
+Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -190,6 +193,13 @@ def wiring_flags(a: dict, b: dict, routes_a: dict | None, routes_b: dict | None)
     for arm, w in (("A", a), ("B", b)):
         if w["power_mixed"]:
             flags.append(f"! {arm}'s power changed mid-run (driver block): its latency is not headline-grade")
+    # 2026-11-20: a pick that threw (Apple's model not ready, e.g. after a macOS profile switch) is the agent
+    # route, not the app's: those turns measure the fallback. Before `picker-failed` it read as plain `agent`.
+    for arm, routes in (("A", routes_a), ("B", routes_b)):
+        failed = sum(n for stage, n in (routes or {}).items() if stage and "picker-failed" in stage)
+        if failed:
+            flags.append(f"! {arm}: {failed} turn(s) where Apple's picker failed (picker-failed): those turns took "
+                         "the agent route, not the app's; re-run once Apple Intelligence is ready")
     return flags
 
 

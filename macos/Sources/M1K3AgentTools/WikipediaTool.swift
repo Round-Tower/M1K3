@@ -18,9 +18,15 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — Wikimedia UA contact → hello@round-tower.ie
 //  (the studio address; #472 moved every other public surface). Pinned by WikipediaToolTests.
 //  Confidence 0.95.
+//  Review: claude-opus-5-5, 2026-11-20 — a status that is neither OK nor transient (a 403 from the UA policy, a 404,
+//  a 5xx) is logged at notice before it reads as "no article": the only line was a .debug, which never persists.
+//  Logging only. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-21 (pre-push review fold) — the topic is hashed in every log line, and a lookup error logs
+//  domain and code only (a URLError's description carries the URL). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
+import M1K3LogCore
 import os
 
 public struct WikipediaTool: AgentTool {
@@ -53,22 +59,28 @@ public struct WikipediaTool: AgentTool {
         }
         do {
             let (data, response) = try await fetch(queryURL(for: topic))
-            Self.log.debug("HTTP \(response.statusCode) for \"\(topic, privacy: .public)\"")
+            Self.log.debug("HTTP \(response.statusCode) for \"\(topic, privacy: .private(mask: .hash))\"")
             // Distinguish a throttle/outage (after the fetcher's retry) from a
             // genuine miss — else the model is told "no such article" wrongly.
             if HTTPStatus.classify(response.statusCode) == .transient {
-                Self.log.notice("transient HTTP \(response.statusCode) for \"\(topic, privacy: .public)\"")
+                Self.log.notice("transient HTTP \(response.statusCode) for \"\(topic, privacy: .private(mask: .hash))\"")
                 return ToolResult(output: "Error: Wikipedia is temporarily unavailable. "
                     + "Answer from what you already have, with appropriate uncertainty.")
             }
+            let status = response.statusCode
+            if HTTPStatus.classify(status) != .ok {
+                // Not an article lookup: without this line a refused lookup reads as "no such article".
+                Self.log.notice("HTTP \(status, privacy: .public) on a lookup: read as no article")
+            }
             guard let fact = WikipediaSummaryParser.parse(data) else {
-                Self.log.info("no article for \"\(topic, privacy: .public)\"")
+                Self.log.info("no article for \"\(topic, privacy: .private(mask: .hash))\"")
                 // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
                 return ToolResult(output: "No Wikipedia article found for \"\(topic)\".")
             }
             return ToolResult(output: WikipediaFormatter.format(fact))
         } catch {
-            Self.log.error("lookup failed for \"\(topic, privacy: .public)\": \(error, privacy: .public)")
+            let reason = ErrorChain.summary(error)
+            Self.log.error("lookup failed for \"\(topic, privacy: .private(mask: .hash))\": \(reason, privacy: .public)")
             return ToolResult(output: "Error: Wikipedia lookup failed — \(error.localizedDescription)")
         }
     }

@@ -316,6 +316,18 @@ def test_wiring_flags_name_what_differs():
         assert needle in joined
 
 
+def test_an_arm_whose_picker_failed_is_flagged():
+    # 2026-11-20: a macOS profile switch made Apple's model modelNotReady; every pick threw and the turns took the
+    # agent route, so three steps arms measured the fallback for hours. The app now records `picker-failed`.
+    base = {"brain": "lil", "model": "m", "commit": "c1", "power": "ac", "powermode": 0, "power_mixed": False,
+            "config": "Debug"}
+    assert ca.wiring_flags(base, base, {"picker": 3}, {"picker": 2}) == []
+    flags = ca.wiring_flags(base, base, {"picker": 3}, {"picker-failed": 2, "picker": 1})
+    assert len(flags) == 1 and flags[0].startswith("! B: 2 turn(s) where Apple's picker failed")
+    both = ca.wiring_flags(base, base, {"picker-failed": 1}, {"picker-failed": 4})
+    assert [f[:5] for f in both] == ["! A: ", "! B: "]
+
+
 def test_a_debug_and_a_release_arm_do_not_compare_on_latency():
     # 2026-10-25: every October arm was Debug; in-app Lil decoded ~28 tok/s against 65–67 in Release on the
     # older Lil, so a Release arm "passes more" latency ceilings with no model change. Unknown on one side
