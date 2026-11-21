@@ -212,6 +212,8 @@
 //  A/B was Mac-only, so the phone's read is owed in the TestFlight notes. Confidence 0.75.
 //  Review: claude-opus-5-5, 2026-11-20 — the chat-history and memory-graph opens log WHY they failed (`ErrorChain`
 //  domains and codes) instead of `try?`: a failed open made chat non-persistent or the graph go quiet, unseen.
+//  Review: claude-opus-5-5, 2026-11-21 — `MLXGuardedEvaluation.installRecordingHandler()` at launch, beside the
+//  memory budget: an MLX error outside every scope writes its message to the ledger before it traps. Confidence 0.85.
 
 import AVFoundation
 #if os(iOS)
@@ -802,6 +804,9 @@ final class AppCore {
         // aborts the process.
         if Self.mlxAvailable {
             MLXMemoryBudget.applyOnce()
+            // An MLX error outside every guarded scope still traps, but writes MLX's message down first, so the
+            // next launch's "didn't close cleanly" report says what failed (2026-11-21: 15 crash logs, none did).
+            MLXGuardedEvaluation.installRecordingHandler()
         }
 
         let base = try Self.appSupportDirectory()

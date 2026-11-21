@@ -999,13 +999,12 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
   "locale": "de",
+  "value": "Das ist die ganze Nachricht: dass M1K3 beim letzten Mal nicht sauber beendet wurde, wann die betroffene Sitzung begann, das Hirn, die Versionen von App und macOS und alle Absturzzusammenfassungen und Fehlermeldungen des Hirns, die dieser Mac aufbewahrt hat. Nichts, was du getippt oder gesagt hast, geht mit. Sie geht über deine eigene Mail-App an %@; die App öffnet sich mit der fertig ausgefüllten Nachricht. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest. Wenn du noch weißt, was du da gerade gemacht hast, ergänze es am Ende: Das hilft am meisten.",
   "review": true,
-  "value": "Das ist die ganze Nachricht: dass M1K3 beim letzten Mal nicht sauber beendet wurde, wann die betroffene Sitzung begann, das Hirn, die Versionen von App und macOS und alle Absturzzusammenfassungen, die dieser Mac aufbewahrt hat. Nichts, was du getippt oder gesagt hast, geht mit. Sie geht über deine eigene Mail-App an %@; die App öffnet sich mit der fertig ausgefüllten Nachricht. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest. Wenn du noch weißt, was du da gerade gemacht hast, ergänze es am Ende: Das hilft am meisten.",
-  "note": "Privacy copy, literal. Reviewer: 'that session' was „diese Sitzung“, which could read as the current one; now „die betroffene Sitzung“. 'what you were doing' now „was du da gerade gemacht hast“ (at that moment, not just now). Semicolon split keeps %@ (the address) unambiguous.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "352c2aed48311dfc"
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "a263b417ae98c472"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -1771,23 +1770,30 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "key": "This is the whole message: that %@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "de",
+  "value": "Das ist die ganze Nachricht: dass %1$@ nicht antworten konnte, was M1K3 dir angezeigt hat, die App- und Systemversionen, M1K3s Download-Protokoll aus dieser Sitzung und alle Fehlermeldungen des Hirns, die dieses Gerät gespeichert hat. Nichts, was du getippt oder gesagt hast, wird mitgeschickt. Sie geht über deine eigene Mail-App an %2$@; die App öffnet sich mit allem schon ausgefüllt. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest.",
   "review": true,
-  "value": "Das ist die ganze Nachricht: dass %1$@ nicht einsatzbereit wurde, was M1K3 dir angezeigt hat, die App- und Systemversionen und M1K3s Download-Protokoll aus dieser Sitzung. Nichts, was du getippt oder gesagt hast, wird mitgeschickt. Sie geht über deine eigene Mail-App an %2$@; die App öffnet sich mit allem schon ausgefüllt. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest.",
-  "note": "„geht mit“ → „wird mitgeschickt“ (clearer, same force). The privacy promises are kept literal. The Mac FieldReportSheet carries the same text and should match.",
-  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
-  "sheet": "0f14100044e07af2"
+  "english": "This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "b4c2193163f115da"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "de",
+  "value": "Das ist die ganze Nachricht: dass %1$@ nicht einsatzbereit wurde, was M1K3 dir angezeigt hat, die App- und Systemversionen, M1K3s Download-Protokoll aus dieser Sitzung und alle Fehlermeldungen des Hirns, die dieses Gerät gespeichert hat. Nichts, was du getippt oder gesagt hast, wird mitgeschickt. Sie geht über deine eigene Mail-App an %2$@; die App öffnet sich mit allem schon ausgefüllt. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest.",
   "review": true,
-  "value": "Das ist die ganze Nachricht: dass M1K3 beim letzten Mal nicht sauber beendet wurde, wann die Sitzung begann, das Hirn, die App- und Systemversionen und alle Absturzzusammenfassungen, die dieses Gerät gespeichert hat. Nichts, was du getippt oder gesagt hast, wird mitgeschickt. Sie geht über deine eigene Mail-App an %@; die App öffnet sich mit allem schon ausgefüllt. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest. Wenn du noch weißt, was du gerade gemacht hast, ergänz es am Ende: Das hilft am meisten.",
-  "note": "'when that session began' refers to the crashed session; „diese Sitzung“ read as the current one, so it is now „die Sitzung“. „geht mit“ → „wird mitgeschickt“.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "7b12dde445bbcccb"
+  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "4738156414e82a11"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "locale": "de",
+  "value": "Das ist die ganze Nachricht: dass M1K3 beim letzten Mal nicht sauber beendet wurde, wann die Sitzung begann, das Hirn, die App- und Systemversionen und alle Absturzzusammenfassungen und Fehlermeldungen des Hirns, die dieses Gerät gespeichert hat. Nichts, was du getippt oder gesagt hast, wird mitgeschickt. Sie geht über deine eigene Mail-App an %@; die App öffnet sich mit allem schon ausgefüllt. M1K3 selbst sendet nichts. Round Tower liest sie, um herauszufinden, was schiefgelaufen ist, und löscht sie, wenn du darum bittest. Wenn du noch weißt, was du gerade gemacht hast, ergänz es am Ende: Das hilft am meisten.",
+  "review": true,
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "8b87c1e685f23471"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -3356,13 +3362,12 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
   "locale": "es",
+  "value": "Este es el mensaje completo: que M1K3 no se cerró correctamente la última vez, cuándo empezó esa sesión, el cerebro, las versiones de la app y de macOS, y los resúmenes de cierres inesperados y errores del cerebro que este Mac haya guardado. No incluye nada de lo que escribiste o dijiste. Se envía a %@ desde tu propia app de correo, que se abre con el mensaje ya escrito. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides. Si recuerdas lo que estabas haciendo, añádelo al final: es lo que más ayuda.",
   "review": true,
-  "value": "Este es el mensaje completo: que M1K3 no se cerró correctamente la última vez, cuándo empezó esa sesión, el cerebro, las versiones de la app y de macOS, y los resúmenes de cierres inesperados que este Mac haya guardado. No incluye nada de lo que escribiste o dijiste. Se envía a %@ desde tu propia app de correo, que se abre con el mensaje ya escrito. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides. Si recuerdas lo que estabas haciendo, añádelo al final: es lo que más ayuda.",
-  "note": "Privacy disclosure, literal. 'Nada… va con él' (calque) → 'No incluye nada de…' (same force); 'rellenado' (Spain-only) → 'ya escrito'; 'si lo pides' → 'si se lo pides'.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "9a50ec87123bd210"
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "1b0f2262849d1cf0"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -4108,23 +4113,30 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "key": "This is the whole message: that %@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "es",
+  "value": "Este es el mensaje completo: que %1$@ no pudo responder, lo que M1K3 te mostró, las versiones de la app y del sistema, el registro de descargas de M1K3 de esta sesión y los errores del cerebro que haya guardado este dispositivo. Nada de lo que escribiste o dijiste va incluido. Se envía a %2$@ desde tu propia app de correo, que se abre con el mensaje ya completado. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides.",
   "review": true,
-  "value": "Este es el mensaje completo: que %1$@ no pudo prepararse, lo que M1K3 te mostró, las versiones de la app y del sistema, y el registro de descargas de M1K3 de esta sesión. Nada de lo que escribiste o dijiste va incluido. Se envía a %2$@ desde tu propia app de correo, que se abre con el mensaje ya completado. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides.",
-  "note": "Privacy line, literal. %1$@ brain name, %2$@ recipient address. 'va con él' (calque) → 'va incluido'. No code site found (possibly stale key).",
-  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
-  "sheet": "108aeab0761b47a0"
+  "english": "This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "8cd2b581dc3e6bca"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "es",
+  "value": "Este es el mensaje completo: que %1$@ no pudo prepararse, lo que M1K3 te mostró, las versiones de la app y del sistema, el registro de descargas de M1K3 de esta sesión y los errores del cerebro que haya guardado este dispositivo. Nada de lo que escribiste o dijiste va incluido. Se envía a %2$@ desde tu propia app de correo, que se abre con el mensaje ya completado. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides.",
   "review": true,
-  "value": "Este es el mensaje completo: que M1K3 no se cerró correctamente la última vez, cuándo empezó esa sesión, el cerebro, las versiones de la app y del sistema, y los resúmenes de cierres inesperados que haya guardado este dispositivo. Nada de lo que escribiste o dijiste va incluido. Se envía a %@ desde tu propia app de correo, que se abre con el mensaje ya completado. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides. Si recuerdas qué estabas haciendo, añádelo al final: es lo que más ayuda.",
-  "note": "Privacy line, literal. 'any crash summaries' → subjunctive 'que haya guardado' (there may be none). No code site found.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "f79b446720bedaff"
+  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "efc36ad319e31cbc"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "locale": "es",
+  "value": "Este es el mensaje completo: que M1K3 no se cerró correctamente la última vez, cuándo empezó esa sesión, el cerebro, las versiones de la app y del sistema, y los resúmenes de cierres inesperados y errores del cerebro que haya guardado este dispositivo. Nada de lo que escribiste o dijiste va incluido. Se envía a %@ desde tu propia app de correo, que se abre con el mensaje ya completado. M1K3 no envía nada por sí mismo. Round Tower lo lee para averiguar qué falló y lo elimina si se lo pides. Si recuerdas qué estabas haciendo, añádelo al final: es lo que más ayuda.",
+  "review": true,
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "b388a456b393ae54"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -5624,13 +5636,12 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
   "locale": "fr",
+  "value": "Voici le message en entier : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session-là a commencé, le cerveau, les versions de l’app et de macOS, et les éventuels résumés de plantage et erreurs du cerveau que ce Mac a conservés. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.",
   "review": true,
-  "value": "Voici le message en entier : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session-là a commencé, le cerveau, les versions de l’app et de macOS, et les éventuels résumés de plantage que ce Mac a conservés. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.",
-  "note": "Privacy copy, translated literally. « cette session-là » makes clear it is the session that crashed, not the current one. « éventuels » carries 'any' (there may be none). « ta propre app de messagerie » is any mail app, not Apple's Mail.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "11ae42acccfa78a9"
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "914042ede5f9f645"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -6397,22 +6408,30 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "key": "This is the whole message: that %@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "fr",
+  "value": "Voici l’intégralité du message : le fait que %1$@ n’a pas pu répondre, ce que M1K3 t’a affiché, les versions de l’app et du système, le journal de téléchargement de M1K3 pour cette session, et les éventuelles erreurs du cerveau conservées par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.",
   "review": true,
-  "value": "Voici l’intégralité du message : le fait que %1$@ n’a pas pu se préparer, ce que M1K3 t’a affiché, les versions de l’app et du système, et le journal de téléchargement de M1K3 pour cette session. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.",
-  "note": "%1$@ is a brain name, %2$@ the support address; order kept. Round Tower is the company name, untranslated. NBSP before the colon.",
-  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
-  "sheet": "ab3c8d6171bbe770"
+  "english": "This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "784251218b6b020b"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "fr",
+  "value": "Voici l’intégralité du message : le fait que %1$@ n’a pas pu se préparer, ce que M1K3 t’a affiché, les versions de l’app et du système, le journal de téléchargement de M1K3 pour cette session, et les éventuelles erreurs du cerveau conservées par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.",
   "review": true,
-  "value": "Voici l’intégralité du message : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session a commencé, le cerveau, les versions de l’app et du système, et les éventuels résumés de plantage conservés par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "a34e566046e60f34"
+  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "a60d3f39a5a6d931"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "locale": "fr",
+  "value": "Voici l’intégralité du message : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session a commencé, le cerveau, les versions de l’app et du système, et les éventuels résumés de plantage et erreurs du cerveau conservés par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.",
+  "review": true,
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "ba91b7b7e40158c5"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
@@ -7922,13 +7941,12 @@
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
   "locale": "pt-BR",
+  "value": "Esta é a mensagem inteira: que o M1K3 não fechou corretamente da última vez, quando essa sessão começou, o cérebro, as versões do app e do macOS, e quaisquer resumos de falhas e erros do cérebro que este Mac tenha guardado. Nada do que você digitou ou disse vai junto. Ela vai para %@ pelo seu próprio app de e-mail, que abre com a mensagem já preenchida. O M1K3 não envia nada sozinho. A Round Tower a lê para descobrir o que deu errado e a apaga se você pedir. Se você lembrar o que estava fazendo, adicione no final: isso é o que mais ajuda.",
   "review": true,
-  "value": "Esta é a mensagem inteira: que o M1K3 não fechou corretamente da última vez, quando essa sessão começou, o cérebro, as versões do app e do macOS, e quaisquer resumos de falhas que este Mac tenha guardado. Nada do que você digitou ou disse vai junto. Ela vai para %@ pelo seu próprio app de e-mail, que abre com a mensagem já preenchida. O M1K3 não envia nada sozinho. A Round Tower a lê para descobrir o que deu errado e a apaga se você pedir. Se você lembrar o que estava fazendo, adicione no final: isso é o que mais ajuda.",
-  "note": "Made 'any crash summaries' plural (quaisquer resumos) and replaced the awkward 'abre com ela já preenchida'.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "e70d274b3879842d"
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "d58b3f8040e2be0b"
  },
  {
   "catalog": "M1K3App/Localizable.xcstrings",
@@ -8680,23 +8698,30 @@
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "key": "This is the whole message: that %@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "pt-BR",
+  "value": "Esta é a mensagem inteira: que o %1$@ não conseguiu responder, o que o M1K3 mostrou a você, as versões do app e do sistema, o registro de downloads do M1K3 desta sessão e quaisquer erros do cérebro que este dispositivo guardou. Nada do que você digitou ou disse vai junto. Ela vai para %2$@ pelo seu próprio app de e-mail, que abre com ela já preenchida. O M1K3 não envia nada por conta própria. A Round Tower a lê para descobrir o que deu errado, e a apaga se você pedir.",
   "review": true,
-  "value": "Esta é a mensagem inteira: que o %1$@ não conseguiu ficar pronto, o que o M1K3 mostrou a você, as versões do app e do sistema e o registro de downloads do M1K3 desta sessão. Nada do que você digitou ou disse vai junto. Ela vai para %2$@ pelo seu próprio app de e-mail, que abre com ela já preenchida. O M1K3 não envia nada por conta própria. A Round Tower a lê para descobrir o que deu errado, e a apaga se você pedir.",
-  "note": "%1$@ is report.brain (a tier name, masculine 'o'); %2$@ is the email address. Dropped the English serial comma before 'e', which Portuguese doesn't use.",
-  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
-  "sheet": "2337a6ad65408ff2"
+  "english": "This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "fb19c2a9d8a1d400"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",
-  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "key": "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
   "locale": "pt-BR",
+  "value": "Esta é a mensagem inteira: que o %1$@ não conseguiu ficar pronto, o que o M1K3 mostrou a você, as versões do app e do sistema, o registro de downloads do M1K3 desta sessão e quaisquer erros do cérebro que este dispositivo guardou. Nada do que você digitou ou disse vai junto. Ela vai para %2$@ pelo seu próprio app de e-mail, que abre com ela já preenchida. O M1K3 não envia nada por conta própria. A Round Tower a lê para descobrir o que deu errado, e a apaga se você pedir.",
   "review": true,
-  "value": "Esta é a mensagem inteira: que o M1K3 não fechou direito da última vez, quando aquela sessão começou, o cérebro, as versões do app e do sistema e quaisquer resumos de falhas que este dispositivo guardou. Nada do que você digitou ou disse vai junto. Ela vai para %@ pelo seu próprio app de e-mail, que abre com ela já preenchida. O M1K3 não envia nada por conta própria. A Round Tower a lê para descobrir o que deu errado, e a apaga se você pedir. Se você lembrar o que estava fazendo, acrescente no final: é o que mais ajuda.",
-  "note": "Dropped the serial comma before 'e'.",
-  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
-  "sheet": "0aa03a421619efe3"
+  "english": "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.",
+  "sheet": "0789b95d79ca9947"
+ },
+ {
+  "catalog": "M1K3iOSApp/Localizable.xcstrings",
+  "key": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "locale": "pt-BR",
+  "value": "Esta é a mensagem inteira: que o M1K3 não fechou direito da última vez, quando aquela sessão começou, o cérebro, as versões do app e do sistema e quaisquer resumos de falhas e erros do cérebro que este dispositivo guardou. Nada do que você digitou ou disse vai junto. Ela vai para %@ pelo seu próprio app de e-mail, que abre com ela já preenchida. O M1K3 não envia nada por conta própria. A Round Tower a lê para descobrir o que deu errado, e a apaga se você pedir. Se você lembrar o que estava fazendo, acrescente no final: é o que mais ajuda.",
+  "review": true,
+  "english": "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.",
+  "sheet": "335b5310993c5110"
  },
  {
   "catalog": "M1K3iOSApp/Localizable.xcstrings",

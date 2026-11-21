@@ -140,6 +140,8 @@
 //  Review: claude-opus-5-5, 2026-11-20 — "The Tell": a `.deliberating` activity puts one `ThinkAside` line on the
 //  answer (`thinkAside`, transient: not in CodingKeys, never in `text`); a reasoning flush keeps it, the first answer
 //  text and the settle clear it. Lines rotate per session (`thinkAsideCount`). Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-21 — a stream that ends with no answer and no reasoning, unasked, settles as a
+//  failure with `ChatFailureMessage.emptyAnswer`, not a blank bubble (an MLX error ends the stream). Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -633,6 +635,21 @@ public final class ChatSession {
             // and whatever the model retrieved itself via search_knowledge.
             let (reasoning, answerWithFollowUps) = ReasoningSplit.split(raw)
             let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
+            // Nothing came back and nobody asked it to stop: a failure, shown as one. A provider's error ends its
+            // stream rather than throwing (the InferenceProvider contract), so an MLX failure used to settle here as
+            // a blank, invisible answer (2026-11-21, Kev's 17 Pro; the A13 phones once their crash became an error).
+            // A think with no answer counts too: an error mid-think (or a think that ran out) leaves the person only
+            // a reasoning disclosure. The reasoning stays on the message, still viewable.
+            if !stopped, Self.isNothing(answer) {
+                update(assistantID) { msg in
+                    msg.reasoning = reasoning
+                    msg.status = .failed(ChatFailureMessage.emptyAnswerReason)
+                    msg.activityLabel = nil
+                    msg.thinkAside = nil
+                    msg.text = ChatFailureMessage.emptyAnswer
+                }
+                break
+            }
             let mergedSources = Self.mergeSources(sources, responder.collectedSources())
             let citedURLs = responder.collectedCitedURLs()
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
@@ -683,6 +700,10 @@ public final class ChatSession {
                 }
             }
         }
+    }
+
+    private static func isNothing(_ text: String) -> Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private enum TurnOutcome {

@@ -15029,7 +15029,7 @@
         }
       }
     },
-    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {
+    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {
 
     },
     "This is the whole message: your message, M1K3's answer, your note, the brain and the app version — nothing else from this Mac, though the answer may quote what M1K3 read to write it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a made-up test case, and deletes it if you ask. Change anything below first if you like." : {

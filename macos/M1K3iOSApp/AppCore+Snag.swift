@@ -20,11 +20,14 @@
 //  (M1K3iOSHarnessApp), which marks before AppCore builds; this keeps the note, the ledger feed and the
 //  draft. A swipe-away from the switcher reaches .background first (a review agent's Simulator run on
 //  iOS 27), so it clears the mark. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-21 — both reports carry `MLXFailureLedger`'s lines: the snag report after a
+//  trap, the brain report when a brain keeps failing (the A13 phones on Pocket). Confidence 0.85.
 //
 
 import Foundation
 import M1K3Chat
 import M1K3Diagnostics
+import M1K3LogCore
 import M1K3Screengrab
 import OSLog
 import UIKit
@@ -72,7 +75,8 @@ extension AppCore {
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
             build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?",
             system: "\(device.systemName) \(device.systemVersion)",
-            crashLines: MobileMetricKitCollector.shared.recentCrashLines()
+            crashLines: MobileMetricKitCollector.shared.recentCrashLines(),
+            mlxErrors: MLXFailureLedger.standard.lines()
         )
         let body = SnagReportFormatter.redactedBody(
             report,
@@ -83,8 +87,8 @@ extension AppCore {
         return SnagDraft(
             intro: String(localized: """
             This is the whole message: that M1K3 didn't close cleanly last time, when that session began, \
-            the brain, the app and system versions, and any crash summaries this device kept. Nothing you \
-            typed or said goes with it. It goes to \(RoundTowerReports.recipient) from your own mail app, \
+            the brain, the app and system versions, and any crash summaries and brain errors this device kept. \
+            Nothing you typed or said goes with it. It goes to \(RoundTowerReports.recipient) from your own mail app, \
             which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went \
             wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that \
             helps most.
@@ -96,7 +100,9 @@ extension AppCore {
 
     /// The redacted report for a brain that won't get ready. The log goes through the formatter's
     /// category gate, then the same scrub as a snag. `shown` is the line the chat showed.
-    func brainFailureDraft(shown: String) async -> SnagDraft {
+    func brainFailureDraft(
+        shown: String, happened: String = BrainFailureReport.Happened.couldNotGetReady
+    ) async -> SnagDraft {
         let device = UIDevice.current
         let entries = await Task.detached(priority: .userInitiated) { Self.recentLogEntries() }.value
         let report = BrainFailureReport(
@@ -105,7 +111,9 @@ extension AppCore {
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
             build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?",
             system: "\(device.systemName) \(device.systemVersion)",
-            logLines: BrainFailureReportFormatter.logLines(entries)
+            logLines: BrainFailureReportFormatter.logLines(entries),
+            mlxErrors: MLXFailureLedger.standard.lines(),
+            happened: happened
         )
         let body = BrainFailureReportFormatter.redactedBody(
             report,
@@ -113,13 +121,25 @@ extension AppCore {
             userName: nil,
             scrubExtra: { CanaryGuard.fromLocalConfig().scan($0).text }
         )
-        return SnagDraft(
-            intro: String(localized: """
+        // Whole sentences per case (a translator can't reorder a spliced-in phrase), each listing exactly what the
+        // body holds: the privacy promise is "this is the whole message".
+        let intro = happened == BrainFailureReport.Happened.couldNotAnswer
+            ? String(localized: """
+            This is the whole message: that \(report.brain) couldn't answer, what M1K3 showed you, the app and \
+            system versions, M1K3's download log from this session, and any brain errors this device kept. \
+            Nothing you typed or said goes with it. It goes to \(RoundTowerReports.recipient) from your own mail \
+            app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went \
+            wrong, and deletes it if you ask.
+            """)
+            : String(localized: """
             This is the whole message: that \(report.brain) couldn't get ready, what M1K3 showed you, the app \
-            and system versions, and M1K3's download log from this session. Nothing you typed or said goes with \
-            it. It goes to \(RoundTowerReports.recipient) from your own mail app, which opens with it filled in. \
-            M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.
-            """),
+            and system versions, M1K3's download log from this session, and any brain errors this device kept. \
+            Nothing you typed or said goes with it. It goes to \(RoundTowerReports.recipient) from your own mail \
+            app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went \
+            wrong, and deletes it if you ask.
+            """)
+        return SnagDraft(
+            intro: intro,
             subject: BrainFailureReportFormatter.subject(report),
             body: body
         )

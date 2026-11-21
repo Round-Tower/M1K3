@@ -10,20 +10,22 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-30, Confidence 0.8 (pure; the sheet and the log read
 //  are verify-by-launch). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-21 — `mlxErrors`, MLX's own messages from `MLXFailureLedger`. Confidence 0.85.
 //
 
 import Foundation
 @testable import M1K3Diagnostics
 import Testing
 
-private func report(logLines: [String] = []) -> BrainFailureReport {
+private func report(logLines: [String] = [], mlxErrors: [String] = []) -> BrainFailureReport {
     BrainFailureReport(
         brain: "Lil",
         shown: "Couldn't reach the download server. Check your connection and try again.",
         appVersion: "1.3.0",
         build: "542",
         system: "iOS 27.2",
-        logLines: logLines
+        logLines: logLines,
+        mlxErrors: mlxErrors
     )
 }
 
@@ -39,7 +41,7 @@ struct BrainFailureReportTests {
     @Test("the payload is exactly: brain, the line shown, app version, build, system, log lines")
     func fieldSet() {
         let labels = Mirror(reflecting: report()).children.compactMap(\.label)
-        #expect(labels == ["brain", "shown", "appVersion", "build", "system", "logLines"])
+        #expect(labels == ["brain", "happened", "shown", "appVersion", "build", "system", "logLines", "mlxErrors"])
     }
 
     @Test("only the download and brain-load logs pass: the memory log holds the user's own words")
@@ -104,5 +106,39 @@ struct BrainFailureReportTests {
     @Test("the subject is Round Tower's support format")
     func subject() {
         #expect(BrainFailureReportFormatter.subject(report()) == "M1K3 | iOS Support | v1.3.0")
+    }
+
+    @Test("MLX's own messages ride along, redacted like the log lines; none, no section (2026-11-21)")
+    func brainErrors() {
+        #expect(!BrainFailureReportFormatter.body(report()).contains("Brain errors"))
+        let line = "2027-01-15T08:59:00Z [load] Failed to open /Users/lil/Library/models/x.safetensors"
+        let plain = BrainFailureReportFormatter.body(report(mlxErrors: [line]))
+        #expect(plain.contains("Brain errors this device kept:\n" + line))
+        let body = BrainFailureReportFormatter.redactedBody(
+            report(mlxErrors: [line]), homeDirectory: "/Users/lil", userName: nil
+        )
+        #expect(!body.contains("/Users/lil"))
+        #expect(body.contains("[load] Failed to open"))
+    }
+
+    @Test("a failed answer reports as one: the same report, saying what actually happened (2026-11-21)")
+    func failedAnswer() {
+        var failed = report()
+        failed.happened = BrainFailureReport.Happened.couldNotAnswer
+        let body = BrainFailureReportFormatter.body(failed)
+        #expect(body.contains("This email says Lil couldn't answer on this device."))
+        #expect(body.contains("What happened: Lil couldn't answer."))
+        #expect(!body.contains("couldn't get ready"))
+        #expect(BrainFailureReportFormatter.body(report()).contains("What happened: Lil couldn't get ready."),
+                "the default is still the load failure")
+    }
+
+    @Test("the line M1K3 showed is redacted too: a failed answer's error can name a path")
+    func shownIsRedacted() {
+        var failed = report()
+        failed.shown = "generationFailed(\"MLX: [load] Failed to open /Users/lil/Library/x.safetensors\")"
+        let body = BrainFailureReportFormatter.redactedBody(failed, homeDirectory: "/Users/lil", userName: nil)
+        #expect(!body.contains("/Users/lil"))
+        #expect(body.contains("[load] Failed to open"))
     }
 }

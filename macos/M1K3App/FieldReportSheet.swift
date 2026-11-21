@@ -32,6 +32,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: claude-opus-5-5, 2026-11-21 — the snag intro names the brain errors the body now carries (privacy copy:
+//  the new key is held in English until a native reader approves it). Confidence 0.85.
 
 import M1K3Diagnostics
 import SwiftUI
@@ -76,8 +78,8 @@ struct FieldReportSheet: View {
                     .font(.title3.weight(.semibold))
                 Text("""
                 This is the whole message: that M1K3 didn't close cleanly last time, when that session began, \
-                the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed \
-                or said goes with it. It goes to \(FieldReporter.recipient) from your own mail app, which opens \
+                the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. \
+                Nothing you typed or said goes with it. It goes to \(FieldReporter.recipient) from your own mail app, which opens \
                 with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and \
                 deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.
                 """)

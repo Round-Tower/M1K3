@@ -28,12 +28,15 @@
 //  user's fields and leaves M1K3's own lines alone. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: FieldReportDraft gains `kind`; snagDraft builds the redacted
 //  SnagReport for the same sheet and send. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-21 — the snag report carries `MLXFailureLedger`'s lines (MLX's own message,
+//  written before the trap). Confidence 0.85.
 //
 
 import AppKit
 import Foundation
 import M1K3Chat
 import M1K3Diagnostics
+import M1K3LogCore
 
 /// One report waiting on the sheet (`.sheet(item:)` needs an identity; the body is a value).
 struct FieldReportDraft: Identifiable {
@@ -94,7 +97,8 @@ enum FieldReporter {
             appVersion: infoString("CFBundleShortVersionString"),
             build: infoString("CFBundleVersion"),
             system: "macOS \(os.majorVersion).\(os.minorVersion)",
-            crashLines: crashLines
+            crashLines: crashLines,
+            mlxErrors: MLXFailureLedger.standard.lines()
         )
         let body = SnagReportFormatter.redactedBody(
             report,

@@ -43,6 +43,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
+//  Review: claude-opus-5-5, 2026-11-21 — `onReportFailure`: "Send a report" under a failed answer, the brain
+//  report saying "couldn't answer" with MLX's own messages. Verify-by-launch (`-forceMLXError`). Confidence 0.75.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -64,6 +66,9 @@ struct MessageBubble: View {
     var onSpeak: (String) -> Void = { _ in }
     /// "Keep this": file the text this read answered about in Documents. nil hides the button.
     var onKeep: (() async -> Bool)?
+    /// "Send a report" under a failed answer (nil hides it): a ready brain that fails turns, as Pocket does on the
+    /// A13 phones, otherwise leaves no way to say so (2026-11-21).
+    var onReportFailure: (() -> Void)?
     var onSendFollowUp: (String) -> Void = { _ in }
     /// A typed `m1k3-choices` card in this answer may send (#717): ChatScreen
     /// passes true only for the newest message while no turn is responding.
@@ -123,6 +128,10 @@ struct MessageBubble: View {
                     Text(reason)
                         .font(.caption)
                         .foregroundStyle(.red)
+                    if let onReportFailure {
+                        Button("Send a report", action: onReportFailure)
+                            .font(.caption)
+                    }
                 }
                 if case .complete = message.status, !message.text.isEmpty {
                     answerActions

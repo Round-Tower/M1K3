@@ -8,7 +8,7 @@ heavy backends isolated behind protocols; `M1K3App/` a thin shell over `AppEnvir
 
 | Target | Role |
 |---|---|
-| `M1K3LogCore` | Single source of truth for unified logging: the `app.m1k3` subsystem + category catalogue + `LogPreview`. Dependency-free so every target references it. |
+| `M1K3LogCore` | Single source of truth for unified logging: the `app.m1k3` subsystem + category catalogue + `LogPreview`, and `MLXFailureLedger` (MLX's last error messages, kept on disk for the snag and brain reports). Dependency-free so every target references it. |
 | `M1K3LiveActivity` | The iPhone Live Activity's shared pieces: `TurnActivityState` (a phase and no free text, test-pinned), `TurnActivityAttributes` (ActivityKit, iOS only) and the tap link. Foundation-only so the widget extension (a ~30 MB ceiling) can link it and the Mac's Live Activities can reuse it. `M1K3Chat` decides when each phase shows (`TurnActivityPolicy`). |
 | `M1K3Knowledge` | RAG corpus: GRDB store, embeddings, hybrid (vector + FTS) search, RRF fusion, grounding gate. The knowledge primitives. Also `SwappableEmbeddingService` (the runtime embedder-swap façade), and on the hashing embedder `HashingKeywordLane` (#670: one strict-AND keyword chunk) and `HashingMemoryGate` (#447: a memory reaches a turn only if it shares a content word with the question). |
 | `M1K3Memory` | Temporal memory **graph** (atomic facts + typed edges + recursive-CTE traversal). Separate DB/consent lifecycle from the corpus. |
@@ -65,3 +65,4 @@ Review: Kev + claude-opus-5.5, 2026-10-27 — #696 receipts: the `M1K3Inference`
 calibrated on an M1 Max and a tier with no per-token receipt stays unpriced. Confidence 0.9.
 Review: Kev + claude-fable-5.2, 2026-11-12 — the `M1K3Voice` row names `M1K3ObjCTry`, a new leaf target with no product (the
 audio player's start can raise an NSException; the phone app was aborted by one at the background exit). Confidence 0.85.
+Review: claude-opus-5-5, 2026-11-21 — the `M1K3LogCore` row names `MLXFailureLedger` (still dependency-free; `M1K3MLX` now declares it). Confidence 0.9.

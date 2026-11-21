@@ -15,6 +15,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-30, Confidence 0.8 (pure, TDD-pinned; the sheet and the
 //  OSLogStore read are verify-by-launch). Prior: none (new file; SnagReport's shape).
+//  Review: claude-opus-5-5, 2026-11-21 — `mlxErrors`: MLX's own messages from `MLXFailureLedger`, redacted like
+//  the log lines, so a brain that fails on every turn (the A13 phones) reports why; `happened` lets a failed answer
+//  use the same report ("couldn't answer"). Confidence 0.85.
 //
 
 import Foundation
@@ -38,6 +41,8 @@ public struct BrainFailureLogEntry: Sendable, Equatable {
 public struct BrainFailureReport: Sendable, Equatable {
     /// The brain's display name ("Lil", "Big").
     public var brain: String
+    /// What went wrong, in the words the body uses: `Happened.couldNotGetReady` (a load) or `.couldNotAnswer`.
+    public var happened: String
     /// The line M1K3 showed the user.
     public var shown: String
     public var appVersion: String
@@ -46,14 +51,31 @@ public struct BrainFailureReport: Sendable, Equatable {
     public var system: String
     /// `BrainFailureReportFormatter.logLines`' output. Often the real cause is only here.
     public var logLines: [String]
+    /// MLX's own error messages this device kept (`MLXFailureLedger.lines`), newest first. Often empty.
+    public var mlxErrors: [String]
 
-    public init(brain: String, shown: String, appVersion: String, build: String, system: String, logLines: [String]) {
+    public init(
+        brain: String, shown: String, appVersion: String, build: String, system: String, logLines: [String],
+        mlxErrors: [String] = [], happened: String = Happened.couldNotGetReady
+    ) {
         self.brain = brain
+        self.happened = happened
         self.shown = shown
         self.appVersion = appVersion
         self.build = build
         self.system = system
         self.logLines = logLines
+        self.mlxErrors = mlxErrors
+    }
+}
+
+public extension BrainFailureReport {
+    /// The two failures a report is offered for.
+    enum Happened {
+        /// The brain never got ready (a download or a load).
+        public static let couldNotGetReady = "couldn't get ready"
+        /// A ready brain failed a turn (2026-11-21: on the A13 phones the persona warm fails after ready).
+        public static let couldNotAnswer = "couldn't answer"
     }
 }
 
@@ -82,17 +104,20 @@ public enum BrainFailureReportFormatter {
     /// The email body. Plain text: mail clients render mailto bodies verbatim.
     public static func body(_ report: BrainFailureReport) -> String {
         var lines = [
-            "This email says \(report.brain) couldn't get ready on this device. It holds the brain, what M1K3 "
-                + "showed you, the app and system versions, M1K3's download log from this session, and anything "
-                + "you add below.",
+            "This email says \(report.brain) \(report.happened) on this device. It holds the brain, what M1K3 "
+                + "showed you, the app and system versions, M1K3's download log from this session, any brain errors "
+                + "this device kept, and anything you add below.",
             "It does not hold anything you typed or said, or your memories and documents.",
             "",
-            "What happened: \(report.brain) couldn't get ready.",
+            "What happened: \(report.brain) \(report.happened).",
             "M1K3 showed: \(report.shown)",
             "App: \(report.appVersion) (\(report.build)) · \(report.system)",
         ]
         if !report.logLines.isEmpty {
             lines += ["", "M1K3's log from this session:"] + report.logLines
+        }
+        if !report.mlxErrors.isEmpty {
+            lines += ["", "Brain errors this device kept:"] + report.mlxErrors
         }
         lines += ["", "What were you doing when it happened?", ""]
         return lines.joined(separator: "\n")
@@ -110,6 +135,9 @@ public enum BrainFailureReportFormatter {
         let redactor = DiagnosticRedactor(homeDirectory: homeDirectory, userName: userName)
         var scrubbed = report
         scrubbed.logLines = report.logLines.map(redactor.redact)
+        scrubbed.mlxErrors = report.mlxErrors.map(redactor.redact)
+        // A failed answer's line is the error's own description, which can name a path (2026-11-21 review).
+        scrubbed.shown = redactor.redact(report.shown)
         return scrubExtra(body(scrubbed))
     }
 

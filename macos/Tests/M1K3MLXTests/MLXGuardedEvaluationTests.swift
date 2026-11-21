@@ -1,5 +1,6 @@
 import Foundation
 import M1K3Inference
+import M1K3LogCore
 @testable import M1K3MLX
 import MLX
 import Testing
@@ -123,5 +124,66 @@ struct MLXGuardedEvaluationTests {
         let tools = try text("MLXToolCalling.swift")
         #expect(tools.contains("MLXGuardedEvaluation.during(\"M1K3 tool turn\")"))
         #expect(tools.contains("MLXGuardedEvaluation.during(\"M1K3 agent step\")"))
+    }
+
+    // MARK: The ledger (2026-11-21: 15 iPhone crash logs, none with MLX's message)
+
+    private func tempLedger() -> MLXFailureLedger {
+        MLXFailureLedger(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("guard-ledger-\(UUID().uuidString)").appendingPathComponent("l.json"))
+    }
+
+    @Test("an MLX error the scope catches is written to the ledger, so the next report can say what failed")
+    func caughtErrorIsRecorded() async {
+        let ledger = tempLedger()
+        await #expect(throws: InferenceError.self) {
+            try await MLXGuardedEvaluation.run(recording: ledger) { throw MLXError.caught("[metal::malloc] boom") }
+        }
+        let lines = ledger.lines()
+        #expect(lines.count == 1)
+        #expect(lines.first?.hasSuffix("[metal::malloc] boom") == true)
+    }
+
+    @Test("the body's own throw is not an MLX failure and stays out of the ledger")
+    func ownThrowIsNotRecorded() async {
+        let ledger = tempLedger()
+        await #expect(throws: InferenceError.self) {
+            try await MLXGuardedEvaluation.run(recording: ledger) { throw InferenceError.generationFailed("own") }
+        }
+        #expect(ledger.lines().isEmpty)
+    }
+
+    @Test("a stopped turn's MLX error is the stop's own fallout and stays out of the ledger")
+    func cancelledErrorIsNotRecorded() async {
+        let ledger = tempLedger()
+        let (gate, open) = AsyncStream<Void>.makeStream()
+        let (started, began) = AsyncStream<Void>.makeStream()
+        let task = Task {
+            try await MLXGuardedEvaluation.run(recording: ledger) {
+                began.yield()
+                for await _ in gate {
+                    break
+                }
+                throw MLXError.caught("[METAL] Insufficient Permission (to submit GPU work from background)")
+            }
+        }
+        for await _ in started {
+            break
+        }
+        task.cancel()
+        open.yield()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(ledger.lines().isEmpty)
+    }
+
+    @Test("the forced-failure drills exist only in a Debug build")
+    func drillsAreDebugOnly() throws {
+        let source = try text("MLXGuardedEvaluation.swift")
+        // The code that reads the flags, not the header that names them.
+        let drill = try #require(source.range(of: "forKey: \"forceMLXError\""))
+        let debug = try #require(source.range(of: "#if DEBUG\n    /// Debug-only drills"))
+        #expect(debug.lowerBound < drill.lowerBound)
+        #expect(source.contains("forKey: \"forceMLXCrash\""))
+        #expect(source.contains("#if DEBUG\n                    try MLXFailureDrill.failIfAsked()"), "the scope's call is Debug-only too")
     }
 }
