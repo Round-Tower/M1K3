@@ -141,9 +141,12 @@
 //  as the person's words. The canvas is the face and the composer.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the String-typed readiness hint and the refused-image
 //  line are String(localized:). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-21 — a failed answer offers "Send a report" (the brain report, "couldn't
+//  answer", MLX's own messages included), gated like the brain-load one. Verify-by-launch. Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
+import M1K3Diagnostics
 import M1K3Inference
 import M1K3LanguageModel
 import M1K3Screengrab
@@ -595,6 +598,19 @@ struct ChatScreen: View {
         .padding(.horizontal, 24)
     }
 
+    /// A failed answer's report, for the age bands #708's reports are offered to (nil hides the button).
+    private func failureReport(for message: ChatMessage) -> (() -> Void)? {
+        guard case let .failed(reason) = message.status,
+              AgeAppropriateness.fieldReportAllowed(for: AgeBand(persisted: ageBandRaw)) else { return nil }
+        return {
+            Task {
+                brainFailureDraft = await core.brainFailureDraft(
+                    shown: reason, happened: BrainFailureReport.Happened.couldNotAnswer
+                )
+            }
+        }
+    }
+
     // MARK: - Transcript
 
     private var transcript: some View {
@@ -616,6 +632,7 @@ struct ChatScreen: View {
                             onKeep: core.chat.readSource(answeredBy: message.id).map { source in
                                 { await core.keep(source) }
                             },
+                            onReportFailure: failureReport(for: message),
                             onSendFollowUp: { question in
                                 // Gate on brainReady, not canSend: a follow-up chip carries
                                 // its own prompt, so no draft dependency; chips

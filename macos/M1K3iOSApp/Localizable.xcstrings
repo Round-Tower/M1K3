@@ -5697,17 +5697,27 @@
     "This device’s pairing key is missing — pair with your Mac again." : {
 
     },
-    "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask." : {
+    "This is the whole message: that %@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask."
+            "value" : "This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask."
           }
         }
       }
     },
-    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {
+    "This is the whole message: that %@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask."
+          }
+        }
+      }
+    },
+    "This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most." : {
 
     },
     "Try Again" : {

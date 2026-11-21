@@ -20,8 +20,13 @@
 //  park-not-return choice is deliberate — returning would let MLX continue on
 //  torn-down Metal state. Verify-owed: ⌘Q mid-generation exits quietly).
 //  Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-21 — the live-app branch writes MLX's message to `MLXFailureLedger` before it
+//  traps, so the next report carries it; the deprecated-installer shim moved to `MLXGuardedEvaluation`, shared
+//  with the iPhone's recording handler. Confidence 0.85.
 
 import Foundation
+import M1K3LogCore
+import M1K3MLX
 import MLX
 import os
 
@@ -36,7 +41,7 @@ enum MLXExitGuard {
 
     /// Install at launch, before any MLX use.
     static func install() {
-        installGlobalHandler {
+        MLXGuardedEvaluation.installGlobalHandler {
             message, _ in
             let text = message.map { String(cString: $0) } ?? "unknown MLX error"
             if MLXExitGuard.terminating.withLock({ $0 }) {
@@ -49,7 +54,9 @@ enum MLXExitGuard {
                     Thread.sleep(forTimeInterval: 3600)
                 }
             } else {
-                // Today's behaviour, kept deliberately: fail loud on a live app.
+                // Today's behaviour, kept deliberately: fail loud on a live app. MLX's message goes to the ledger
+                // first, so the next launch's report can say what failed (2026-11-21).
+                MLXFailureLedger.standard.record(text)
                 fatalError(text)
             }
         }
@@ -57,31 +64,5 @@ enum MLXExitGuard {
 
     static func markTerminating() {
         terminating.withLock { $0 = true }
-    }
-
-    /// `MLX.setErrorHandler` is deprecated in favour of the task-scoped
-    /// `withErrorHandler`, but a task-scoped handler can't cover a teardown
-    /// race — the erroring eval belongs to whatever task happened to be in
-    /// flight at quit. The protocol hop below calls the deprecated global
-    /// installer without spraying a warning over every build.
-    private protocol DeprecatedInstaller {
-        static func install(
-            _ handler: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> Void
-        )
-    }
-
-    private enum Shim: DeprecatedInstaller {
-        @available(*, deprecated)
-        static func install(
-            _ handler: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> Void
-        ) {
-            MLX.setErrorHandler(handler)
-        }
-    }
-
-    private static func installGlobalHandler(
-        _ handler: @convention(c) (UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> Void
-    ) {
-        (Shim.self as DeprecatedInstaller.Type).install(handler)
     }
 }

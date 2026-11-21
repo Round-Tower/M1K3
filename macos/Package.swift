@@ -15,6 +15,7 @@
 // Review: Kev + claude-opus-5-5, 2026-10-02 — M1K3Voice depends on the dependency-free M1K3LogCore (voice logger via
 // M1K3Log.logger(.voice), PR #471 round 2). Confidence 0.9.
 // Review: Kev + claude-opus-5, 2026-09-11 — M1K3CLICore target + tests (the `m1k3` command-line client's
+// Review: claude-opus-5-5, 2026-11-21 — M1K3MLX declares M1K3LogCore (MLXFailureLedger, the guard's record of MLX's message).
 // pure half: argument parsing, JSON-RPC framing, the agent-notes block, and the per-client connect plans).
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
 // dependency-free knowledge primitives (VectorMath, RRFFusion) ported from
@@ -534,6 +535,8 @@ let package = Package(
             dependencies: [
                 "M1K3Knowledge",
                 "M1K3Inference",
+                // MLXFailureLedger: the guarded scope writes MLX's message down for the next report (2026-11-21).
+                "M1K3LogCore",
                 .product(name: "MLXEmbedders", package: "mlx-swift-lm"),
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),

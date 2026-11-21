@@ -308,8 +308,8 @@ Each line says what leaves the device, what stays, or asks permission. Mark any 
 102. **EN:** The pairing code expired.  
    **fr:** Le code d’association a expiré.
 
-103. **EN:** This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.  
-   **fr:** Voici le message en entier : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session-là a commencé, le cerveau, les versions de l’app et de macOS, et les éventuels résumés de plantage que ce Mac a conservés. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.
+103. **EN:** This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and macOS versions, and any crash summaries and brain errors this Mac kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.  
+   **fr:** Voici le message en entier : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session-là a commencé, le cerveau, les versions de l’app et de macOS, et les éventuels résumés de plantage et erreurs du cerveau que ce Mac a conservés. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.
 
 104. **EN:** This is the whole message: your message, M1K3's answer, your note, the brain and the app version — nothing else from this Mac, though the answer may quote what M1K3 read to write it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a made-up test case, and deletes it if you ask. Change anything below first if you like.  
    **fr:** Voici le message en entier : ton message, la réponse de M1K3, ta note, le cerveau et la version de l’app — rien d’autre de ce Mac, même si la réponse peut citer ce que M1K3 a lu pour l’écrire. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour corriger ce qui n’a pas marché, peut le réécrire sous forme de cas de test fictif, et le supprime si tu le demandes. Tu peux d’abord modifier ce que tu veux ci-dessous.
@@ -551,171 +551,174 @@ Each line says what leaves the device, what stays, or asks permission. Mark any 
 183. **EN:** This device’s pairing key is missing — pair with your Mac again.  
    **fr:** La clé d’association de cet appareil est manquante — associe-le de nouveau à ton Mac.
 
-184. **EN:** This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, and M1K3's download log from this session. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.  
-   **fr:** Voici l’intégralité du message : le fait que %1$@ n’a pas pu se préparer, ce que M1K3 t’a affiché, les versions de l’app et du système, et le journal de téléchargement de M1K3 pour cette session. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.
+184. **EN:** This is the whole message: that %1$@ couldn't answer, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.  
+   **fr:** Voici l’intégralité du message : le fait que %1$@ n’a pas pu répondre, ce que M1K3 t’a affiché, les versions de l’app et du système, le journal de téléchargement de M1K3 pour cette session, et les éventuelles erreurs du cerveau conservées par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.
 
-185. **EN:** This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.  
-   **fr:** Voici l’intégralité du message : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session a commencé, le cerveau, les versions de l’app et du système, et les éventuels résumés de plantage conservés par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.
+185. **EN:** This is the whole message: that %1$@ couldn't get ready, what M1K3 showed you, the app and system versions, M1K3's download log from this session, and any brain errors this device kept. Nothing you typed or said goes with it. It goes to %2$@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask.  
+   **fr:** Voici l’intégralité du message : le fait que %1$@ n’a pas pu se préparer, ce que M1K3 t’a affiché, les versions de l’app et du système, le journal de téléchargement de M1K3 pour cette session, et les éventuelles erreurs du cerveau conservées par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %2$@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes.
 
-186. **EN:** Turns the camera off  
+186. **EN:** This is the whole message: that M1K3 didn't close cleanly last time, when that session began, the brain, the app and system versions, and any crash summaries and brain errors this device kept. Nothing you typed or said goes with it. It goes to %@ from your own mail app, which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.  
+   **fr:** Voici l’intégralité du message : le fait que M1K3 ne s’est pas fermé correctement la dernière fois, le moment où cette session a commencé, le cerveau, les versions de l’app et du système, et les éventuels résumés de plantage et erreurs du cerveau conservés par cet appareil. Rien de ce que tu as tapé ou dit ne l’accompagne. Il est envoyé à %@ depuis ta propre app de messagerie, qui s’ouvre avec le message déjà rempli. M1K3 n’envoie rien lui-même. Round Tower le lit pour trouver ce qui n’a pas marché, et le supprime si tu le demandes. Si tu te souviens de ce que tu faisais, ajoute-le à la fin : c’est ce qui aide le plus.
+
+187. **EN:** Turns the camera off  
    **fr:** Désactive la caméra
 
-187. **EN:** Turns the camera on so M1K3 answers about what you point it at  
+188. **EN:** Turns the camera on so M1K3 answers about what you point it at  
    **fr:** Active la caméra pour que M1K3 réponde à propos de ce vers quoi tu la pointes
 
-188. **EN:** Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for under 16; the assistant's tone adjusts for all minors. Declining gives full capability.  
+189. **EN:** Uses Apple's Declared Age Range to adjust content for younger users. Web search is disabled for under 16; the assistant's tone adjusts for all minors. Declining gives full capability.  
    **fr:** Utilise la Tranche d’âge déclarée d’Apple pour adapter le contenu aux plus jeunes. La recherche web est désactivée pour les moins de 16 ans ; le ton de l’assistant s’adapte pour tous les mineurs. Refuser donne accès à toutes les fonctionnalités.
 
-189. **EN:** Voice mode, microphone parked  
+190. **EN:** Voice mode, microphone parked  
    **fr:** Mode vocal, micro en pause
 
-190. **EN:** Web search in chat  
+191. **EN:** Web search in chat  
    **fr:** Recherche web dans la discussion
 
-191. **EN:** Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, sends your messages to Apple. %@  
+192. **EN:** Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, sends your messages to Apple. %@  
    **fr:** La recherche web envoie ta requête à DuckDuckGo. Private Cloud Compute, dans la section Cerveau, envoie tes messages à Apple. %@
 
-192. **EN:** Write a short description of this photo and remember it. The description stays on this device.  
+193. **EN:** Write a short description of this photo and remember it. The description stays on this device.  
    **fr:** Rédiger une courte description de cette photo et la mémoriser. La description reste sur cet appareil.
 
-193. **EN:** Writes a search for you to read and send. Nothing is sent until you send it  
+194. **EN:** Writes a search for you to read and send. Nothing is sent until you send it  
    **fr:** Rédige une recherche que tu pourras relire et envoyer. Rien n’est envoyé tant que tu ne l’as pas envoyée
 
-194. **EN:** Writes a short description and remembers it on this device  
+195. **EN:** Writes a short description and remembers it on this device  
    **fr:** Rédige une courte description et la mémorise sur cet appareil
 
-195. **EN:** Your Mac’s brain, over your Wi‑Fi — pair to use it  
+196. **EN:** Your Mac’s brain, over your Wi‑Fi — pair to use it  
    **fr:** Le cerveau de ton Mac, via ton Wi‑Fi — associe-le pour l’utiliser
 
-196. **EN:** Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair.  
+197. **EN:** Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair.  
    **fr:** Le cerveau de ton Mac, via ton propre Wi‑Fi. Scanne un code pour l’associer.
 
-197. **EN:** Your mail app didn't open it. The full text is on your clipboard — paste it into an email to %@.  
+198. **EN:** Your mail app didn't open it. The full text is on your clipboard — paste it into an email to %@.  
    **fr:** Ton app de messagerie ne l’a pas ouvert. Le texte complet est dans ton presse-papiers — colle-le dans un e-mail à %@.
 
-198. **EN:** Your mail app opened with the start of it. The message was too long for one link, so the full text is on your clipboard — paste it in before you send.  
+199. **EN:** Your mail app opened with the start of it. The message was too long for one link, so the full text is on your clipboard — paste it in before you send.  
    **fr:** Ton app de messagerie s’est ouverte avec le début du message. Il était trop long pour un seul lien, donc le texte complet est dans ton presse-papiers — colle-le avant d’envoyer.
 
-199. **EN:** Your mail app should now show it, addressed and filled in; it goes when you send it there. If no message appeared, Copy instead still has the text.  
+200. **EN:** Your mail app should now show it, addressed and filled in; it goes when you send it there. If no message appeared, Copy instead still has the text.  
    **fr:** Ton app de messagerie devrait maintenant l’afficher, avec le destinataire et le contenu déjà remplis ; il part quand tu l’envoies depuis cette app. Si aucun message n’est apparu, « Copier plutôt » contient toujours le texte.
 
-200. **EN:** Your next message is answered by looking at this photo again, on this device  
+201. **EN:** Your next message is answered by looking at this photo again, on this device  
    **fr:** Pour répondre à ton prochain message, M1K3 regarde à nouveau cette photo, sur cet appareil
 
-201. **EN:** Your next message is answered from this text again, on this device  
+202. **EN:** Your next message is answered from this text again, on this device  
    **fr:** Pour répondre à ton prochain message, M1K3 s’appuie à nouveau sur ce texte, sur cet appareil
 
-202. **EN:** Your thumbs up and down, with any notes, and the question and answer each one rates. They stay on this device unless you export them.  
+203. **EN:** Your thumbs up and down, with any notes, and the question and answer each one rates. They stay on this device unless you export them.  
    **fr:** Tes pouces levés et baissés, avec tes éventuels commentaires, et la question et la réponse que chacun évalue. Ils restent sur cet appareil, sauf si tu les exportes.
 
-203. **EN:** pair with your Mac  
+204. **EN:** pair with your Mac  
    **fr:** associe ton Mac
 
-204. **EN:** M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored.  
+205. **EN:** M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored.  
    **fr:** M1K3 n’utilise la caméra que pour scanner le code d’association affiché par ton Mac pour Brain at Home. Aucune photo ni vidéo n’est capturée ni stockée.
 
-205. **EN:** Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted.  
+206. **EN:** Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted.  
    **fr:** Brain at Home se connecte à ton propre Mac via ton Wi-Fi pour que cet appareil puisse utiliser le cerveau plus gros du Mac. Cette connexion reste chiffrée, sur ton propre réseau.
 
-206. **EN:** M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device.  
+207. **EN:** M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device.  
    **fr:** M1K3 utilise le microphone pour les conversations vocales. L’audio est transcrit sur ton appareil et ne le quitte jamais.
 
-207. **EN:** M1K3 uses Apple's on-device speech recognition, so your voice stays on this device. It is never sent to a server.  
+208. **EN:** M1K3 uses Apple's on-device speech recognition, so your voice stays on this device. It is never sent to a server.  
    **fr:** M1K3 utilise la reconnaissance vocale d’Apple sur l’appareil, donc ta voix reste sur cet appareil. Elle n’est jamais envoyée à un serveur.
 
-208. **EN:** Sends it as your next message  
+209. **EN:** Sends it as your next message  
    **fr:** Envoie ce choix comme ton prochain message
 
-209. **EN:** Offline? I'm still right here, on your device.  
+210. **EN:** Offline? I'm still right here, on your device.  
    **fr:** Hors ligne ? Je suis toujours là, sur ton appareil.
 
-210. **EN:** Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone.  
+211. **EN:** Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone.  
    **fr:** L’accès au micro est désactivé. Active-le dans Réglages Système → Confidentialité et sécurité → Micro.
 
-211. **EN:** The microphone isn’t ready yet — try again in a moment.  
+212. **EN:** The microphone isn’t ready yet — try again in a moment.  
    **fr:** Le micro n’est pas encore prêt — réessaie dans un instant.
 
-212. **EN:** %@ answers. Web search is off.  
+213. **EN:** %@ answers. Web search is off.  
    **fr:** %@ répond. Recherche web désactivée.
 
-213. **EN:** %@ answers. Web search is on.  
+214. **EN:** %@ answers. Web search is on.  
    **fr:** %@ répond. Recherche web activée.
 
-214. **EN:** %@ can't remember photos. Switch to Lil to remember photos.  
+215. **EN:** %@ can't remember photos. Switch to Lil to remember photos.  
    **fr:** %@ ne peut pas mémoriser de photos. Passe à Lil pour mémoriser des photos.
 
-215. **EN:** This brain can't read photos right now.  
+216. **EN:** This brain can't read photos right now.  
    **fr:** Ce cerveau ne peut pas lire les photos pour le moment.
 
-216. **EN:** %@ are each a switch in Settings.  
+217. **EN:** %@ are each a switch in Settings.  
    **fr:** %@ s’activent ou se désactivent séparément dans les Réglages.
 
-217. **EN:** %@ is a switch in Settings.  
+218. **EN:** %@ is a switch in Settings.  
    **fr:** %@ s’active ou se désactive dans les Réglages.
 
-218. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.  
+219. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro.  
    **fr:** Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton Vision Pro.
 
-219. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.  
+220. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your device.  
    **fr:** Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ton appareil.
 
-220. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.  
+221. **EN:** A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine.  
    **fr:** Un moteur entièrement local — conversation suivie, mémoire et raisonnement qui suit ton rythme. Fonctionne entièrement sur ta machine.
 
-221. **EN:** A one-time download, kept on this device  
+222. **EN:** A one-time download, kept on this device  
    **fr:** Un téléchargement unique, conservé sur cet appareil
 
-222. **EN:** About %@, kept on this device  
+223. **EN:** About %@, kept on this device  
    **fr:** Environ %@, conservé sur cet appareil
 
-223. **EN:** Apple's built-in on-device model. No download. The quickest way to start.  
+224. **EN:** Apple's built-in on-device model. No download. The quickest way to start.  
    **fr:** Le modèle intégré d’Apple, sur l’appareil. Aucun téléchargement. Le moyen le plus rapide de commencer.
 
-224. **EN:** Besides model downloads, the one capability that sends anything off this Mac: every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way.  
+225. **EN:** Besides model downloads, the one capability that sends anything off this Mac: every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way.  
    **fr:** En dehors des téléchargements de modèles, la seule fonction qui envoie quoi que ce soit hors de ce Mac : chaque recherche et chaque lecture de page s’affichent dans la réponse au moment où elles ont lieu. Les outils de date, d’heure et système restent en local dans tous les cas.
 
-225. **EN:** Every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way.  
+226. **EN:** Every search and page read shows in the reply as it happens. Date, time, and system tools stay local either way.  
    **fr:** Chaque recherche et chaque lecture de page s’affichent dans la réponse au moment où elles ont lieu. Les outils de date, d’heure et système restent en local dans tous les cas.
 
-226. **EN:** Maximum capability, fully local. The full M1K3.  
+227. **EN:** Maximum capability, fully local. The full M1K3.  
    **fr:** Capacités maximales, entièrement en local. M1K3 au complet.
 
-227. **EN:** My everyday brain. Quick, sees pictures, lives on this Mac.  
+228. **EN:** My everyday brain. Quick, sees pictures, lives on this Mac.  
    **fr:** Mon cerveau de tous les jours. Rapide, voit les images, vit sur ce Mac.
 
-228. **EN:** That brain was switched out. Send it again to use the new one.  
+229. **EN:** That brain was switched out. Send it again to use the new one.  
    **fr:** Ce cerveau a été remplacé. Renvoie le message pour utiliser le nouveau.
 
-229. **EN:** Your local AI companion. Runs on this Mac — no account. It goes online only to %1$@. %2$@  
+230. **EN:** Your local AI companion. Runs on this Mac — no account. It goes online only to %1$@. %2$@  
    **fr:** Ton compagnon IA local. Fonctionne sur ce Mac — sans compte. Il ne se connecte à Internet que pour %1$@. %2$@
 
-230. **EN:** download the models you choose (brains, speech, voice)  
+231. **EN:** download the models you choose (brains, speech, voice)  
    **fr:** télécharger les modèles que tu choisis (cerveaux, reconnaissance vocale, voix)
 
-231. **EN:** email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to  
+232. **EN:** email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to  
    **fr:** envoyer par e-mail à Round Tower, quand tu le choisis, un échange ou un court rapport après un accroc ou l’échec du téléchargement d’un cerveau
 
-232. **EN:** search the web and look things up  
+233. **EN:** search the web and look things up  
    **fr:** chercher sur le web et se renseigner
 
-233. **EN:** use the optional Private Cloud Compute brain  
+234. **EN:** use the optional Private Cloud Compute brain  
    **fr:** utiliser le cerveau facultatif Private Cloud Compute
 
-234. **EN:** M1K3 couldn’t read its scanned pages on this device. Try again in a moment.  
+235. **EN:** M1K3 couldn’t read its scanned pages on this device. Try again in a moment.  
    **fr:** M1K3 n’a pas pu lire ses pages numérisées sur cet appareil. Réessaie dans un instant.
 
-235. **EN:** A warm, natural neural voice that runs entirely on your Mac. One download, then offline forever. The voice M1K3 was meant to have.  
+236. **EN:** A warm, natural neural voice that runs entirely on your Mac. One download, then offline forever. The voice M1K3 was meant to have.  
    **fr:** Une voix neuronale chaleureuse et naturelle qui fonctionne entièrement sur ton Mac. Un seul téléchargement, puis hors ligne pour toujours. La voix que M1K3 devait avoir.
 
-236. **EN:** A warm, natural neural voice that runs entirely on your device. One download, then offline forever. The voice M1K3 was meant to have.  
+237. **EN:** A warm, natural neural voice that runs entirely on your device. One download, then offline forever. The voice M1K3 was meant to have.  
    **fr:** Une voix neuronale chaleureuse et naturelle qui fonctionne entièrement sur ton appareil. Un seul téléchargement, puis hors ligne pour toujours. La voix que M1K3 devait avoir.
 
-237. **EN:** Speech recognition isn't allowed — check Settings › Privacy & Security.  
+238. **EN:** Speech recognition isn't allowed — check Settings › Privacy & Security.  
    **fr:** La reconnaissance vocale n’est pas autorisée — vérifie dans Réglages › Confidentialité et sécurité.
 
-238. **EN:** Your device's built-in speech. Works immediately, always on-device — clear, if a little robotic.  
+239. **EN:** Your device's built-in speech. Works immediately, always on-device — clear, if a little robotic.  
    **fr:** La synthèse vocale intégrée de ton appareil. Fonctionne immédiatement, toujours sur l’appareil — claire, quoique un peu robotique.
 
-239. **EN:** macOS's built-in speech. Works immediately, always on-device — clear, if a little robotic.  
+240. **EN:** macOS's built-in speech. Works immediately, always on-device — clear, if a little robotic.  
    **fr:** La synthèse vocale intégrée de macOS. Fonctionne immédiatement, toujours sur l’appareil — claire, quoique un peu robotique.
 

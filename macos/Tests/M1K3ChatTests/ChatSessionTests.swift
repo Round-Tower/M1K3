@@ -18,6 +18,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: both note tests send through one gated,
 //  note-only turn and judge it mid-flight, so a note that strays into the activity label fails, and the replay
 //  check runs with the note demonstrably on the answer. Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-21 — a stream that ends with nothing, unasked, settles as a visible failure
+//  (an MLX error ends the stream, so it used to read as a blank answer). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -321,6 +323,28 @@ struct ChatSessionTests {
             Issue.record("expected .failed status, got \(String(describing: answer?.status))")
         }
         #expect(!(answer?.text.isEmpty ?? true)) // user-facing fallback text
+    }
+
+    @Test("a stream that ends with nothing, unasked, is a failed answer the person can see (2026-11-21)")
+    func emptyStreamIsAFailure() async {
+        // A provider's error ends its stream rather than throwing (the InferenceProvider contract), so an MLX
+        // failure used to settle as a blank, invisible answer: Kev's 17 Pro under -forceMLXError, and what the A13
+        // phones would see in 1.5 once the crash became a caught error.
+        // Lil's stream opens with "<think>" before the failure (its template pre-opens one), so a lone tag is nothing too.
+        // A think that ended with no answer (an error mid-think, or the cap) is nothing to the person too.
+        for deltas in [[], ["", "  \n"], ["<think>"], ["<think>The bat costs"], ["<think>Sums.</think>", "  "]] {
+            let session = ChatSession(responder: DeltaResponder(sources: [], deltas: deltas))
+            await session.send("how are you?")
+            let answer = session.messages.last
+            #expect(answer?.role == .assistant)
+            if case .failed = answer?.status {} else {
+                Issue.record("expected .failed for \(deltas), got \(String(describing: answer?.status))")
+            }
+            #expect(answer?.text == ChatFailureMessage.emptyAnswer)
+        }
+        let thought = ChatSession(responder: DeltaResponder(sources: [], deltas: ["<think>Sums.</think>"]))
+        await thought.send("how much is the ball?")
+        #expect(thought.messages.last?.reasoning?.contains("Sums.") == true, "the reasoning stays viewable")
     }
 
     @Test("isResponding is true mid-flight and false once settled")

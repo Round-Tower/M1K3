@@ -13,13 +13,15 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — the recipient pin. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — "Brain now:" (it is the brain the next
 //  launch restored, not necessarily the one that crashed). Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-21 — `mlxErrors` (MLX's own messages from `MLXFailureLedger`): a section of
+//  their own, redacted like the crash lines. Confidence 0.85.
 //
 
 import Foundation
 @testable import M1K3Diagnostics
 import Testing
 
-private func report(crashLines: [String] = []) -> SnagReport {
+private func report(crashLines: [String] = [], mlxErrors: [String] = []) -> SnagReport {
     SnagReport(
         openedAt: Date(timeIntervalSince1970: 1_800_000_000),
         noticedAt: Date(timeIntervalSince1970: 1_800_003_600),
@@ -27,15 +29,33 @@ private func report(crashLines: [String] = []) -> SnagReport {
         appVersion: "1.3.0",
         build: "542",
         system: "macOS 27.0",
-        crashLines: crashLines
+        crashLines: crashLines,
+        mlxErrors: mlxErrors
     )
 }
 
 struct SnagReportTests {
-    @Test("the payload is exactly: the two times, brain, app version, build, system, crash summaries")
+    @Test("the payload is exactly: the two times, brain, app version, build, system, crash summaries, brain errors")
     func fieldSet() {
         let labels = Mirror(reflecting: report()).children.compactMap(\.label)
-        #expect(labels == ["openedAt", "noticedAt", "brain", "appVersion", "build", "system", "crashLines"])
+        #expect(labels == ["openedAt", "noticedAt", "brain", "appVersion", "build", "system", "crashLines", "mlxErrors"])
+    }
+
+    @Test("MLX's own messages ride along when the device kept some; none, no section (2026-11-21)")
+    func brainErrorsAreOptional() {
+        #expect(!SnagReportFormatter.body(report()).contains("Brain errors"))
+        let line = "2027-01-15T08:59:00Z [metal::malloc] Unable to allocate 268435456 bytes."
+        let body = SnagReportFormatter.body(report(mlxErrors: [line]))
+        #expect(body.contains("Brain errors this device kept:\n" + line))
+        #expect(body.contains("brain errors"), "the preamble says they are in it")
+    }
+
+    @Test("brain errors are redacted like crash lines: MLX can name a file path")
+    func brainErrorsAreRedacted() {
+        let leaky = report(mlxErrors: ["2027-01-15T08:59:00Z [load] Failed to open /Users/aoife/models/x.safetensors"])
+        let body = SnagReportFormatter.redactedBody(leaky, homeDirectory: "/Users/aoife", userName: nil)
+        #expect(!body.contains("/Users/aoife"))
+        #expect(body.contains("[load] Failed to open"))
     }
 
     @Test("the body says what happened, when, on what, and what it leaves out")

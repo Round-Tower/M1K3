@@ -20,6 +20,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — the subject takes Round Tower's support format (Kev: "Lexy | iOS Support
 //  | v4.0.2"), shared with the field report through `RoundTowerReports.subject`. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — `subject(system:version:)`, for BrainFailureReport too. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-21 — `mlxErrors`: MLX's own messages from `MLXFailureLedger`, a section of their
+//  own and redacted like the crash lines (15 iPhone crash logs carried no message; the next report will). Confidence 0.85.
 //
 
 import Foundation
@@ -66,10 +68,13 @@ public struct SnagReport: Sendable, Equatable {
     public var system: String
     /// MetricKit digest lines for crashes this device kept, newest first. Often empty.
     public var crashLines: [String]
+    /// MLX's own error messages this device kept (`MLXFailureLedger.lines`), newest first: the line a crash
+    /// report never carries, written down before the trap. Often empty.
+    public var mlxErrors: [String]
 
     public init(
         openedAt: Date, noticedAt: Date, brain: String, appVersion: String, build: String, system: String,
-        crashLines: [String]
+        crashLines: [String], mlxErrors: [String] = []
     ) {
         self.openedAt = openedAt
         self.noticedAt = noticedAt
@@ -78,6 +83,7 @@ public struct SnagReport: Sendable, Equatable {
         self.build = build
         self.system = system
         self.crashLines = crashLines
+        self.mlxErrors = mlxErrors
     }
 }
 
@@ -93,7 +99,8 @@ public enum SnagReportFormatter {
     public static func body(_ report: SnagReport) -> String {
         var lines = [
             "This email says M1K3 didn't close cleanly last time. It holds when that session began, the brain, "
-                + "the app and system versions, any crash summaries this device kept, and anything you add below.",
+                + "the app and system versions, any crash summaries and brain errors this device kept, and anything "
+                + "you add below.",
             "It does not hold anything you typed or said, or your memories and documents.",
             "",
             "What happened: M1K3 didn't close cleanly. That session began \(timestamp.string(from: report.openedAt)); "
@@ -103,6 +110,9 @@ public enum SnagReportFormatter {
         ]
         if !report.crashLines.isEmpty {
             lines += ["", "Crash summaries this device kept:"] + report.crashLines
+        }
+        if !report.mlxErrors.isEmpty {
+            lines += ["", "Brain errors this device kept:"] + report.mlxErrors
         }
         lines += ["", "What were you doing when it happened?", ""]
         return lines.joined(separator: "\n")
@@ -121,6 +131,7 @@ public enum SnagReportFormatter {
         let redactor = DiagnosticRedactor(homeDirectory: homeDirectory, userName: userName)
         var scrubbed = report
         scrubbed.crashLines = report.crashLines.map(redactor.redact)
+        scrubbed.mlxErrors = report.mlxErrors.map(redactor.redact)
         return scrubExtra(body(scrubbed))
     }
 
