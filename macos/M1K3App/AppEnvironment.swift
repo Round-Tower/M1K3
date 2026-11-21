@@ -181,6 +181,7 @@
 //  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the live AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 
 import AppKit
 import Foundation
@@ -551,6 +552,8 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// The voice loop's current answer's spoken language (decided once per answer; see `SpokenAnswerLanguage`).
+    let spokenAnswerLanguage = SpokenAnswerLanguage()
     /// The page voice mode shows beside the avatar (#839): opened only by a tap or a spoken request.
     let voicePage = VoicePageSession()
     /// The handle the spoken "scroll down" / "go back" commands drive on that page's web view.

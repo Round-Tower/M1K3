@@ -18,6 +18,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — `unspoken` (#768): the look's tag is set when its answer is
 //  final, so the tracker drops it rather than say "Using look." after the answer it names.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `read` joins `unspoken`: tagged as its answer lands, like a look.
+//  Review: claude-opus-5-5, 2026-11-20 — `isNarration`: a chunk that IS a written narration line, exactly, so the
+//  speak lane keeps it in the English voice after a non-English answer has latched (`SpokenLanguage.language(forChunk:)`).
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -30,6 +33,20 @@ public enum ToolNarration {
     /// camera being on is already on screen.
     /// A read ("read", `ReadPrompt.toolName`) is the same: tagged as its answer lands.
     public static let unspoken: Set<String> = ["look", "read"]
+
+    /// The tools with a written line (every case of `phrase` but the humanised default).
+    static let namedTools = [
+        "web_search", "search_knowledge", "fetch_page", "lookup_fact", "datetime", "system_status",
+        "delegate_deep", "list_documents", "get_document", "open_link", "recent_activity",
+    ]
+
+    /// Whether a spoken chunk IS one of the written narration lines, exactly. The humanised "Using x." of an
+    /// unknown tool is not claimed: it can't be told apart from an answer sentence.
+    public static func isNarration(_ chunk: String) -> Bool {
+        narrationLines.contains(chunk)
+    }
+
+    private static let narrationLines = Set(namedTools.map(phrase(forTool:)))
 
     public static func phrase(forTool name: String) -> String {
         switch name {

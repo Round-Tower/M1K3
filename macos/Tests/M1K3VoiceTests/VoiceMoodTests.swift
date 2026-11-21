@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.85 (the table is pure
 //  and pinned; how each mood SOUNDS is verify-by-launch). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-20 — the shell scan reads `SpokenVoice.utterance(text:mood:language:)`, the
+//  constructor that also carries the answer's spoken language; the mood is still handed to the voice.
 //
 
 import Foundation
@@ -71,7 +73,8 @@ struct VoiceMoodTests {
     @Test("the Mac shell hands the speak tool's emotion to the voice, not only the face")
     func wiredInTheShell() throws {
         let voice = try Self.code("M1K3App/AppEnvironment+VoiceMode.swift")
-        #expect(voice.contains("SpeechUtterance(text: spoken, mood: mood)"))
+        // Since 2026-11-20 the utterance also carries the spoken language (`SpokenVoice.utterance`); the mood still flows.
+        #expect(voice.contains("SpokenVoice.utterance(text: spoken, mood: mood, language: spokenLanguage)"))
         #expect(voice.contains("mood: VoiceMood = .neutral"), "every caller without an emotion stays neutral")
         let intelligence = try Self.code("M1K3App/AppEnvironment+Intelligence.swift")
         #expect(intelligence.contains("let mood = VoiceMood(emotion)"), "M1K3's own speak path")

@@ -13,6 +13,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-fable-5, 2026-06-11 — added SpeechProviderWithWordTiming
 //  (onTimelineReady/onWordSpoken), the karaoke seam. Confidence 0.9.
+//  Review: claude-opus-5-5, 2026-11-20 — SpeechUtterance.language (optional; nil = today's behaviour): the language an
+//  answer is spoken in, so Kokoro can hand a non-English line to the Apple render path. Confidence 0.8.
 
 import Foundation
 
@@ -35,13 +37,17 @@ public struct SpeechUtterance: Sendable, Equatable {
     public let pitch: Float
     /// Optional platform voice identifier; nil uses the system default voice.
     public let voiceIdentifier: String?
+    /// BCP-47 language the text is in; nil means the voice's own (English). Non-English routes Kokoro to the Apple render.
+    public let language: String?
 
     public init(
         text: String,
         rate: Float = defaultRate,
         pitch: Float = defaultPitch,
+        language: String? = nil,
         voiceIdentifier: String? = nil
     ) {
+        self.language = language
         self.text = text
         self.rate = min(max(rate, Self.minRate), Self.maxRate)
         self.pitch = min(max(pitch, Self.minPitch), Self.maxPitch)

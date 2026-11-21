@@ -33,6 +33,7 @@
 //  `speak(_:)`'s whole-answer fallback then read its raw URLs aloud. Now it is skipped. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
 //  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 
 import Foundation
 import M1K3Chat
@@ -76,6 +77,8 @@ extension AppEnvironment {
                 leakGuard: Self.spokenLeakGuard
             )
             var pinnedID: UUID?
+            let answerLanguage = SpokenAnswerLanguage() // one spoken language per answer, never per sentence
+            answerLanguage.begin(seed: self?.spokenSeed() ?? SpokenLanguage.seed) // the person's language
             // Poll ticks before the first assistant message appears; ~10s at
             // 150ms. Generous — a message normally appears within one tick.
             let firstMessageTickBudget = 66
@@ -104,7 +107,8 @@ extension AppEnvironment {
                         // A Sources trailer streams in as a sentence of its own and polishes to
                         // nothing; `speak(_:)` would fall back to its raw URLs.
                         guard let spoken = SpeechTextPolish.spokenSentence(sentence) else { continue }
-                        await self.speak(spoken)
+                        answerLanguage.observe(spoken)
+                        await self.speak(spoken, language: answerLanguage.current)
                     }
                     switch message.status {
                     case .failed:
@@ -116,11 +120,12 @@ extension AppEnvironment {
                         // voice loop's twin): say what the screen says, and not
                         // the pre-swap tail.
                         if !folder.tripped, message.text == PersonaLeakGuard.refusal {
-                            if !Task.isCancelled { await self.speak(PersonaLeakGuard.refusal) }
+                            if !Task.isCancelled { await self.speak(PersonaLeakGuard.refusal, language: "en") }
                             return
                         }
                         if !Task.isCancelled, let spoken = folder.flush().flatMap(SpeechTextPolish.spokenSentence) {
-                            await self.speak(spoken)
+                            answerLanguage.observe(spoken)
+                            await self.speak(spoken, language: answerLanguage.current)
                         }
                         return
                     default:

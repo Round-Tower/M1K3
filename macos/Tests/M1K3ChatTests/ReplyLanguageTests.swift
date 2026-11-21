@@ -23,6 +23,8 @@
 //  nothing, the device fallback's allowlist, an English question beside a non-Latin line that does not ask, a Han
 //  piece not vetoing a Japanese turn, and consonant-flanked initialisms not tripping the Arabizi guard. Lines are the
 //  reviewer's or new, none from a blind set. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — voice turns fall back to the voice's language (`liveClause(voiceLanguage:)`),
+//  and `personLanguage` (the spoken answer's seed) is the person's read only, never the device's.
 //
 
 import Foundation
@@ -159,6 +161,31 @@ struct ReplyLanguageTests {
         #expect(ReplyLanguage.liveClause(for: german, defaults: defaults)?.contains("German") == true)
         defaults.set(false, forKey: ReplyLanguage.enabledKey)
         #expect(ReplyLanguage.liveClause(for: german, defaults: defaults) == nil)
+    }
+
+    /// 2026-11-20 (challenger on the voice design): a voice turn too short to read fell back to the DEVICE language,
+    /// so a German Mac answered "hi" in voice mode in German, read aloud by the English Kokoro voice. A voice turn
+    /// falls back to the voice's language instead; what the person actually said still wins.
+    @Test func voiceTurnFallsBackToTheVoiceLanguageNotTheDevice() throws {
+        let suite = "ReplyLanguageTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ReplyLanguage.liveClause(for: "hi", voiceLanguage: "en", deviceLanguage: "de", defaults: defaults) == nil)
+        #expect(ReplyLanguage.liveClause(for: "ok", voiceLanguage: "en", deviceLanguage: "fr-FR", defaults: defaults) == nil)
+        let german = "Wie hoch ist der höchste Berg Europas?"
+        #expect(ReplyLanguage.liveClause(for: german, voiceLanguage: "en", deviceLanguage: "de",
+                                         defaults: defaults)?.contains("German") == true)
+        // A typed turn keeps the device fallback (#870).
+        #expect(ReplyLanguage.liveClause(for: "hi", voiceLanguage: nil, deviceLanguage: "de",
+                                         defaults: defaults)?.contains("German") == true)
+    }
+
+    /// The spoken answer's seed (2026-11-20): the person's own language, never the device's.
+    @Test func personLanguageIsThePersonsNeverTheDevices() {
+        #expect(ReplyLanguage.personLanguage(turn: "Wie hoch ist der höchste Berg Europas?") == "de")
+        #expect(ReplyLanguage.personLanguage(turn: "danke!", earlierTurns: ["Wie hoch ist der höchste Berg Europas?"]) == "de")
+        #expect(ReplyLanguage.personLanguage(turn: "hi") == nil)
+        #expect(ReplyLanguage.personLanguage(turn: "What is the tallest mountain in Europe?") == "en")
     }
 
     /// Region and script tags fold to the language: en-GB is English, pt-BR is Portuguese.

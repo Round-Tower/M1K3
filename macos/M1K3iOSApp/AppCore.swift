@@ -203,6 +203,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the AppleSpeechTranscriber listens in `SpeechLocalePolicy.forThisApp`, English
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
+//  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 
 import AVFoundation
 #if os(iOS)
@@ -304,6 +307,8 @@ final class AppCore {
     /// SpeechHighlight, cherry-picked verbatim; fed by AVSpeechProvider's live
     /// word ranges (AppCore+Voice.wireSpeechCallbacks).
     let speechHighlight = SpeechHighlight()
+    /// The voice loop's current answer's spoken language (decided once per answer; see `SpokenAnswerLanguage`).
+    let spokenAnswerLanguage = SpokenAnswerLanguage()
     /// The page voice mode shows beside the face (#839): opened only by a tap or a spoken request.
     let voicePage = VoicePageSession()
     /// The handle the spoken "scroll down" / "go back" commands drive on that page's web view.
@@ -1765,7 +1770,11 @@ final class AppCore {
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
             // The language the reply comes back in (2026-11-19): the turn's own, else the device's; nil for English.
-            replyLanguageClauseProvider: { ReplyLanguage.liveClause(for: $0, earlierTurns: $1) },
+            replyLanguageClauseProvider: {
+                // A voice turn falls back to the voice's language, never the device's (2026-11-20).
+                let voice = UserDefaults.standard.bool(forKey: VoiceModeDefaults.activeKey) ? ReplyLanguage.spokenLanguage : nil
+                return ReplyLanguage.liveClause(for: $0, earlierTurns: $1, voiceLanguage: voice)
+            },
             appStateProvider: { Self.appStateLine(afm: afm) },
             // The Mac's tool router, mirrored. Every brain takes it (Kev, 2026-11-02): without it Lil's every
             // message was an agent turn over pasted history, and Lil copied its last answer back word for word.
