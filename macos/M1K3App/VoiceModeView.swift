@@ -31,6 +31,7 @@
 //  brain roster (2507 reasoning pinned off, gemma-4 and AFM non-thinking), and
 //  a control that cannot change anything is a dead control. VoiceThinkingPolicy
 //  itself stays for a future thinking brain.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the hero creature takes `.fit` framing so
 //  the whole fox is in shot (voice plates clipped its head). Confidence 0.8 (verify-by-launch).
@@ -295,7 +296,7 @@ struct VoiceModeView: View {
         switch env.voiceLoop?.state {
         case let .listening(partial):
             VStack(spacing: 8) {
-                Text(partial.isEmpty ? "Listening…" : partial)
+                Text(partial.isEmpty ? String(localized: "Listening…") : partial)
                     .font(.title3)
                     .foregroundStyle(partial.isEmpty ? Color.readableSecondary : Color.primary)
                     .multilineTextAlignment(.center)
@@ -322,7 +323,7 @@ struct VoiceModeView: View {
         case .awaitingAnswer:
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text(env.chat.messages.last?.activityLabel ?? "Thinking…")
+                Text(env.chat.messages.last?.activityLabel ?? String(localized: "Thinking…"))
                     .font(.callout)
                     .foregroundStyle(.readableSecondary)
             }
@@ -331,7 +332,7 @@ struct VoiceModeView: View {
             .glassEffect(.regular, in: .capsule)
             // One spoken element — the spinner alone says nothing to VoiceOver.
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(env.chat.messages.last?.activityLabel ?? "Thinking")
+            .accessibilityLabel(env.chat.messages.last?.activityLabel ?? String(localized: "Thinking"))
 
         case .speaking:
             // The timeline: already-spoken lines dim and fade above the live

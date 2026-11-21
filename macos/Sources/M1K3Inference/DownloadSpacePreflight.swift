@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-03, Confidence 0.8 (the 300 MB headroom is a judgement:
 //  the tokenizer, config and the temp file's rename need a little more than the weights). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 
 import Foundation
@@ -41,8 +42,10 @@ public enum DownloadSpacePreflight {
         public var errorDescription: String? {
             let size = BrainTier.downloadSizeLabel(megabytes: downloadMB)
             let short = BrainTier.downloadSizeLabel(megabytes: shortfallMB)
-            return "Not enough space for \(brain). It needs about \(size), and this device is \(short) short. "
-                + "Free some space, then pick \(brain) again."
+            return String(
+                localized: "Not enough space for \(brain). It needs about \(size), and this device is \(short) short. Free some space, then pick \(brain) again.",
+                bundle: .module
+            )
         }
     }
 }

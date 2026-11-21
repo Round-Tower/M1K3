@@ -1,6 +1,34 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A quiet stretch — the next pulse comes when something happens, or with the morning." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade ist es ruhig – der nächste Puls kommt, wenn etwas passiert, oder am Morgen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un rato tranquilo: el próximo pulso llegará cuando pase algo, o por la mañana."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un moment calme — le prochain bilan arrivera quand il se passera quelque chose, ou au matin."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um período tranquilo — o próximo pulso vem quando algo acontecer, ou de manhã."
+          }
+        }
+      }
+    },
     "Active" : {
       "localizations" : {
         "de" : {
@@ -169,6 +197,62 @@
         }
       }
     },
+    "Holding off while the machine is busy." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiert, solange das Gerät ausgelastet ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En pausa mientras el dispositivo está ocupado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En pause tant que l’appareil est occupé."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em pausa enquanto o dispositivo está ocupado."
+          }
+        }
+      }
+    },
+    "Holding off while the machine runs warm." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiert, solange das Gerät warm läuft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En pausa mientras el dispositivo se calienta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En pause tant que l’appareil chauffe."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em pausa enquanto o dispositivo está quente."
+          }
+        }
+      }
+    },
     "Learned" : {
       "localizations" : {
         "de" : {
@@ -309,6 +393,34 @@
         }
       }
     },
+    "Quiet hours — the next pulse comes with the morning." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruhezeit – der nächste Puls kommt am Morgen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horas de silencio: el próximo pulso llegará por la mañana."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heures calmes — le prochain bilan arrivera au matin."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horário de silêncio — o próximo pulso vem de manhã."
+          }
+        }
+      }
+    },
     "Ran cool" : {
       "localizations" : {
         "de" : {
@@ -417,6 +529,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sugerida"
+          }
+        }
+      }
+    },
+    "The first pulse is on its way." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der erste Puls ist unterwegs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El primer pulso está en camino."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le premier bilan arrive bientôt."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O primeiro pulso está a caminho."
           }
         }
       }

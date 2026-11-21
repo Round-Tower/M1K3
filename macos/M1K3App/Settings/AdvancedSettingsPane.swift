@@ -26,6 +26,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure (Kev, TestFlight): Import weights and Model
 //  auditions left Settings (the 2026-07-21 import section and the 2026-09-29 audition section are gone), and the
 //  Agent conversation log moved to the MCP Server pane. Confidence 0.8 (verify-by-launch).
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
@@ -53,7 +54,7 @@ struct AdvancedSettingsPane: View {
                 if env.isReindexing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(env.embeddingStatus ?? "Rebuilding index…")
+                        Text(env.embeddingStatus ?? String(localized: "Rebuilding index…"))
                             .font(.callout).foregroundStyle(.readableSecondary)
                     }
                 } else {
@@ -89,7 +90,7 @@ struct AdvancedSettingsPane: View {
                 } else if env.isPreparingBatchTranscription {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(env.lastCallStatus ?? "Preparing call transcription…")
+                        Text(env.lastCallStatus ?? String(localized: "Preparing call transcription…"))
                             .font(.callout).foregroundStyle(.readableSecondary)
                     }
                 } else if env.batchTranscriptionReady {

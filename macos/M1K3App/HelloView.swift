@@ -104,6 +104,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 — the Mac pseudo pass showed the door titles, the Private caption and two
 //  disclosure lines single (plain Strings into `experienceButton` / `disclosureCaption`): now String(localized:).
 //  English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 (l10n follow-ups) — `downloadSize` calls the size label through a closure
+//  (the helper gained a defaulted `locale:`, so the bare function reference no longer matched), and its unknown-size
+//  fallback is a catalog key. Confidence 0.85.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -580,7 +583,11 @@ struct HelloView: View {
 
     /// "630 MB" / "2.2 GB" from the tier's own figure — one source for every copy line.
     private static func downloadSize(_ tier: BrainTier) -> String {
-        tier.approxDownloadMB.map(BrainTier.downloadSizeLabel(megabytes:)) ?? "small"
+        tier.approxDownloadMB.map { BrainTier.downloadSizeLabel(megabytes: $0) }
+            ?? String(
+                localized: "small",
+                comment: "Fills the size in “a one-time %@ download” when the size is unknown."
+            )
     }
 
     private func startFallbackDownload(_ tier: BrainTier) {

@@ -38,6 +38,7 @@
 //  (Big lingered two minutes after a swap to Lil). A cached value still serves (a turn mid-tool-loop on the old
 //  brain finishes; the weights go when the provider does); a running flight is cancelled and never re-caches.
 //  Pinned in SingleFlightLoaderRetireTests. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import Foundation
 
@@ -45,7 +46,7 @@ import Foundation
 public struct SingleFlightLoaderRetired: LocalizedError, Equatable {
     public init() {}
     public var errorDescription: String? {
-        "That brain was switched out. Send it again to use the new one."
+        String(localized: "That brain was switched out. Send it again to use the new one.", bundle: .module)
     }
 }
 

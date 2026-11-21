@@ -19,6 +19,7 @@
 //  Signed: Kev + claude-fable-5, 2026-08-06, Confidence 0.8 (compiles +
 //  mirrors the house window idioms; the rendered feel is ⌘R verify-owed).
 //  Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5, 2026-08-19, Confidence 0.85 — window →
 //  destination promotion + the interaction timeline (visits foldered per
@@ -273,7 +274,7 @@ struct HeartbeatScreen: View {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .accessibilityHidden(true)
                         .symbolRenderingMode(.hierarchical)
-                    Text(visit.clientName ?? "An agent")
+                    Text(visit.clientName ?? String(localized: "An agent"))
                         .font(.callout.bold())
                     Text("· ^[\(visit.callCount) call](inflect: true)")
                         .font(.caption)

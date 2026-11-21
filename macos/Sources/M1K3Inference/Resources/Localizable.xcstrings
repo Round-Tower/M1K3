@@ -74,6 +74,9 @@
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your machine." : {
       "comment" : "Brain card copy for Lil, on a Mac (\"your machine\" is the Mac)."
     },
+    "A one-time download, kept on this device" : {
+
+    },
     "A small brain for this Mac, which can't run Apple Intelligence." : {
       "localizations" : {
         "de" : {
@@ -198,6 +201,9 @@
           }
         }
       }
+    },
+    "About %@, kept on this device" : {
+
     },
     "Also get semantic memory (%@)" : {
       "localizations" : {
@@ -349,6 +355,34 @@
       "comment" : "Brain name: never translated.",
       "shouldTranslate" : false
     },
+    "Could not read file: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei konnte nicht gelesen werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer el archivo: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire le fichier : %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler o arquivo: %@"
+          }
+        }
+      }
+    },
     "Couldn't download — try again from Settings ▸ Brains & downloads" : {
       "localizations" : {
         "de" : {
@@ -433,6 +467,34 @@
         }
       }
     },
+    "Downloading %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wird geladen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargando %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement de %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baixando %@"
+          }
+        }
+      }
+    },
     "Downloading…" : {
       "localizations" : {
         "de" : {
@@ -489,6 +551,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rápido e focado"
+          }
+        }
+      }
+    },
+    "File was truncated to %lld characters (original: %lld)." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datei wurde auf %lld Zeichen gekürzt (Original: %lld)."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "File was truncated to %1$lld characters (original: %2$lld)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El archivo se recortó a %lld caracteres (original: %lld)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier a été tronqué à %lld caractères (original : %lld)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O arquivo foi truncado para %lld caracteres (original: %lld)."
           }
         }
       }
@@ -726,6 +822,40 @@
         }
       }
     },
+    "Not enough space for %@. It needs about %@, and this device is %@ short. Free some space, then pick %@ again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht genug Platz für %@. Es braucht etwa %@, und diesem Gerät fehlen %@. Gib etwas Speicher frei und wähl %@ dann noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not enough space for %1$@. It needs about %2$@, and this device is %3$@ short. Free some space, then pick %4$@ again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay espacio suficiente para %@. Necesita unos %@ y a este dispositivo le faltan %@. Libera espacio y vuelve a elegir %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas assez d’espace pour %@. Il faut environ %@, et il manque %@ sur cet appareil. Libère de l’espace, puis choisis à nouveau %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não há espaço suficiente para o %@. Ele precisa de cerca de %@, e faltam %@ neste dispositivo. Libere espaço e escolha o %@ de novo."
+          }
+        }
+      }
+    },
     "Ready" : {
       "localizations" : {
         "de" : {
@@ -867,6 +997,9 @@
         }
       }
     },
+    "That brain was switched out. Send it again to use the new one." : {
+
+    },
     "The deep thinker. Slower, sharper, for the hard questions." : {
       "localizations" : {
         "de" : {
@@ -947,6 +1080,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "O download não terminou (%@). Tente de novo daqui a pouco."
+          }
+        }
+      }
+    },
+    "The file is empty." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datei ist leer."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El archivo está vacío."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier est vide."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O arquivo está vazio."
+          }
+        }
+      }
+    },
+    "Unsupported file format: .%@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht unterstütztes Dateiformat: .%@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Formato de archivo no compatible: .%@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Format de fichier non pris en charge : .%@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Formato de arquivo não compatível: .%@"
           }
         }
       }

@@ -111,10 +111,13 @@ exports, deletion) is drafted but held out of the catalogs in
 `docs/l10n/pending-review.json`, so it renders in English until a native speaker reads it
 (Kev, 2026-11-19, decision 3; master ships publicly in the nightly DMG).
 `xcstrings_l10n.py review-sheet docs/l10n/pending-review.json <locale> <out.md>` prints the
-lines; `apply docs/l10n/pending-review.json --approved --hold-review docs/l10n/pending-review.json
---locale <code>` writes one reader's approved lines and records each in `docs/l10n/approved.json`
-with the English it was read against, so a later `sweep` or re-draft keeps it until that English
-changes. Translate these **literally**: never soften or strengthen a promise.
+lines and stamps each held row with what the sheet showed (its English and its translation);
+`apply docs/l10n/pending-review.json --approved --hold-review docs/l10n/pending-review.json
+--locale <code>` (the locale is required) writes one reader's approved lines, only where the stamp
+still matches, and records each in `docs/l10n/approved.json` with the English it was read against,
+so a later `sweep` or re-draft keeps it until that English changes. A re-draft or an English edit
+after the sheet was printed drops the stamp: re-print and read again. `approved.json` stays in the
+repo even when empty (`[]`); a missing file is an error, never "nothing approved". Translate these **literally**: never soften or strengthen a promise.
 A label of three words or fewer ("Delete", "Web search", "Always allow") names an action and makes
 no promise, so it ships with the wave; the sentence that explains it stays held. A short label
 that makes a claim ("Stays on device", "Private by design", "Fully local") is held.
@@ -132,3 +135,5 @@ decisions and the shipped store copy; the Apple term table is from memory of App
 localisation and wants a native read, like the privacy copy). Prior: none (new file).
 Review: claude-opus-5-5, 2026-11-20 — the approval command and its record (`approved.json`); short claims
 are held. Confidence 0.8.
+Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — an approval is bound to the sheet the reader saw (the
+`sheet` stamp), `--approved` needs `--locale`, and a missing `approved.json` fails loudly. Confidence 0.8.

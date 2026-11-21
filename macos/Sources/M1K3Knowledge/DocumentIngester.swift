@@ -21,6 +21,7 @@
 //  Review (same day, pre-push review): the replace is for `.document` items only; empty text throws its own
 //  `emptyText` (memory and MCP callers reach it too); every scanned page failing throws `scanUnreadable`,
 //  which blames the reader, not the file.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import Foundation
 
@@ -122,14 +123,19 @@ public struct DocumentIngester: Sendable {
         public var errorDescription: String? {
             switch self {
             case .markupNotProse:
-                "This looks like raw markup (SVG/XML/HTML), not readable text — convert it to prose or PDF first."
+                String(
+                    localized: "This looks like raw markup (SVG/XML/HTML), not readable text — convert it to prose or PDF first.",
+                    bundle: .module
+                )
             case .noReadableText:
-                "M1K3 couldn’t find any text in it. "
-                    + "If it’s a scan or a photo, the writing may be handwritten or too faint to read."
+                String(
+                    localized: "M1K3 couldn’t find any text in it. If it’s a scan or a photo, the writing may be handwritten or too faint to read.",
+                    bundle: .module
+                )
             case .scanUnreadable:
-                "M1K3 couldn’t read its scanned pages on this device. Try again in a moment."
+                String(localized: "M1K3 couldn’t read its scanned pages on this device. Try again in a moment.", bundle: .module)
             case .emptyText:
-                "It’s empty."
+                String(localized: "It’s empty.", bundle: .module)
             }
         }
     }

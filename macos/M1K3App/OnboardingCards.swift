@@ -19,6 +19,7 @@
 //  Not yet seen by Kev's eye.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the Auto card's caption is a single literal (no `+`
 //  join), and a brain card's size line is whole with or without the memory note (no `+=` fragment). English unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import M1K3Inference
 import SwiftUI
@@ -99,13 +100,11 @@ struct BrainCard: View {
     }
 
     private var sizeLabel: String {
-        guard let megabytes = tier.approxDownloadMB else { return "Built-in · no download" }
+        guard let megabytes = tier.approxDownloadMB else { return String(localized: "Built-in · no download") }
         // Already fetched → say so, and don't imply another download is pending.
-        if isDownloaded { return "On disk · ready" }
+        if isDownloaded { return String(localized: "On disk · ready") }
         // The size keeps its exact digits; the line is whole, with or without the memory note (no `+=` fragment).
-        let size = megabytes >= 1000
-            ? String(format: "~%.1f GB", Double(megabytes) / 1000)
-            : "~\(megabytes) MB"
+        let size = "~" + BrainTier.downloadSizeLabel(megabytes: megabytes)
         if isLocked, let floor = tier.minimumPhysicalMemoryGB {
             return String(localized: "\(size) · one-time download · needs \(Int(floor))GB+ memory")
         }
