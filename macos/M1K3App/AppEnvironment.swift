@@ -913,6 +913,13 @@ final class AppEnvironment {
         appStateLive.withLock { $0?.snapshot.answeringBrain } ?? persisted
     }
 
+    /// Lil is chosen AND answering: false while Mini stands in for a downloading Lil, so Lil's reasoning shape
+    /// and "The Tell" never ride on a brain with no think phase.
+    nonisolated static func lilIsAnswering(persisted raw: String?) -> Bool {
+        guard BrainTier(persisted: raw ?? "") == .lil else { return false }
+        return answeringBrainName(persisted: BrainTier.lil.displayName) == BrainTier.lil.displayName
+    }
+
     /// Last ingest outcome, surfaced to the UI.
     private(set) var lastIngestStatus: String?
     /// The last successfully ingested document's title, threaded properly for

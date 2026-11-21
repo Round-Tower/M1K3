@@ -1734,7 +1734,9 @@ final class AppCore {
             // Lil reasons in steps, the same as the Mac (Kev, 2026-11-20); `-thinkingShape` still picks an A/B arm.
             thinkingShapeProvider: {
                 let defaults = UserDefaults.standard
+                // Brain at Home answers on the host: the phone's Lil shape stays out of that turn.
                 let isLil = BrainTier(persisted: defaults.string(forKey: Self.selectedBrainKey) ?? "") == .lil
+                    && !Self.homeBrainLive.withLock { $0 }
                 return ThinkingShapeMode(
                     argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
                     fallback: .shippedDefault(isLil: isLil)

@@ -740,6 +740,7 @@ extension AppEnvironment {
                     // as a lie.
                     return .failure(VoiceTurnFailure(message: announcedAnyTool
                             ? "I checked, but no answer came back."
+                            : saidAside ? "I thought it over, but no answer came back."
                             : "The model had nothing to say."))
                 }
                 // A refused turn is not a spoken exchange to record, nor a win to rate.

@@ -523,15 +523,15 @@ extension AppEnvironment {
             // Lil reasons in steps (Kev, 2026-11-20); `M1K3 -thinkingShape off|think|steps` still picks an A/B arm.
             thinkingShapeProvider: {
                 let defaults = UserDefaults.standard
-                let isLil = BrainTier(persisted: defaults.string(forKey: Self.selectedBrainKey) ?? "") == .lil
                 return ThinkingShapeMode(
                     argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
-                    fallback: .shippedDefault(isLil: isLil)
+                    fallback: .shippedDefault(isLil: Self.lilIsAnswering(persisted: defaults.string(forKey: Self.selectedBrainKey)))
                 )
             },
-            // "The Tell": only a brain with a real think phase may announce one. Read fresh: a hot-swap applies.
+            // "The Tell": only a brain with a real think phase may announce one, and only while it is the one
+            // answering (Mini standing in for a downloading Lil has none). Read fresh: a hot-swap applies.
             thinkAsideProvider: {
-                BrainTier(persisted: UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? "") == .lil
+                Self.lilIsAnswering(persisted: UserDefaults.standard.string(forKey: Self.selectedBrainKey))
             },
             // Read fresh each turn so a hot-swap re-sizes the window immediately.
             historyBudgetProvider: { Self.liveHistoryBudget() },
