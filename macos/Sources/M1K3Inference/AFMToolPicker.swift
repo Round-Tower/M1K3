@@ -34,6 +34,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-25 (later) — the first measurement (−18 % / −12 %) ran each pick
 //  against its own re-arm (`store` before `respond`) and warmed the cold path twice; now the cold pick runs on
 //  an unwarmed session and the re-arm follows the pick (`defer`). Confidence 0.7, re-measured in the PR.
+//  Review: claude-opus-5-5, 2026-11-20 — the unavailable throw names Apple's reason (`unavailable(_:)`), so the
+//  route's failed-pick line can say why. Confidence 0.85.
 
 import Foundation
 @_weakLinked import FoundationModels
@@ -56,6 +58,11 @@ public extension ToolPicking {
 }
 
 public enum AFMToolPicker {
+    /// The throw for a pick Apple's model can't serve, naming why (`modelNotReady` after a profile switch).
+    static func unavailable(_ state: AFMAvailability) -> InferenceError {
+        .providerUnavailable("Apple Intelligence is unavailable (\(state.unavailableReason))")
+    }
+
     /// The route's category, so a pick's session warmth reads beside its `tool pick:` line.
     static let log = Logger(subsystem: "app.m1k3", category: "route")
 
@@ -99,14 +106,14 @@ private struct AFMToolChainPick {
 
 extension AppleFoundationModelsProvider: ToolPicking {
     public func pickTool(message: String, instructions: String) async throws -> (tool: String, query: String) {
-        guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
+        guard isAvailable else { throw AFMToolPicker.unavailable(availabilityState) }
         // A fresh session with the picker's own instructions: it never takes or
         // spoils the chat prewarm slot, and it carries no persona.
         return try await AFMToolPicker.pick(session: LanguageModelSession(instructions: instructions), message: message)
     }
 
     public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
-        guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
+        guard isAvailable else { throw AFMToolPicker.unavailable(availabilityState) }
         let session = LanguageModelSession(instructions: instructions)
         return try await AFMToolPicker.pickChain(session: session, message: message)
     }
@@ -195,7 +202,7 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
 
     /// The warm session for this menu when one waits (the slot drops a mismatch), else a cold one.
     private func session(for instructions: String) throws -> LanguageModelSession {
-        guard base.isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
+        guard base.isAvailable else { throw AFMToolPicker.unavailable(base.availabilityState) }
         let taken = slot.take(matching: instructions)
         // Params only inside the Logger autoclosure (the swiftformat landmine: never a member).
         let warmth = taken == nil ? "cold" : "warm"

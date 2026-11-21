@@ -437,6 +437,12 @@ struct ToolDispatchOpenTests {
     }
 }
 
+/// An error with a payload, standing in for a framework error whose context could carry the prompt.
+private enum PickFailureProbe: Error {
+    case refused(prompt: String)
+    case timedOut
+}
+
 /// The picker's timing line (2026-10-25): what the baseline read off `routeStage` but could not attribute.
 struct ToolPickTimingTests {
     @Test("the pick line names the tool, or the agent, and whole clamped milliseconds")
@@ -446,6 +452,35 @@ struct ToolPickTimingTests {
         #expect(ToolRouterWiring.pickSummary(tool: nil, elapsed: .milliseconds(1200) + .microseconds(700))
             == "tool pick: picker → agent in 1200ms")
         #expect(ToolRouterWiring.pickSummary(tool: "datetime", elapsed: .zero) == "tool pick: picker → datetime in 0ms")
+    }
+
+    @Test("a failed pick says it failed, and why, instead of reading as the agent's turn (2026-11-20)")
+    func failedPickSummary() {
+        // Three eval arms ran hours on the fallback while Apple's model was modelNotReady: the only line was
+        // "picker → agent in 2ms", which is also what an honest no-tool pick prints.
+        let reason = "InferenceError.providerUnavailable: Apple Intelligence is unavailable (modelNotReady)"
+        #expect(ToolRouterWiring.pickSummary(tool: nil, elapsed: .milliseconds(2), failure: reason)
+            == "tool pick: picker failed in 2ms (\(reason)) → agent")
+        #expect(ToolRouterWiring.pickSummary(tool: nil, elapsed: .milliseconds(3300), failure: nil)
+            == "tool pick: picker → agent in 3300ms")
+    }
+
+    @Test("a failure's reason is our own message, or the error's type and case only: never a payload")
+    func failureReason() {
+        // A payload can carry the person's words (a framework context, `generationFailed`'s text).
+        let unavailable = InferenceError.providerUnavailable("Apple Intelligence is unavailable (modelNotReady)")
+        #expect(ToolRouterWiring.failureReason(unavailable)
+            == "InferenceError.providerUnavailable: Apple Intelligence is unavailable (modelNotReady)")
+        let failed = InferenceError.generationFailed("what the person asked")
+        #expect(ToolRouterWiring.failureReason(failed) == "InferenceError.generationFailed")
+        let refused = PickFailureProbe.refused(prompt: "my secret plan")
+        #expect(ToolRouterWiring.failureReason(refused) == "PickFailureProbe.refused")
+        #expect(ToolRouterWiring.failureReason(PickFailureProbe.timedOut) == "PickFailureProbe.timedOut")
+        #expect(ToolRouterWiring.failureReason(CancellationError()) == "CancellationError")
+        let bridged = NSError(
+            domain: "FMDomain", code: 7, userInfo: [NSLocalizedDescriptionKey: "what the person asked"]
+        )
+        #expect(ToolRouterWiring.failureReason(bridged) == "FMDomain(7)")
     }
 }
 

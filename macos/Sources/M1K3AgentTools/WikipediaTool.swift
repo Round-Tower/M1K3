@@ -18,6 +18,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — Wikimedia UA contact → hello@round-tower.ie
 //  (the studio address; #472 moved every other public surface). Pinned by WikipediaToolTests.
 //  Confidence 0.95.
+//  Review: claude-opus-5-5, 2026-11-20 — a status that is neither OK nor transient (a 403 from the UA policy, a 404,
+//  a 5xx) is logged at notice before it reads as "no article": the only line was a .debug, which never persists.
+//  Logging only. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -60,6 +63,11 @@ public struct WikipediaTool: AgentTool {
                 Self.log.notice("transient HTTP \(response.statusCode) for \"\(topic, privacy: .public)\"")
                 return ToolResult(output: "Error: Wikipedia is temporarily unavailable. "
                     + "Answer from what you already have, with appropriate uncertainty.")
+            }
+            let status = response.statusCode
+            if HTTPStatus.classify(status) != .ok {
+                // Not an article lookup: without this line a refused lookup reads as "no such article".
+                Self.log.notice("HTTP \(status, privacy: .public) on a lookup: read as no article")
             }
             guard let fact = WikipediaSummaryParser.parse(data) else {
                 Self.log.info("no article for \"\(topic, privacy: .public)\"")

@@ -26,6 +26,8 @@
 //  2026-08-03 rate-collapse, so they are recognised but not verbatim-pinned.
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `.unsupportedLanguage`, its check order against the guardrail,
 //  the typed case, and the one failure class that carries a user reply. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — the picker's unavailable throw names Apple's reason (a profile switch reads
+//  `modelNotReady`), so the route log can say why a pick failed. Confidence 0.85.
 //
 
 import Foundation
@@ -133,6 +135,16 @@ struct AFMFailureTests {
                 #expect(reply == nil, "\(failure)")
             }
         }
+    }
+
+    @Test("the picker's unavailable throw names Apple's own reason, so a failed pick can say why (2026-11-20)")
+    func unavailableNamesTheReason() {
+        #expect(AFMAvailability.notReady.unavailableReason == "modelNotReady")
+        #expect(AFMAvailability.blocked(userFixable: true).unavailableReason == "appleIntelligenceNotEnabled")
+        #expect(AFMAvailability.blocked(userFixable: false).unavailableReason == "deviceNotEligible")
+        #expect(AFMAvailability.available.unavailableReason == "available")
+        #expect(AFMToolPicker.unavailable(.notReady)
+            == InferenceError.providerUnavailable("Apple Intelligence is unavailable (modelNotReady)"))
     }
 }
 

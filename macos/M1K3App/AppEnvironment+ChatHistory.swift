@@ -65,6 +65,9 @@
 //  Confidence 0.7 until the language arm reads it.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
 //  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — `makeChatHistoryStore` logs WHY the store or the legacy migration failed
+//  (`ErrorChain` domains and codes, no SQL or paths) instead of `try?`: before, a full disk or a failed migration
+//  quietly made chat non-persistent, every conversation gone at quit, nothing in the log. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -74,6 +77,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3LanguageModel
+import M1K3LogCore
 import M1K3MLX
 import os
 import Synchronization
@@ -227,13 +231,23 @@ extension AppEnvironment {
     /// the import). nil on store failure → chat degrades to non-persistent,
     /// exactly like the old optional transcript.
     static func makeChatHistoryStore(in dir: URL) -> (any ChatHistoryPersisting)? {
-        guard let store = try? GRDBChatHistoryStore(
-            path: dir.appendingPathComponent("chat-history.sqlite").path
-        ) else { return nil }
-        try? TranscriptMigrator.migrateIfNeeded(
-            legacyURL: dir.appendingPathComponent("transcript.json"),
-            into: store
-        )
+        let log = M1K3Log.logger(.chatSession)
+        let store: GRDBChatHistoryStore
+        do {
+            store = try GRDBChatHistoryStore(path: dir.appendingPathComponent("chat-history.sqlite").path)
+        } catch {
+            // The one line that says why chat stopped saving (a full disk, a lock, a migration that threw).
+            let reason = ErrorChain.summary(error)
+            log.error("chat history unavailable, this session won't be saved: \(reason, privacy: .public)")
+            return nil
+        }
+        do {
+            let legacy = dir.appendingPathComponent("transcript.json")
+            try TranscriptMigrator.migrateIfNeeded(legacyURL: legacy, into: store)
+        } catch {
+            let reason = ErrorChain.summary(error)
+            log.error("legacy transcript import failed: \(reason, privacy: .public)")
+        }
         return store
     }
 

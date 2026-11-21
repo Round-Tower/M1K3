@@ -63,6 +63,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-19 — `toolNoneToAgent` (`noneToAgentEnabled`, `route`/`compose(noneToAgent:)`): a picker
 //  `none` on a brain that isn't Mini takes the agent turn (11-19 route control: 16/24 plain vs 15/16 agent on Lil's
 //  routed puzzles). `PickStage` gains `none-plain` / `none-agent` so a none pick reads apart from a tool pick. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — a pick that THROWS says so (`tool pick: picker failed in 2ms (<reason>)
+//  → agent`) and records a `picker-failed` stage, apart from an honest no-tool pick. Before, `try?` dropped the
+//  reason: a macOS profile switch (Apple's model serves the console user only, so it reads modelNotReady) logged
+//  "picker → agent in 2ms", and three eval arms ran on the fallback for hours. `failureReason` logs our own message,
+//  or an error's type and case only, never a payload (a framework context can carry the prompt). Confidence 0.85.
 //
 
 import Foundation
@@ -260,39 +265,71 @@ public enum ToolRouterWiring {
         // Timed (2026-10-25): the Lil Release baseline put the picker route's first token at 3.8 s against
         // 0.65 s on the chat route — the pick itself was the gap's prime suspect and nothing logged it.
         let started = ContinuousClock.now
-        let picked = await pick(with: fallback, question: question, menu: menu, chain: chain)
+        let outcome = await attempt(with: fallback, question: question, menu: menu, chain: chain)
         let elapsed = started.duration(to: .now)
-        log.notice("\(pickSummary(tool: picked?.tool, elapsed: elapsed), privacy: .public)")
-        pickRecorder?.record(picked == nil ? .agent : .picker)
-        return picked
+        let summary = pickSummary(tool: outcome.pick?.tool, elapsed: elapsed, failure: outcome.failure)
+        log.notice("\(summary, privacy: .public)")
+        pickRecorder?.record(outcome.failure != nil ? .pickerFailed : (outcome.pick == nil ? .agent : .picker))
+        return outcome.pick
     }
 
-    /// `tool pick: picker → web_search in 3120ms` — or `→ agent` when the picker named nothing
-    /// (a guardrail, the daemon). Whole ms, clamped at 0.
-    static func pickSummary(tool: String?, elapsed: Duration) -> String {
+    /// `tool pick: picker → web_search in 3120ms`, or `→ agent` when the picker named nothing; a pick that threw
+    /// reads `tool pick: picker failed in 2ms (<reason>) → agent`. Whole ms, clamped at 0.
+    static func pickSummary(tool: String?, elapsed: Duration, failure: String? = nil) -> String {
         let parts = elapsed.components
         let ms = max(0, Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000))
+        if let failure { return "tool pick: picker failed in \(ms)ms (\(failure)) → agent" }
         return "tool pick: picker → \(tool ?? "agent") in \(ms)ms"
     }
 
+    /// Why a pick threw, safe for a public log line: our own `InferenceError.providerUnavailable` message (fixed
+    /// text, e.g. "Apple Intelligence is unavailable (modelNotReady)"), else the error's type and case name only.
+    /// Never a payload: a framework error's context can carry the prompt, and `generationFailed` carries text.
+    static func failureReason(_ error: any Error) -> String {
+        if let inference = error as? InferenceError {
+            switch inference {
+            case let .providerUnavailable(message): return "InferenceError.providerUnavailable: \(message)"
+            case .generationFailed: return "InferenceError.generationFailed"
+            }
+        }
+        let typeName = String(describing: type(of: error))
+        let described = String(describing: error)
+        if described.hasPrefix("Error Domain=") { return ErrorChain.summary(error) }
+        // An enum case prints as `caseName` or `caseName(payload…)`: keep the leading identifier only.
+        let head = described.prefix { $0.isLetter || $0.isNumber || $0 == "_" }
+        if let first = head.first, first.isLowercase { return "\(typeName).\(head)" }
+        return typeName
+    }
+
     /// Apple's model names one tool from the menu (two with `chain`: the second rides
-    /// as `then`); any failure (a guardrail, the daemon) is nil, which keeps the agent turn.
+    /// as `then`); any failure (a guardrail, the daemon, Apple's model not ready) is nil, which keeps the agent turn.
     static func pick(with picker: some ToolPicking, question: String, menu: String, chain: Bool = false) async -> ToolPick? {
+        await attempt(with: picker, question: question, menu: menu, chain: chain).pick
+    }
+
+    /// A pick and, when it threw, why (`failureReason`): the cascade logs it, `pick` drops it.
+    static func attempt(
+        with picker: some ToolPicking, question: String, menu: String, chain: Bool = false
+    ) async -> (pick: ToolPick?, failure: String?) {
         let rules = chain
             ? ToolDispatch.pickerInstructions + "\n" + ToolDispatch.chainInstructions
             : ToolDispatch.pickerInstructions
         let instructions = rules + "\n\n" + menu
-        if chain {
-            guard let picks = try? await picker.pickTools(message: question, instructions: instructions),
-                  let first = picks.first
-            else { return nil }
-            return ToolPick(
-                tool: first.tool, query: first.query,
-                then: picks.dropFirst().map { ToolPick(tool: $0.tool, query: $0.query) }
-            )
+        do {
+            if chain {
+                let picks = try await picker.pickTools(message: question, instructions: instructions)
+                guard let first = picks.first else { return (nil, nil) }
+                let pick = ToolPick(
+                    tool: first.tool, query: first.query,
+                    then: picks.dropFirst().map { ToolPick(tool: $0.tool, query: $0.query) }
+                )
+                return (pick, nil)
+            }
+            let choice = try await picker.pickTool(message: question, instructions: instructions)
+            return (ToolPick(tool: choice.tool, query: choice.query), nil)
+        } catch {
+            return (nil, failureReason(error))
         }
-        guard let choice = try? await picker.pickTool(message: question, instructions: instructions) else { return nil }
-        return ToolPick(tool: choice.tool, query: choice.query)
     }
 
     /// Headroom over today's two façade levels, not a measured depth: it only guards a
@@ -347,6 +384,9 @@ public enum PickStage: String, Sendable, Codable {
     case noneToAgent = "none-agent"
     /// A lookup_fact the user's kept documents answer: a plain turn reads them (`documentCorrected`).
     case documentPlain = "doc-plain"
+    /// Apple's pick THREW (its model not ready, a guardrail, the daemon) and the agent turn answered: an outage
+    /// reads apart from an honest no-tool pick (2026-11-20: a profile switch voided three eval arms unseen).
+    case pickerFailed = "picker-failed"
 }
 
 /// An eval's ear on the cascade: the stages this task's tool turns took, in order.

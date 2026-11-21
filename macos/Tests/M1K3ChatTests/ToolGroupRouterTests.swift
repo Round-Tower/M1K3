@@ -242,6 +242,23 @@ struct ToolPickCascadeTests {
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil) == nil)
     }
 
+    @Test("a pick that throws is recorded as picker-failed, apart from an honest no-tool turn (2026-11-20)")
+    func failedPickIsItsOwnStage() async {
+        let failed = PickStageRecorder()
+        let pick = await ToolRouterWiring.$pickRecorder.withValue(failed) {
+            let failing = RecordingPicker(answer: nil)
+            return await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: failing)
+        }
+        #expect(pick == nil)
+        #expect(failed.stages == [.pickerFailed])
+        #expect(PickStage.pickerFailed.rawValue == "picker-failed")
+        let absent = PickStageRecorder()
+        _ = await ToolRouterWiring.$pickRecorder.withValue(absent) {
+            await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
+        }
+        #expect(absent.stages == [.agent])
+    }
+
     @Test("the gate and the head share one sentence vector per turn; a new turn embeds again (#512)")
     func vectorCachedPerTurn() {
         let calls = Mutex<[String]>([])
@@ -481,7 +498,7 @@ struct PickStageRecorderTests {
         }
     }
 
-    @Test("the cascade tells a recorder which stage named the pick: head, Apple's picker, or the agent")
+    @Test("the cascade tells a recorder which stage named the pick: head, Apple's picker, a failed picker, or the agent")
     func recordsStages() async {
         let recorder = PickStageRecorder()
         await ToolRouterWiring.$pickRecorder.withValue(recorder) {
@@ -497,7 +514,8 @@ struct PickStageRecorderTests {
             )
             _ = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
         }
-        #expect(recorder.stages == [.head, .picker, .agent, .agent])
+        // A picker that throws is a failed pick, its own stage (an outage must not read as agent routes).
+        #expect(recorder.stages == [.head, .picker, .pickerFailed, .agent])
     }
 
     @Test("with no recorder (every shipping turn) the cascade picks exactly as before")

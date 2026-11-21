@@ -21,6 +21,8 @@
 //  Memories, but its prompt never read them. Pinned: AppCore restores the style once the memory store opens,
 //  and its distillation factory forwards a `didWrite` that re-reads it. The iPhone's Memories list has no
 //  edit or forget, so there is no third seam yet. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-21 — the iPhone's memory store opens in a do/catch now (it logs why it
+//  couldn't); the scan reads `memoryStore = try MemoryStore(`. Confidence 0.9.
 //
 
 import Foundation
@@ -120,7 +122,7 @@ struct StatedStyleWiringTests {
     @Test("#730: the iPhone restores the stated style once its memory store opens")
     func iPhoneLaunchRestoresTheStyle() throws {
         let core = try Self.appSource("AppCore.swift", shell: "M1K3iOSApp")
-        let open = try #require(core.range(of: "memoryStore = try? MemoryStore("))
+        let open = try #require(core.range(of: "memoryStore = try MemoryStore("))
         let restore = try #require(core.range(of: "Self.refreshUserStyle(from: memoryStore)"))
         #expect(open.lowerBound < restore.lowerBound)
     }

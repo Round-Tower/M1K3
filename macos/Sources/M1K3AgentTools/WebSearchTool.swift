@@ -32,6 +32,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — beside a page read the list keeps three results
 //  (`listedBesideAPage`); with ToolDispatch's hosts-for-URLs, the page text reaching the model across the
 //  sample's nine answered searches went 6,388 → 11,996 characters. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — a lite page that came back neither OK nor throttled (a 403, a 4xx, a 5xx)
+//  is logged at notice with its status before it reads as "no results": the only line was a .debug, which never
+//  persists, so a blocked search looked like a genuine miss. Logging only. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -174,6 +177,11 @@ public struct WebSearchTool: AgentTool {
             fallback.data, contentType: fallback.response.value(forHTTPHeaderField: "Content-Type")
         )
         let results = DuckDuckGoHTMLParser.parse(html: html)
+        let liteStatus = fallback.response.statusCode
+        if HTTPStatus.classify(liteStatus) != .ok {
+            // Not a search result: without this line a blocked search reads as a genuine miss.
+            Self.log.notice("lite fallback: HTTP \(liteStatus, privacy: .public), \(results.count) result(s)")
+        }
         Self.log.debug("""
         lite fallback: HTTP \(fallback.response.statusCode), \(html.count) bytes → \
         \(results.count) result(s), challenge=\(DuckDuckGoHTMLParser.isChallengePage(html))

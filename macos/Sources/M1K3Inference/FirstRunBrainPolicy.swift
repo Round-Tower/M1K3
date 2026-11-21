@@ -21,6 +21,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — `AFMAvailability.isBlocked`; the blocked-AFM fallback downloads
 //  pocket (LFM2.5-1.2B, ~630 MB) instead of Lil's 2.3 GB. Confidence now 0.9.
+//  Review: claude-opus-5-5, 2026-11-20 — `unavailableReason`: Apple's own name for the state, so a failed pick logs
+//  why (a macOS profile switch reads `modelNotReady`; three eval arms ran on the fallback before anyone saw it).
 
 import Foundation
 
@@ -50,6 +52,17 @@ public enum AFMAvailability: Sendable, Equatable {
     public var isBlocked: Bool {
         if case .blocked = self { return true }
         return false
+    }
+
+    /// Apple's own name for the state (`SystemLanguageModel.Availability.UnavailableReason`), for a log line:
+    /// `modelNotReady` is also what a macOS profile switch reads, since the model serves the console user only.
+    public var unavailableReason: String {
+        switch self {
+        case .available: "available"
+        case .notReady: "modelNotReady"
+        case .blocked(userFixable: true): "appleIntelligenceNotEnabled"
+        case .blocked(userFixable: false): "deviceNotEligible"
+        }
     }
 
     public var isStableForCaching: Bool {
