@@ -9,6 +9,7 @@ New in this build, please try:
 • Plainer talk: ask Mike to talk plainer. He should, and stay that way for the rest of the chat
 • A new chat should open with no suggested questions
 • Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
+• If an answer fails, M1K3 now says so instead of going quiet, with Send a report under it. If you ever see one, please send the report: it now says what the brain ran into
 
 Still worth a look:
 • Read a text: attach a .txt, .md, .csv or .log file from Files and ask about it, in Airplane Mode too. Tell us how long a long file takes before the first words appear, on Lil and on Mini: we have not timed it on a phone yet
