@@ -4,6 +4,8 @@ WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.
 • Talk to me: on-device speech recognition and a natural neural voice (Kokoro TTS).
 • Bring your own knowledge: drop in notes and PDFs and I'll answer from them (on-device retrieval).
+• Read a text: drop in a .txt, .md, .csv or .log file with a question, and the answer sticks to the file.
+• Speaks your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
 • I remember what matters to you — a temporal knowledge graph you can see, search, and delete at any time.
 • Three brain tiers — Mini (instant on Apple Intelligence Macs, a small download on others), Lil (4B), and Big (12B) — pick the one that fits your machine.
 • Show me things: Lil and Big read images. Attach a photo, a screenshot or a whiteboard and ask about it, and one tap keeps a private caption in my memory so you can ask again later.

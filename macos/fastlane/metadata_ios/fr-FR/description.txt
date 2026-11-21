@@ -5,6 +5,8 @@ CE QUE JE FAIS
 • Montre-moi des choses : touche l’œil et pointe ta caméra, ou joins une photo, et pose-moi des questions dessus. Je la lis sur ton appareil et je ne l’envoie nulle part, et un geste garde une légende privée d’une image jointe, pour plus tard.
 • Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
 • Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur l’appareil.
+• Lire un texte : joins un fichier .txt, .md, .csv ou .log avec une question, et la réponse reste collée au fichier.
+• Je parle ta langue : l’appli en anglais, allemand, français, espagnol et portugais du Brésil, et je réponds dans la langue dans laquelle tu écris.
 • Je retiens ce qui compte pour toi, et tu peux voir et rechercher tout ce que j’ai gardé.
 • Un compagnon 3D sympa ou un visage en pixels — et sur iPad, une constellation de tes souvenirs.
 • Brain at Home : associe-moi à ton Mac via ton propre Wi-Fi et emprunte son grand cerveau depuis le canapé.
@@ -16,6 +18,6 @@ PRIVÉ PAR CONCEPTION
 
 Fonctionne hors ligne — en avion, en montagne, partout où le réseau ne passe pas.
 
-Pour l'instant, la saisie vocale est en anglais.
+L’appli est maintenant en français. En mode vocal, je n’écoute encore qu’en anglais pour l’instant, et quelques notes de confidentialité restent en anglais.
 
 Intelligence punk : la tienne, privée, selon tes règles.

@@ -1,11 +1,17 @@
-NOVEDADES DE LA 1.4
+NOVEDADES DE LA 1.5
 
-• Muéstrame. Toca el ojo en la parte superior de un chat, apunta la cámara a una etiqueta, un letrero, una planta o una pantalla y pregunta. Te respondo sobre lo que veo, en tu dispositivo. La imagen no se envía a ninguna parte y se guarda con ese chat en tu dispositivo.
-• Mira mientras platicamos. En el modo de voz, abre el ojo y cada pregunta será sobre lo que tienes enfrente. O pregunta en inglés "what am I looking at?" (por ahora solo en inglés) y echo una sola mirada. Un interruptor en Configuración desactiva la pregunta hablada.
-• Pregunta otra vez. Una segunda pregunta sobre la misma imagen es un solo toque.
-• Busca, si quieres. Después de mirar, puedo redactarte una búsqueda web. Aparece en el campo de mensaje y solo se envía si tú la envías.
-• El título dice quién responde: "LIL M1K3" o "MINI M1K3".
-• Mini responde a la pregunta. Mini había agarrado la costumbre de contestar preguntas de programación comunes con una frase sobre que no comparte su cableado. Ya quedó arreglado.
+• Hablo tu idioma. La app ya está en alemán, francés, español y portugués de Brasil, además de inglés, y sigue el idioma de tu dispositivo. Respondo en el idioma en que escribes, sea cual sea el cerebro que conteste. En el modo de voz, por ahora solo te escucho en inglés; una respuesta en otro idioma la lee una voz que lo habla. Algunas notas de privacidad siguen en inglés hasta que las revise un hablante nativo.
+• Leer un texto. Adjunta un archivo .txt, .md, .csv o .log desde Archivos y pregunta por él ("¿cuándo termina la garantía?"). La respuesta se ciñe al archivo y sale de tu dispositivo. Con "Preguntar más" sigues preguntando sobre el mismo texto; "Guardar este texto" lo guarda en tus documentos.
+• Vete mientras respondo. Bloquea el teléfono o vuelve a la pantalla de inicio durante una respuesta larga: una Actividad en vivo en la pantalla de bloqueo y en la Dynamic Island muestra cuándo está lista, y una notificación te avisa. Nunca muestra tu pregunta ni la respuesta.
+• Corregido: salir de la app mientras Lil respondía podía cerrar M1K3. Ahora se detiene donde estaba y continúa cuando vuelves.
+• Lil lo resuelve. En un problema de varios pasos, una cuenta o un acertijo, Lil ahora lo trabaja en pasos cortos antes de responder: más respuestas correctas, y sigue siendo el cerebro rápido.
+• Te digo cuándo estoy pensando. Cuando una pregunta necesita pensarse de verdad, lo digo en una línea sencilla, en vez de dejarte con una rueda girando.
+• Mira lo que cito. En el modo de voz, cuando cito una página web, toca el chip o di "show me that" y la página aparece con la cita resaltada.
+• Digo los números como los dicen las personas: fechas, horas, dinero, fracciones, versiones y “Henry VIII”. Y ya suenan bien “I'm”, “I'll” y “I've”.
+• Hablar más claro. El villano es el aspecto, no la voz. Pídeme que hable más claro y lo haré.
+• Accesibilidad: cada control tiene un nombre para VoiceOver y Control por voz, y las fechas y la letra pequeña se leen más grandes.
+• Un comienzo limpio: un chat nuevo se abre sin preguntas sugeridas.
+• Corregido: una respuesta podía detenerse en ciertos emoji.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 

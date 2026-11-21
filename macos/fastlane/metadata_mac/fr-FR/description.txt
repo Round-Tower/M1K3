@@ -4,6 +4,8 @@ CE QUE JE FAIS
 • Discute avec un modèle de langage performant sur l’appareil — rapide sur Apple Silicon.
 • Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle (Kokoro TTS).
 • Apporte tes connaissances : ajoute notes et PDF et je répondrai à partir d’eux (recherche sur l’appareil).
+• Lire un texte : dépose un fichier .txt, .md, .csv ou .log avec une question, et la réponse reste collée au fichier.
+• Je parle ta langue : l’appli en anglais, allemand, français, espagnol et portugais du Brésil, et je réponds dans la langue dans laquelle tu écris.
 • Je retiens ce qui compte pour toi — un graphe de connaissances temporel que tu peux voir, chercher et supprimer à tout moment.
 • Trois niveaux de cerveau — Mini (instantané sur les Mac compatibles Apple Intelligence, un petit téléchargement ailleurs), Lil (4B) et Big (12B) — choisis celui qui convient à ta machine.
 • Montre-moi des choses : Lil et Big lisent les images. Joins une photo, une capture d’écran ou un tableau blanc et pose-moi des questions dessus. Un geste garde dans ma mémoire une légende privée, pour que tu puisses m’en reparler plus tard.
@@ -22,6 +24,6 @@ CONÇU POUR TA MACHINE
 • Un serveur local pour tes autres apps : active la Local API et n’importe quel outil qui parle l’OpenAI API peut utiliser le cerveau que tu as chargé. Sur ce Mac uniquement, désactivé par défaut, avec sa propre clé.
 • Le cloud privé d’Apple pour ces apps aussi, si tu l’actives : un cerveau plus grand quand la tâche l’exige. Seul ce que l’appli envoie sort, et les Réglages comptent chaque appel.
 
-Pour l'instant, la saisie vocale est en anglais.
+L’appli est maintenant en français. En mode vocal, je n’écoute encore qu’en anglais pour l’instant, et quelques notes de confidentialité restent en anglais.
 
 Intelligence punk : à toi, privée, selon tes règles.

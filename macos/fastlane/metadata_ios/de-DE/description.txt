@@ -5,6 +5,8 @@ WAS ICH KANN
 • Zeig mir Dinge: Tippe auf das Auge und richte deine Kamera darauf, oder häng ein Foto an, und frag mich dazu. Ich lese es auf deinem Gerät und sende es nirgendwohin, und mit einem Fingertipp halte ich eine private Bildunterschrift zu einem angehängten Bild für später fest.
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
 • Bring dein eigenes Wissen mit: Füge PDFs und Textdateien hinzu, und ich antworte auf ihrer Grundlage — auf dem Gerät.
+• Einen Text lesen: Häng eine .txt-, .md-, .csv- oder .log-Datei mit einer Frage an, und die Antwort bleibt bei der Datei.
+• Spricht deine Sprache: die App auf Englisch, Deutsch, Französisch, Spanisch und brasilianischem Portugiesisch, und ich antworte in der Sprache, in der du schreibst.
 • Ich merke mir, was dir wichtig ist, und du kannst alles sehen und durchsuchen, was ich behalten habe.
 • Ein freundlicher 3D-Begleiter oder ein Pixelgesicht — und auf dem iPad eine Konstellation deiner Erinnerungen.
 • Brain at Home: Kopple iPhone oder iPad über dein eigenes WLAN mit deinem Mac und nutze sein großes Gehirn vom Sofa aus.
@@ -16,6 +18,6 @@ PRIVAT AUS PRINZIP
 
 Funktioniert offline — im Flugzeug, auf dem Berg, überall ohne Netz.
 
-Die Spracheingabe ist vorerst nur auf Englisch.
+Die App ist jetzt auf Deutsch. Im Sprachmodus höre ich vorerst nur auf Englisch zu, und ein paar Datenschutzhinweise sind noch auf Englisch.
 
 Punk-Intelligenz: deine, privat, zu deinen Bedingungen.
