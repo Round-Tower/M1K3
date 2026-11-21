@@ -1,23 +1,24 @@
 Thanks for testing M1K3 1.5.0 on the Mac.
 
 New in this build, please try:
-• Read a text: drop a .txt, .md, .csv or .log file on the chat and ask a question about it ("when does the warranty end?"). The answer should start in a few seconds and stick to the file. Send the file with no words and you should get the gist of the whole text
-• Ask more: under a read's answer, click Ask more. Every message you send then asks about the same text, until you close the Ask more pill or switch to another chat
-• Keep this: under a read's answer, click Keep this. A banner should say it was kept in Documents, and searching your documents should find it. A read is never kept unless you click it. A very long file (a big log) should say it kept the first 100,000 characters
-• A link in a read's answer should show as plain code and do nothing when clicked, with no link chip beside it
-• These should stay ordinary chat turns, not reads: a .swift or other code file, "translate this" or "write a reply to this" with a file, and any file while Brain at Home or Private Cloud Compute is answering
-• Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
-• Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers (voice mode, or Speak on an answer). They should sound right now. So should names such as Abuja, Alzheimer's and iOS
-• Listen to numbers in spoken answers: "3rd", "-5", "£5", "10:30", "pages 4-7", "3/4", "Henry VIII", "v1.2.3", and "1500 people" against "in 1984". Each should sound the way you would say it
-• Voice mode, ask something that needs the web ("what's in the news in Cork?"). When Mike quotes a source, a small chip shows under his line: click it, or say "show me that", and the page opens beside the avatar with the quote lit up. Then try saying "scroll down", "go back" and "close it", and press Esc after clicking inside the page (the page should close first, then voice mode). A page should never open by itself
-• In voice mode, the line Mike says while he uses a tool ("Let me check the web") should stay centred as it fades up, not jump to the left
-• Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. Every button should say what it does. Tell us about anything VoiceOver reads as just "button"
-• With Voice Control on, say "Show names": the names should match what you see on the message field, the memory search, the sidebar and the toolbar
-• Try light and dark appearance, Reduce Motion (the avatar and voice mode) and the largest reading size. Tell us about anything hard to read or that moves when it shouldn't
+• Your language: in System Settings > General > Language & Region, put German, French, Spanish or Portuguese (Brazil) first, then relaunch M1K3. The app should be in that language. Tell us about any English left on screen (a few privacy notes stay in English on purpose until a native speaker has read them) and any wording that reads oddly
+• Write to Mike in another language: he should reply in it, on Mini, Lil and Big
+• Voice mode in German or Spanish: ask Mike to answer in that language. The answer should be read by a voice that speaks it, not an English voice reading German. Voice still listens in English
+• Lil and a puzzle: on Lil, ask "A bat and a ball cost 1.10 in total. The bat costs 1.00 more than the ball. How much is the ball?" Lil should work it out in a few short numbered steps, then answer, in about ten seconds
+• Thinking out loud: Settings > Reasoning > Always think, then ask Lil something hard. A plain line such as "Let me think this one through." should show under Thinking… and go when the answer starts. In voice mode it should only be said aloud if the quiet runs past a few seconds. Tell us whether it helps or feels like noise
+• Plainer talk: ask Mike to talk plainer. He should, and stay that way for the rest of the chat
+• A new chat should open with no suggested questions
+• Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
+
+Still worth a look:
+• Read a text: drop a .txt, .md, .csv or .log file on the chat and ask about it. Ask more and Keep this under the answer
+• Voice mode, ask something that needs the web. When Mike quotes a source, click the chip or say "show me that": the page opens beside the avatar. A page should never open by itself
+• Spoken numbers ("£5", "10:30", "Henry VIII") and "I'm" should sound the way you'd say them
+• VoiceOver and Voice Control: tell us about anything read as just "button"
 
 And the basics:
 • Chat, then voice mode, a few turns in a row
 • Drop a PDF onto the chat and ask about it
 • Brain at Home from your iPhone or iPad
 
-A read happens on this Mac: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
+The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.

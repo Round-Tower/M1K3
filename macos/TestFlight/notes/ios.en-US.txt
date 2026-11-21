@@ -1,31 +1,25 @@
 Thanks for testing M1K3 1.5.0 on iPhone and iPad.
 
 New in this build, please try:
-• Read a text: attach a .txt, .md, .csv or .log file from Files and ask a question about it ("when does the warranty end?"). The answer should stick to the file and come from your device: try it in Airplane Mode. Send the file with no words and you should get the gist of the whole text
-• How long a long file takes before the first words appear, with Lil and with Mini. Tell us the seconds; we have not timed it on a phone yet
-• Ask more: under a read's answer, tap Ask more. Every message then asks about the same text, until you close the Ask more pill or switch to another chat
-• Keep this: under a read's answer, tap Keep this. A banner should say it was kept in Documents. A read is never kept unless you tap it
-• A link in a read's answer should show as plain code and do nothing when tapped
-• These should stay ordinary chat turns, not reads: a code file, "translate this" with a file, and any file while Brain at Home is answering
-• Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
-• Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers. They should sound right now. So should names such as Abuja, Alzheimer's and iOS
-• Listen to numbers in spoken answers: "3rd", "-5", "£5", "10:30", "pages 4-7", "3/4", "Henry VIII", "v1.2.3", and "1500 people" against "in 1984". Each should sound the way you would say it
-• Voice mode, ask something that needs the web ("what's in the news in Cork?"). When Mike quotes a source, a small chip shows under his line: tap it, or say "show me that", and the page pops up with the quote lit up. Try "scroll down", "go back" and "close it". A page should never open by itself, and a phone number on the page should not start a call without asking
-• In voice mode, the line Mike says while he uses a tool ("Let me check the web") should stay centred as it fades up, not jump to the left
-• Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. In Documents, each row should read its title then its date, and swipe to delete should still work
-• With Voice Control on, say "Show names": the names should match what you see
-• Try the largest text sizes (Settings > Accessibility > Display & Text Size > Larger Text): tell us about anything cut off or overlapping. Dates and small print are a size larger than before; on a small phone, tell us if anything no longer fits
-• Try light and dark appearance and Reduce Motion (the avatar and voice mode). Tell us about anything hard to read or that moves when it shouldn't
-• Switch to Lil, ask something long, then swipe home or lock the phone a few seconds in. Do it several times: M1K3 should never close, and the answer should stop where it was
-• Live Activity: on Mini, ask something, then lock the phone or go home. A card should appear on the Lock Screen and in the Dynamic Island, turn to "Answer ready" when it lands, and a notification should arrive. On Lil, the card should say "Paused". Tapping any of it opens the chat
-• Private Cloud: ask, then lock. It should finish and say "Answer ready", not "Paused"
-• On Lil, start a new chat and go home just after the first answer. M1K3 should come back fine
-• Settings: tap the space beside a brain or voice: the whole row should pick it
-• On Lil, go home, come back and ask something: the first words should come as fast as the next answer's. Look straight away too, and tell us if it lags
+• Your language: in Settings > General > Language & Region, put German, French, Spanish or Portuguese (Brazil) first, then open M1K3. The app should be in that language. Tell us about any English left on screen (a few privacy notes stay in English on purpose until a native speaker has read them) and any wording that reads oddly
+• Write to Mike in another language: he should reply in it
+• Voice mode in German or Spanish: ask Mike to answer in that language. The answer should be read by a voice that speaks it. Voice still listens in English
+• Lil and a puzzle (iPhones and iPads with 8 GB): ask "A bat and a ball cost 1.10 in total. The bat costs 1.00 more than the ball. How much is the ball?" Lil should work it out in a few short numbered steps, then answer. Tell us how long it took: we have not timed this on a phone yet
+• Thinking out loud: Settings > Reasoning > Always think, then ask Lil something hard. A plain line such as "Let me think this one through." should show under Thinking… and go when the answer starts
+• Plainer talk: ask Mike to talk plainer. He should, and stay that way for the rest of the chat
+• A new chat should open with no suggested questions
+• Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
+
+Still worth a look:
+• Read a text: attach a .txt, .md, .csv or .log file from Files and ask about it, in Airplane Mode too
+• Live Activity: on Mini, ask something, then lock the phone. The card should turn to "Answer ready" and a notification should arrive. On Lil it says "Paused"
+• On Lil, ask something long, then go home or lock the phone. M1K3 should never close
+• Voice mode, ask something that needs the web, then tap the chip or say "show me that"
+• The largest text sizes, VoiceOver and Voice Control: tell us about anything cut off or read as just "button"
 
 And the basics:
 • Voice mode, a few turns in a row
 • Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
 
-A read happens on your device: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
