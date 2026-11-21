@@ -31,6 +31,8 @@ and get a `chain fx` column.
 Review: Kev + claude-opus-5-5, 2026-10-10 — a `picked by` column from each score's routeStage; a head cell whose
 head never picked is "untested", not a flip (the 10-09 arm's head never fired); Mini's baseline is `routing`.
 Review: Kev + claude-opus-5-5, 2026-10-10 — an `all` config (routing + head + chains together, what the Mac ships).
+Review: claude-opus-5-5, 2026-11-21 — the "picked by" cell counts picker-failed turns (Apple's picker
+threw), which used to read as agent turns and would otherwise drop out of the cell. Confidence 0.9.
 """
 
 from __future__ import annotations
@@ -186,7 +188,7 @@ def render(cells: dict[tuple[str, str], Cell]) -> str:
             else:
                 v = verdict(cells.get((brain, base)), cell)
             stages = cell.stage_counts()
-            picked = " · ".join(f"{k} {stages[k]}" for k in ("head", "picker", "agent") if k in stages) or "-"
+            picked = " · ".join(f"{k} {stages[k]}" for k in ("head", "picker", "picker-failed", "agent") if k in stages) or "-"
             lines.append(f"| {brain} | {config} | {rates[0]} | {rates[1]} | {cp}/{cn} fx | {picked} "
                          f"| {_ms(cell.median_ms('tool-use'))} | {_ms(cell.median_ms())} | {v} |")
     return "\n".join(lines)

@@ -35,10 +35,13 @@
 //  Review: claude-opus-5-5, 2026-11-20 — a lite page that came back neither OK nor throttled (a 403, a 4xx, a 5xx)
 //  is logged at notice with its status before it reads as "no results": the only line was a .debug, which never
 //  persists, so a blocked search looked like a genuine miss. Logging only. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-21 (pre-push review fold) — the query is hashed in every log line (it was public in logs that
+//  persist), and a fetch error logs domain and code only: a URLError's description carries the request URL. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
 import M1K3Inference
+import M1K3LogCore
 import os
 
 public struct WebSearchTool: AgentTool {
@@ -85,7 +88,7 @@ public struct WebSearchTool: AgentTool {
             case .rateLimited:
                 let provider = Self.providerName
                 Self.log.notice(
-                    "rate-limited: \(provider, privacy: .public) challenge page for \"\(query, privacy: .public)\""
+                    "rate-limited: \(provider, privacy: .public) challenge page for \"\(query, privacy: .private(mask: .hash))\""
                 )
                 return ToolResult(output: "Error: web search is temporarily unavailable "
                     + "(\(Self.providerName) rate-limited \(HostPlatform.thisDevice)). "
@@ -93,15 +96,16 @@ public struct WebSearchTool: AgentTool {
             case let .results(results) where results.isEmpty:
                 // .notice: "the search found nothing" is a load-bearing breadcrumb
                 // (distinguishes empty-result from never-ran) that must persist.
-                Self.log.notice("no results for \"\(query, privacy: .public)\"")
+                Self.log.notice("no results for \"\(query, privacy: .private(mask: .hash))\"")
                 // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
                 return ToolResult(output: "No web results for \"\(query)\".")
             case let .results(results):
-                Self.log.notice("\(results.count) result(s) for \"\(query, privacy: .public)\"")
+                Self.log.notice("\(results.count) result(s) for \"\(query, privacy: .private(mask: .hash))\"")
                 return ToolResult(output: await deepened(results))
             }
         } catch {
-            Self.log.error("fetch failed for \"\(query, privacy: .public)\": \(error, privacy: .public)")
+            let reason = ErrorChain.summary(error)
+            Self.log.error("fetch failed for \"\(query, privacy: .private(mask: .hash))\": \(reason, privacy: .public)")
             return ToolResult(output: "Error: web search failed — \(error.localizedDescription)")
         }
     }
@@ -163,7 +167,7 @@ public struct WebSearchTool: AgentTool {
         let instant = DuckDuckGoInstantAnswerParser.parse(instantResponse.data)
         Self.log.debug("""
         instant answer: HTTP \(instantResponse.response.statusCode) → \(instant.count) result(s) \
-        for "\(query, privacy: .public)"
+        for "\(query, privacy: .private(mask: .hash))"
         """)
         if !instant.isEmpty { return .results(instant) }
 

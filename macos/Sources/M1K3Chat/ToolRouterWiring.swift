@@ -68,6 +68,8 @@
 //  reason: a macOS profile switch (Apple's model serves the console user only, so it reads modelNotReady) logged
 //  "picker → agent in 2ms", and three eval arms ran on the fallback for hours. `failureReason` logs our own message,
 //  or an error's type and case only, never a payload (a framework context can carry the prompt). Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-21 (pre-push review fold) — a cancelled pick is a stopped turn, not an outage: no failure
+//  line and no picker-failed stage. Confidence 0.85.
 //
 
 import Foundation
@@ -327,6 +329,9 @@ public enum ToolRouterWiring {
             }
             let choice = try await picker.pickTool(message: question, instructions: instructions)
             return (ToolPick(tool: choice.tool, query: choice.query), nil)
+        } catch is CancellationError {
+            // A stopped turn, not an outage: no failure line, and the eval's outage flag stays quiet.
+            return (nil, nil)
         } catch {
             return (nil, failureReason(error))
         }

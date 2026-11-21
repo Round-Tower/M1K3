@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.9,
 //  Prior: internal call-pipeline project, InferenceProvider (Kev)
+//  Review: claude-opus-5-5, 2026-11-21 (pre-push review fold) — `providerUnavailable`'s message is fixed text by contract: the tool
+//  router logs it public. Confidence 0.9.
 
 import Foundation
 
@@ -36,6 +38,7 @@ public enum InferenceError: Error, Sendable, Equatable {
     case generationFailed(String)
     /// The backend is not available right now (e.g. Apple Intelligence went
     /// away after a profile switch). Callers must NOT fall back on the same
-    /// provider — it will fail identically.
+    /// provider — it will fail identically. The message is fixed text, never user input or an
+    /// error's description: `ToolRouterWiring.failureReason` logs it public.
     case providerUnavailable(String)
 }
