@@ -9,6 +9,7 @@ New in this build, please try:
 • Plainer talk: ask Mike to talk plainer. He should, and stay that way for the rest of the chat
 • A new chat should open with no suggested questions
 • Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
+• If an answer fails, M1K3 now says so instead of going quiet. If M1K3 ever closes unexpectedly, the report it offers next launch now says what the brain ran into: please send it
 
 Still worth a look:
 • Read a text: drop a .txt, .md, .csv or .log file on the chat and ask about it. Ask more and Keep this under the answer
