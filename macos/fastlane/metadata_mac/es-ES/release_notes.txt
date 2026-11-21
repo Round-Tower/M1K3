@@ -1,15 +1,21 @@
-NOVEDADES DE LA 1.4
+NOVEDADES DE LA 1.5
 
-• Un servidor local para tus otras apps. Activa la Local API en Settings > Server y cualquier herramienta que hable la OpenAI API (un editor, un script, una app de chat) podrá usar el cerebro que tengas cargado. Escucha solo en este Mac, viene desactivada por defecto y tiene su propia clave. Tú vas primero: una llamada espera mientras chateas y se corta si empiezas un turno.
-• La nube privada de Apple para tus otras apps, si la quieres. Activa “Also offer Private Cloud Compute” y un segundo modelo, cloud-m1k3, responde desde Private Cloud Compute de Apple: un cerebro más grande para los trabajos que lo necesitan. Tus agentes de código lo reciben igual a través de MCP, con un interruptor propio. Ambos vienen desactivados por defecto. Solo sale lo que envía la app, yo no añado nada tuyo, y Settings cuenta cada llamada.
-• Settings > Server. El servidor MCP para tus agentes de código y la nueva Local API comparten un mismo panel, cada uno con su propio interruptor y su propia clave.
-• Mini responde a la pregunta. Mini había cogido la costumbre de contestar preguntas de programación normales con una frase sobre que no comparte su cableado. Ya está arreglado.
+• Hablo tu idioma. La app ya está en alemán, francés, español y portugués de Brasil, además de inglés, y sigue el idioma de tu Mac. Respondo en el idioma en que escribes, sea cual sea el cerebro que conteste. En el modo de voz, por ahora solo te escucho en inglés; una respuesta en otro idioma la lee una voz que lo habla. Algunas notas de privacidad siguen en inglés hasta que las revise un hablante nativo.
+• Leer un texto. Suelta un archivo .txt, .md, .csv o .log en el chat y pregunta por él (“¿cuándo termina la garantía?”). La respuesta se ciñe al archivo, y el archivo no va a ningún otro sitio. Con “Preguntar más” sigues preguntando sobre el mismo texto; “Guardar este texto” lo guarda en tus documentos.
+• Lil lo resuelve. En un problema de varios pasos, una cuenta o un acertijo, Lil ahora lo trabaja en pasos cortos antes de responder: más respuestas correctas, y sigue siendo el cerebro rápido.
+• Te digo cuándo estoy pensando. Cuando una pregunta necesita pensarse de verdad, lo digo en una línea sencilla, en vez de dejarte con una rueda girando.
+• Mira lo que cito. En el modo de voz, cuando cito una página web, haz clic en el chip o di “show me that” y la página se abre a mi lado con la cita resaltada. “Scroll down”, “go back” y “close it” también funcionan. Una página nunca se abre sola.
+• Digo los números como los dicen las personas: fechas, horas, dinero, fracciones, versiones y “Henry VIII”. Y ya suenan bien “I'm”, “I'll” y “I've”.
+• Hablar más claro. El villano es el aspecto, no la voz. Pídeme que hable más claro y lo haré.
+• Accesibilidad: cada control tiene un nombre para VoiceOver y Control por voz, y el contraste está medido.
+• Un comienzo limpio: un chat nuevo se abre sin preguntas sugeridas.
+• Corregido: una respuesta podía detenerse en ciertos emoji.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 
 • Tres cerebros: Mini (al instante, con Apple Intelligence), Lil (4B, ve imágenes) y Big (12B). Elige el que mejor le va a tu Mac.
 • Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural (en inglés).
-• Trae tu propio conocimiento: arrastra notas y PDF y respondo a partir de ellos, en tu Mac.
+• Trae tu propio conocimiento: arrastra notas, PDF y archivos de texto y respondo a partir de ellos, en tu Mac.
 • Recuerdo lo que te importa, en una memoria que puedes ver, buscar y borrar.
 • Memoria de llamadas: con tu consentimiento, transcribo y resumo llamadas, y lo guardo cifrado en tu Mac.
 • Brain at Home: empareja tu iPhone o iPad por tu propia wifi y usa el cerebro de tu Mac desde el sofá.

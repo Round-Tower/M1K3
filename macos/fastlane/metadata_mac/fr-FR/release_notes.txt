@@ -1,15 +1,21 @@
-NOUVEAU DANS LA 1.4
+NOUVEAU DANS LA 1.5
 
-• Un serveur local pour tes autres apps. Active la Local API dans Settings > Server, et n'importe quel outil qui parle l'OpenAI API (un éditeur, un script, une appli de chat) peut utiliser le cerveau que tu as chargé. Le serveur n'écoute que sur ce Mac, il est désactivé par défaut et il a sa propre clé. Tu passes en premier : un appel attend pendant que tu discutes, et s'arrête si tu lances un nouvel échange.
-• Le cloud privé d'Apple pour tes autres apps, si tu le veux. Active « Also offer Private Cloud Compute » et un second modèle, cloud-m1k3, répond depuis Private Cloud Compute d'Apple : un cerveau plus grand pour les tâches qui en ont besoin. Tes agents de code y accèdent aussi via MCP, avec leur propre interrupteur. Les deux sont désactivés par défaut. Seul ce que l'appli envoie sort, je n'ajoute rien de toi, et Settings compte chaque appel.
-• Settings > Server. Le serveur MCP pour tes agents de code et la nouvelle Local API partagent un même volet, chacun avec son propre interrupteur et sa propre clé.
-• Mini répond à la question. Mini avait pris l'habitude de répondre aux questions de code ordinaires par une phrase disant qu'il ne partage pas son câblage. C'est corrigé.
+• Je parle ta langue. L'appli est maintenant en allemand, en français, en espagnol et en portugais du Brésil, en plus de l'anglais, et elle suit la langue de ton Mac. Je réponds dans la langue dans laquelle tu écris, quel que soit le cerveau qui répond. En mode vocal, j'écoute encore en anglais pour l'instant ; une réponse dans une autre langue est lue par une voix qui la parle. Quelques notes de confidentialité restent en anglais, le temps qu'un locuteur natif les relise.
+• Lire un texte. Dépose un fichier .txt, .md, .csv ou .log dans la conversation et pose ta question (« Quand la garantie se termine-t-elle ? »). La réponse reste collée au fichier, et le fichier ne va nulle part ailleurs. « Autre question » continue de poser des questions sur le même texte ; « Garder ce texte » l'enregistre dans tes documents.
+• Lil réfléchit. Sur un problème à plusieurs étapes, un calcul ou une énigme, Lil le résout maintenant en petites étapes avant de répondre : plus de bonnes réponses, et toujours le cerveau rapide.
+• Je te dis quand je réfléchis. Quand une question demande une vraie réflexion, je le dis en une ligne simple, au lieu de te laisser devant un indicateur qui tourne.
+• Vois ce que je cite. En mode vocal, quand je cite une page web, clique sur la pastille ou dis « show me that » : la page s'ouvre à côté de moi avec la citation en surbrillance. « Scroll down », « go back » et « close it » marchent aussi. Une page ne s'ouvre jamais toute seule.
+• Je dis les nombres comme les gens : dates, heures, argent, fractions, versions et « Henry VIII ». Et « I'm », « I'll » et « I've » sonnent juste maintenant.
+• Parler plus simplement. Le méchant, c'est le look, pas la voix. Demande-moi de parler plus simplement et je le ferai.
+• Accessibilité : chaque commande a un nom pour VoiceOver et Contrôle vocal, et le contraste est mesuré.
+• Un départ propre : une nouvelle conversation s'ouvre sans questions suggérées.
+• Corrigé : une réponse pouvait s'arrêter à certains emoji.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
 • Trois cerveaux : Mini (instantané, avec Apple Intelligence), Lil (4B, voit les images) et Big (12B). Choisis celui qui convient à ton Mac.
 • Parle-moi : reconnaissance vocale sur l'appareil et une voix neuronale naturelle.
-• Apporte tes connaissances : dépose des notes et des PDF, et je réponds à partir d'eux, sur ton Mac.
+• Apporte tes connaissances : dépose des notes, des PDF et des fichiers texte, et je réponds à partir d'eux, sur ton Mac.
 • Je retiens ce qui compte pour toi, dans une mémoire que tu peux voir, chercher et supprimer.
 • Mémoire des appels : avec ton accord, je transcris et résume tes appels, chiffrés sur ton Mac.
 • Brain at Home : associe ton iPhone ou ton iPad via ton propre Wi-Fi et utilise le cerveau de ton Mac depuis le canapé.

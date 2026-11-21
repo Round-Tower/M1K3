@@ -5,6 +5,8 @@ LO QUE HAGO
 • Enséñame cosas: toca el ojo y apunta tu cámara, o adjunta una foto, y pregúntame por ella. La leo en tu dispositivo y no la envío a ninguna parte, y un toque guarda en mi memoria un pie de foto privado de una imagen adjunta, para más tarde.
 • Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural.
 • Trae tu propio conocimiento: añade PDF y archivos de texto y responderé a partir de ellos, en el dispositivo.
+• Leer un texto: adjunta un archivo .txt, .md, .csv o .log con una pregunta, y la respuesta se ciñe al archivo.
+• Hablo tu idioma: la app en inglés, alemán, francés, español y portugués de Brasil, y respondo en el idioma en que escribes.
 • Recuerdo lo que te importa, y puedes ver y buscar todo lo que he guardado.
 • Un compañero 3D simpático o una cara de píxeles — y en iPad, una constelación de tus recuerdos.
 • Brain at Home: empareja tu iPhone o iPad con tu Mac por tu propia wifi y usa su gran cerebro desde el sofá.
@@ -16,6 +18,6 @@ PRIVADO POR DISEÑO
 
 Funciona sin conexión — en un avión, en la montaña, donde no llegue la cobertura.
 
-Por ahora, la entrada de voz está en inglés.
+La app ya está en español. En el modo de voz, por ahora solo te escucho en inglés, y algunas notas de privacidad siguen en inglés.
 
 Inteligencia punk: tuya, privada, a tu manera.

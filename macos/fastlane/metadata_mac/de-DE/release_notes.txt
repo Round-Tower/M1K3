@@ -1,15 +1,21 @@
-NEU IN 1.4
+NEU IN 1.5
 
-• Ein lokaler Server für deine anderen Apps. Schalte die Local API unter Settings > Server ein, und jedes Werkzeug, das die OpenAI API spricht (ein Editor, ein Skript, eine Chat-App), kann das Hirn nutzen, das du geladen hast. Sie lauscht nur auf diesem Mac, ist standardmäßig aus und hat einen eigenen Schlüssel. Du bist zuerst dran: Ein Aufruf wartet, solange du chattest, und endet, sobald du eine neue Runde beginnst.
-• Apples private Cloud für deine anderen Apps, wenn du willst. Schalte „Also offer Private Cloud Compute“ ein, und ein zweites Modell, cloud-m1k3, antwortet aus Apples Private Cloud Compute: ein größeres Hirn für die Jobs, die eins brauchen. Deine Coding-Agenten bekommen dasselbe über MCP, mit einem eigenen Schalter. Beide sind standardmäßig aus. Es geht nur hinaus, was die App sendet; ich füge nichts von dir hinzu, und Settings zählt jeden Aufruf.
-• Settings > Server. Der MCP-Server für deine Coding-Agenten und die neue Local API teilen sich einen Bereich, jeweils mit eigenem Schalter und eigenem Schlüssel.
-• Mini beantwortet die Frage. Mini hatte sich angewöhnt, ganz normale Coding-Fragen mit einem Satz darüber zu beantworten, dass es seine Verdrahtung nicht preisgibt. Das ist behoben.
+• Ich spreche deine Sprache. Die App gibt es jetzt auf Deutsch, Französisch, Spanisch und brasilianischem Portugiesisch, zusätzlich zu Englisch, und sie folgt der Sprache deines Macs. Ich antworte in der Sprache, in der du schreibst, egal welches Hirn gerade antwortet. Im Sprachmodus höre ich vorerst nur auf Englisch zu; eine Antwort in einer anderen Sprache liest eine Stimme vor, die sie spricht. Ein paar Datenschutzhinweise bleiben auf Englisch, bis sie jemand mit der passenden Muttersprache geprüft hat.
+• Einen Text lesen. Zieh eine .txt-, .md-, .csv- oder .log-Datei in den Chat und frag danach („Wann endet die Garantie?“). Die Antwort bleibt bei der Datei, und die Datei geht nirgendwohin sonst. Mit „Nachfragen“ fragst du weiter zum selben Text; „Aufbewahren“ legt ihn in deinen Dokumenten ab.
+• Lil rechnet es durch. Bei einem Problem mit mehreren Schritten, einer Rechnung oder einem Rätsel arbeitet Lil es jetzt in kurzen Schritten durch, bevor es antwortet: mehr richtige Antworten, und trotzdem das schnelle Hirn.
+• Ich sage dir, wenn ich nachdenke. Braucht eine Frage echtes Nachdenken, sage ich das in einer schlichten Zeile, statt dich mit einem sich drehenden Ladekreis allein zu lassen.
+• Sieh, was ich zitiere. Wenn ich im Sprachmodus eine Webseite zitiere, klick auf den Chip oder sag „show me that“, und die Seite öffnet sich neben mir, das Zitat hervorgehoben. „Scroll down“, „go back“ und „close it“ funktionieren auch. Eine Seite öffnet sich nie von allein.
+• Ich sage Zahlen, wie Menschen sie sagen: Daten, Uhrzeiten, Geldbeträge, Brüche, Versionen und „Henry VIII“. Und „I'm“, „I'll“ und „I've“ klingen jetzt richtig.
+• Schlichter reden. Der Schurke ist der Look, nicht die Stimme. Bitte mich, schlichter zu reden, und ich tue es.
+• Barrierefreiheit: Jedes Bedienelement hat einen Namen für VoiceOver und Sprachsteuerung, und der Kontrast ist gemessen.
+• Ein sauberer Start: Ein neuer Chat öffnet sich ohne Vorschlagsfragen.
+• Behoben: Eine Antwort konnte bei bestimmten Emoji abbrechen.
 
 NEU BEI M1K3? DAS MACHE ICH
 
 • Drei Hirne: Mini (sofort, über Apple Intelligence), Lil (4B, liest Bilder) und Big (12B). Wähl das Passende für deinen Mac.
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
-• Bring dein eigenes Wissen mit: Zieh Notizen und PDFs hinein, und ich antworte auf ihrer Grundlage, auf deinem Mac.
+• Bring dein eigenes Wissen mit: Zieh Notizen, PDFs und Textdateien hinein, und ich antworte auf ihrer Grundlage, auf deinem Mac.
 • Ich merke mir, was dir wichtig ist, in einem Gedächtnis, das du sehen, durchsuchen und löschen kannst.
 • Anruf-Gedächtnis: Mit deiner Zustimmung transkribiere ich Anrufe und fasse sie zusammen, verschlüsselt auf deinem Mac.
 • Brain at Home: Kopple dein iPhone oder iPad über dein eigenes WLAN und nutze das Hirn deines Macs vom Sofa aus.

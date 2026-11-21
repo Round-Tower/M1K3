@@ -1,11 +1,17 @@
-NOUVEAU DANS LA 1.4
+NOUVEAU DANS LA 1.5
 
-• Montre-moi. Touche l’œil en haut d’une conversation et pointe ta caméra vers une étiquette, un panneau, une plante ou un écran, puis pose ta question. Je réponds sur ce que je vois, sur ton appareil. L’image n’est envoyée nulle part, et elle est enregistrée avec cette conversation sur ton appareil.
-• Regarde pendant qu’on parle. En mode vocal, ouvre l’œil et chaque question porte sur ce qui est devant toi. Ou demande en anglais « what am I looking at? » (pour l’instant, seulement en anglais) et je jette un seul coup d’œil. Un interrupteur dans les Réglages désactive la question à voix haute.
-• Redemande. Une deuxième question sur la même image, c’est un simple toucher.
-• Une recherche, si tu veux. Après un coup d’œil, je peux te rédiger une recherche web. Elle arrive dans le champ de saisie et ne part que si tu l’envoies.
-• Le titre dit qui répond : « LIL M1K3 » ou « MINI M1K3 ».
-• Mini répond à la question. Mini avait pris l’habitude de répondre aux questions de code ordinaires par une phrase disant qu’il ne partage pas son câblage. C’est corrigé.
+• Je parle ta langue. L’appli est maintenant en allemand, en français, en espagnol et en portugais du Brésil, en plus de l’anglais, et elle suit la langue de ton appareil. Je réponds dans la langue dans laquelle tu écris, quel que soit le cerveau qui répond. En mode vocal, j’écoute encore en anglais pour l’instant ; une réponse dans une autre langue est lue par une voix qui la parle. Quelques notes de confidentialité restent en anglais, le temps qu’un locuteur natif les relise.
+• Lire un texte. Joins un fichier .txt, .md, .csv ou .log depuis Fichiers et pose ta question (« Quand la garantie se termine-t-elle ? »). La réponse reste collée au fichier et vient de ton appareil. « Autre question » continue de poser des questions sur le même texte ; « Garder ce texte » l’enregistre dans tes documents.
+• Pars pendant que je réponds. Verrouille ton téléphone ou retourne à l’écran d’accueil pendant une longue réponse : une Activité en direct sur l’écran verrouillé et dans la Dynamic Island indique quand elle est prête, et une notification te prévient. Elle n’affiche jamais ta question ni la réponse.
+• Corrigé : quitter l’appli pendant que Lil répondait pouvait fermer M1K3. Maintenant, il s’arrête là où il en était et reprend quand tu reviens.
+• Lil réfléchit. Sur un problème à plusieurs étapes, un calcul ou une énigme, Lil le résout maintenant en petites étapes avant de répondre : plus de bonnes réponses, et toujours le cerveau rapide.
+• Je te dis quand je réfléchis. Quand une question demande une vraie réflexion, je le dis en une ligne simple, au lieu de te laisser devant un indicateur qui tourne.
+• Vois ce que je cite. En mode vocal, quand je cite une page web, touche la pastille ou dis « show me that » : la page s’affiche avec la citation en surbrillance.
+• Je dis les nombres comme les gens : dates, heures, argent, fractions, versions et « Henry VIII ». Et « I'm », « I'll » et « I've » sonnent juste maintenant.
+• Parler plus simplement. Le méchant, c’est le look, pas la voix. Demande-moi de parler plus simplement et je le ferai.
+• Accessibilité : chaque commande a un nom pour VoiceOver et Contrôle vocal, et les dates et les petits caractères s’affichent plus grands.
+• Un départ propre : une nouvelle conversation s’ouvre sans questions suggérées.
+• Corrigé : une réponse pouvait s’arrêter à certains emoji.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
