@@ -65,6 +65,13 @@
 //  Confidence 0.7 until the language arm reads it.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
 //  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider` reads `-thinkingShape` (unset = off, today's
+//  policy): the A/B arm for a speed tier thinking, or working in steps, on a puzzle-shaped turn. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — Lil reasons in steps by default (`ThinkingShapeMode.shippedDefault`,
+//  Kev's call on the A/B); `-thinkingShape` still overrides. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — `thinkAsideProvider` ("The Tell"): true while Lil serves, the speed tier
+//  whose think phase is real (`prefersFastThinking`'s own note). Mini is Apple's, with no think toggle; Pocket is
+//  left out until its think phase is measured. Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-20 — `makeChatHistoryStore` logs WHY the store or the legacy migration failed
 //  (`ErrorChain` domains and codes, no SQL or paths) instead of `try?`: before, a full disk or a failed migration
 //  quietly made chat non-persistent, every conversation gone at quit, nothing in the log. Confidence 0.85.
@@ -528,6 +535,19 @@ extension AppEnvironment {
                 // lookups — read fresh each turn so a hot-swap applies immediately.
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            // Lil reasons in steps (Kev, 2026-11-20); `M1K3 -thinkingShape off|think|steps` still picks an A/B arm.
+            thinkingShapeProvider: {
+                let defaults = UserDefaults.standard
+                return ThinkingShapeMode(
+                    argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
+                    fallback: .shippedDefault(isLil: Self.lilIsAnswering(persisted: defaults.string(forKey: Self.selectedBrainKey)))
+                )
+            },
+            // "The Tell": only a brain with a real think phase may announce one, and only while it is the one
+            // answering (Mini standing in for a downloading Lil has none). Read fresh: a hot-swap applies.
+            thinkAsideProvider: {
+                Self.lilIsAnswering(persisted: UserDefaults.standard.string(forKey: Self.selectedBrainKey))
             },
             // Read fresh each turn so a hot-swap re-sizes the window immediately.
             historyBudgetProvider: { Self.liveHistoryBudget() },

@@ -41,6 +41,7 @@
 //  Not yet seen by Kev's eye.
 //  Review: claude-opus-5-5, 2026-11-19 — l10n phase 0: `destination(_:systemImage:_:)` takes a LocalizedStringKey, so its
 //  six literal titles reach the string catalog. English renders unchanged.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import M1K3Chat
 import SwiftUI
@@ -188,7 +189,7 @@ struct SidebarView: View {
     private func conversationRow(for summary: ConversationSummary) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(summary.title ?? "New chat")
+                Text(summary.title ?? String(localized: "New chat"))
                     .font(.body)
                     .lineLimit(1)
                 Text(summary.updatedAt, format: .relative(presentation: .named))

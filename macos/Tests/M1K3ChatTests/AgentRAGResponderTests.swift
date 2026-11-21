@@ -43,6 +43,8 @@
 //  question carrying none.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — the reply-language clause: a German turn carries it, an English one
 //  does not, and a short turn carries the language of the person's earlier turn.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": `.deliberating` fires once on a thinking turn when the app says the
+//  brain really thinks (`thinkAsideProvider`), and never on a fast turn or an opted-out brain.
 
 import Foundation
 import M1K3Agent
@@ -1018,6 +1020,52 @@ struct AgentRAGResponderTests {
         let (_, stream) = try await responder.answerStreaming("danke!", history: history) { _ in }
         _ = await collect(stream)
         #expect(provider.allPrompts.first?.contains("reply in German") == true)
+    }
+
+    /// Kev, 2026-11-20: the `steps` arm reasons in the answer instead of a think phase, on a puzzle only.
+    @Test("the steps arm adds the work-in-steps clause to a puzzle on a speed tier, and nothing elsewhere")
+    func stepsArmClause() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let puzzle = "A doctor gives you 3 pills and tells you to take one every half hour, starting now. "
+            + "How many minutes until you have taken them all?"
+        for shape in ThinkingShapeMode.allCases {
+            let provider = AgentScriptedProvider(["CONCLUSION: 60. [Plant Notes §3.2 Seals]",
+                                                  "CONCLUSION: Hi. [Plant Notes §3.2 Seals]"])
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [] },
+                fastThinkingProvider: { true },
+                thinkingShapeProvider: { shape }
+            )
+            _ = try await collect(responder.answerStreaming(puzzle).stream)
+            _ = try await collect(responder.answerStreaming("thanks pal!").stream)
+            let marker = "work it out in a few short numbered steps"
+            #expect(provider.allPrompts.first?.contains(marker) == (shape == .steps), "\(shape)")
+            #expect(provider.allPrompts.last?.contains(marker) == false, "\(shape)")
+        }
+    }
+
+    /// "The Tell" (2026-11-20): a speed tier that really thinks says so before the quiet, once, and only then.
+    @Test("a thinking turn on a brain that thinks emits one deliberating activity; a fast turn or an opted-out brain none")
+    func deliberatingFiresOnlyWhenTheTurnThinks() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let puzzle = "A doctor gives you 3 pills and tells you to take one every half hour, starting now. "
+            + "How many minutes until you have taken them all?"
+        for (aside, question, expected) in [(true, puzzle, 1), (true, "thanks pal!", 0), (false, puzzle, 0)] {
+            let provider = AgentScriptedProvider(["CONCLUSION: 60. [Plant Notes §3.2 Seals]"])
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [] },
+                fastThinkingProvider: { true },
+                thinkingShapeProvider: { .think },
+                thinkAsideProvider: { aside }
+            )
+            let recorder = ActivityRecorder()
+            let (_, stream) = try await responder.answerStreaming(question, history: [], onActivity: { recorder.record($0) })
+            _ = await collect(stream)
+            #expect(recorder.activities.filter { $0 == .deliberating }.count == expected, "\(aside) \(question)")
+            #expect(provider.allPrompts.allSatisfy { prompt in ThinkAside.lines.allSatisfy { !prompt.contains($0) } })
+        }
     }
 
     /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.

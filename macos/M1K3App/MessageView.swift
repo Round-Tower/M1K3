@@ -56,6 +56,9 @@
 //  in the side panel, so a planted link would be one tap from sending its query. Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the sources count is one inflected key, not an English
 //  plural ternary. English unchanged (renders byte-identical for 0, 1, 2, 21, 1234).
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": `thinkAside` shows as a caption over the live reasoning
+//  (announced once to VoiceOver) until the answer starts; the THINKING… dots stay still under Reduce Motion.
+//  Verify-by-launch: a Lil puzzle turn. Confidence 0.75.
 
 import AppKit
 import M1K3AnswerBlocks
@@ -252,6 +255,16 @@ struct MessageView: View {
                     .font(.caption)
                     .foregroundStyle(.readableSecondary)
                     .textSelection(.enabled)
+            }
+
+            // "The Tell": the line M1K3 said before this think, over the live reasoning until the answer starts.
+            // Readable caption type, not the pixel face: it is a sentence, and the one plain-language "what's
+            // happening" a dyslexic reader gets without parsing the (often English) scratchpad below.
+            if isThinkingLive, let aside = message.thinkAside {
+                Text(aside)
+                    .font(.caption)
+                    .foregroundStyle(.readableSecondary)
+                    .onAppear { AccessibilityNotification.Announcement(aside).post() }
             }
 
             if !message.text.isEmpty {
@@ -522,7 +535,7 @@ struct MessageView: View {
                 .contentTransition(.opacity)
                 // The bubble's dots iterate like a typing indicator while the
                 // model reasons; the collapsed resting state stays still.
-                .symbolEffect(.variableColor.iterative, isActive: isThinkingLive)
+                .symbolEffect(.variableColor.iterative, isActive: isThinkingLive && !reduceMotion)
         }
         .padding(.horizontal, 6)
     }

@@ -96,6 +96,35 @@
         }
       }
     },
+    "Hang on, this one needs real thought." : {
+      "comment" : "Said before M1K3 thinks hard. Plain and warm; no time or progress claims.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier muss ich gründlich nachdenken."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto hay que pensarlo bien."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hum, celle-ci demande une vraie réflexion."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa aqui pede uma reflexão de verdade."
+          }
+        }
+      }
+    },
     "I couldn't make out that photo. Try again?" : {
       "localizations" : {
         "de" : {
@@ -288,6 +317,35 @@
         }
       }
     },
+    "Let me think this one through." : {
+      "comment" : "Said before M1K3 thinks hard. Plain and warm; no time or progress claims.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das denke ich mal gründlich durch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voy a pensarlo a fondo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je vais bien réfléchir à celle-ci."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vou pensar nisso com cuidado."
+          }
+        }
+      }
+    },
     "No age range declared" : {
       "comment" : "Settings ▸ Content Controls: no age range has been shared",
       "localizations" : {
@@ -457,6 +515,35 @@
         }
       }
     },
+    "Right, let me work this out properly." : {
+      "comment" : "Said before M1K3 thinks hard. Plain and warm; no time or progress claims.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also gut, das kläre ich richtig."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bien, voy a resolverlo como es debido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bon, je vais démêler ça correctement."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certo, vou resolver isso direitinho."
+          }
+        }
+      }
+    },
     "Set up" : {
       "comment" : "Settings ▸ Content Controls button: share an age range for the first time",
       "localizations" : {
@@ -516,6 +603,35 @@
     },
     "This brain can't read photos right now." : {
 
+    },
+    "This one deserves a proper think." : {
+      "comment" : "Said before M1K3 thinks hard. Plain and warm; no time or progress claims.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das verdient ordentliches Nachdenken."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto merece una buena pensada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça mérite d'y réfléchir sérieusement."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa merece uma boa pensada."
+          }
+        }
+      }
     },
     "Update" : {
       "comment" : "Settings ▸ Content Controls button: share the age range again",

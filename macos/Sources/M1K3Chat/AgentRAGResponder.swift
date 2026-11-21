@@ -273,6 +273,14 @@
 //  the person's earlier turns too (a short turn keeps their language). nil by default and for English, so an
 //  unwired or English prompt is byte-identical. The look, read and Private Cloud routes build their own prompts
 //  and carry none of the turn clauses (a follow-up). Confidence 0.75 until the language arm reads it.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider` (default `.off`: byte-identical) feeds the
+//  turn's `shouldThink(shape:)` and, on the `steps` arm, `ThinkingPolicy.stepsClause` joins `turnClauses` just before
+//  the reply-language line, read against the turn's own `InferenceIntent.thinking`. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": `thinkAsideProvider` (default off: byte-identical) says whether
+//  this brain really has a think phase; on a speed tier whose turn will think, `.deliberating` fires once, right
+//  after the decision and before any generation, so the shell can say one line before the quiet. Mini sits in the
+//  speed tier and cannot think: the app's provider leaves it out, so the line never promises a think that won't
+//  happen. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -324,6 +332,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// think phase on plain grounded lookups. Default `false` = the heavy-tier
     /// behaviour, so existing callers/tests are byte-identical.
     private let fastThinkingProvider: @Sendable () -> Bool
+    /// The `thinkingShape` A/B arm (`ThinkingShapeMode`), read fresh each turn. `.off` = today's policy.
+    private let thinkingShapeProvider: @Sendable () -> ThinkingShapeMode
+    /// Whether the brain answering really has a think phase ("The Tell"), read fresh each turn. Default `false`:
+    /// no `.deliberating`, byte-identical for every caller that doesn't opt in.
+    private let thinkAsideProvider: @Sendable () -> Bool
     /// The conversation-replay budget, read FRESH each turn (same per-turn pattern
     /// as the other providers) so a brain hot-swap re-sizes the window immediately —
     /// wide on the dense-Qwen tiers, clamped under gemma-4's 8192 rotating window.
@@ -397,6 +410,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         thinkingBudget: Int? = nil,
         brainNameProvider: @escaping @Sendable () -> String = { "" },
         fastThinkingProvider: @escaping @Sendable () -> Bool = { false },
+        thinkingShapeProvider: @escaping @Sendable () -> ThinkingShapeMode = { .off },
+        thinkAsideProvider: @escaping @Sendable () -> Bool = { false },
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
@@ -428,6 +443,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.brainNameProvider = brainNameProvider
         self.maxIterationsProvider = maxIterationsProvider
         self.fastThinkingProvider = fastThinkingProvider
+        self.thinkingShapeProvider = thinkingShapeProvider
+        self.thinkAsideProvider = thinkAsideProvider
         self.historyBudgetProvider = historyBudgetProvider
         self.ageClauseProvider = ageClauseProvider
         self.egressClauseProvider = egressClauseProvider
@@ -746,8 +763,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             question: question,
             hasGroundedKnowledge: Self.hasGroundedKnowledge(chunks: turnChunks, memories: cappedMemories),
             mode: thinkingModeProvider(),
-            fastByDefault: fastThinkingProvider()
+            fastByDefault: fastThinkingProvider(),
+            shape: thinkingShapeProvider()
         )
+        // "The Tell": a speed tier that will think says so before the quiet. Only where the think is a choice
+        // (a heavy tier thinks by default, so a line every turn would be noise) and the brain really thinks.
+        if turnThinking, fastThinkingProvider(), thinkAsideProvider() {
+            onActivity(.deliberating)
+        }
         // The turn writes to `inner`; the consumer reads `stream`, a forwarder that marks the first chunk
         // (`turn first token:` — the one number a waiting person feels, unlogged until 2026-10-25). The
         // hand-off is marked here, before the forwarder exists, so the snapshot it logs against is final.
@@ -1286,9 +1309,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         // #768: the turn straight after a look cannot see the picture, and is told so (that turn only).
         let afterLook = LookAftermath.withholdsWeb ? LookAftermath.clause : nil
+        // The `steps` arm: a puzzle that is not thinking works in short steps (nil on every other arm and turn).
+        let steps = ThinkingPolicy.stepsClause(
+            question: question, mode: thinkingModeProvider(), shape: thinkingShapeProvider(),
+            thinking: InferenceIntent.thinking ?? false, fastByDefault: fastThinkingProvider()
+        )
         // Last, nearest the question: the language the reply must come back in (nil for English).
         let replyLanguage = replyLanguageClauseProvider(question, history.filter { $0.role == .user }.map(\.text))
-        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, replyLanguage]
+        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, steps, replyLanguage]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail

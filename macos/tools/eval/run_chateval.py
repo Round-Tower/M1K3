@@ -113,6 +113,8 @@ Review: Kev + claude-opus-5.5, 2026-11-19 — `--router-none-agent` (M1K3_SELFTE
 `none` takes the agent turn, on under dispatch like the Mac app; `--no-router-none-agent` is the off arm. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-11-19 — `--reply-language` (on by default on the live path, like the app) and
 `--device-language` (the clause's short-turn fallback): the language arm's switches. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-11-20 — `--thinking-shape off|think|steps` (M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE):
+the puzzle-shape A/B arms. Unset sends nothing, so older runs are unchanged. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -269,6 +271,7 @@ class RunOptions:
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
     think_steer: str | None = None  # none | terse | emoji | softcap | reread | trap | working | budget
+    thinking_shape: str | None = None  # off | think | steps: the app's -thinkingShape arm (2026-11-20); None sends nothing
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
     calculator: bool = False  # offer the computing `calculate` stub (the calculator probe)
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
@@ -415,6 +418,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
     if opts.think_steer:
         trig["M1K3_SELFTEST_CHATEVAL_THINK_STEER"] = opts.think_steer
+    if opts.thinking_shape:
+        trig["M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"] = opts.thinking_shape
     if opts.calculator:
         trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] = "1"
     if opts.full_answers:
@@ -878,6 +883,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
     ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap", "reread", "trap", "working", "budget"],
                     help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
+    ap.add_argument("--thinking-shape", choices=["off", "think", "steps"],
+                    help="the puzzle-shape arm (the app's -thinkingShape): a speed tier thinks, or works in steps, on a "
+                         "puzzle-shaped turn; unset = the app's default (off)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
     ap.add_argument("--calculator", action="store_true",
@@ -931,7 +939,7 @@ def main(argv: list[str] | None = None) -> int:
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
-        thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
+        thinking=args.thinking, think_steer=args.think_steer, thinking_shape=args.thinking_shape, full_answers=args.full_answers,
         calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
         router_search=args.router_search, router_none_agent=args.router_none_agent,

@@ -16,6 +16,6 @@ PRIVADO POR DISEÑO
 
 Funciona sin conexión — en un avión, en la montaña, donde no llegue la cobertura.
 
-Por ahora, la interfaz y la voz están en inglés.
+Por ahora, la entrada de voz está en inglés.
 
 Inteligencia punk: tuya, privada, a tu manera.

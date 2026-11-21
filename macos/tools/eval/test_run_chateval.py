@@ -1073,3 +1073,13 @@ def test_main_threads_reply_language_to_the_trigger(tmp_path, monkeypatch, capsy
     assert key not in capsys.readouterr().out
     assert rc.main([*base, "--device-language", "pt-BR"]) == 0
     assert '"M1K3_SELFTEST_CHATEVAL_DEVICE_LANGUAGE": "pt-BR"' in capsys.readouterr().out
+
+
+def test_thinking_shape_arm_reaches_the_app_and_unset_sends_nothing():
+    # 2026-11-20: the puzzle-shape A/B (`-thinkingShape` in the app). Unset = today's policy, no key at all.
+    trig = rc.build_trigger(base_opts(thinking_shape="steps"), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"] == "steps"
+    trig = rc.build_trigger(base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None,
+                            mlx_rev=None)
+    assert "M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE" not in trig

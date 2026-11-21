@@ -85,6 +85,65 @@
         }
       }
     },
+    "It’s empty." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Dokument ist leer."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El documento está vacío."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le document est vide."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O documento está vazio."
+          }
+        }
+      }
+    },
+    "M1K3 couldn’t find any text in it. If it’s a scan or a photo, the writing may be handwritten or too faint to read." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 hat darin keinen Text gefunden. Wenn es ein Scan oder ein Foto ist, ist die Schrift vielleicht handschriftlich oder zu blass zum Lesen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 no encontró texto. Si es un escaneo o una foto, puede que la letra esté escrita a mano o sea demasiado tenue para leerla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "M1K3 n’y a trouvé aucun texte. Si c’est un scan ou une photo, l’écriture est peut-être manuscrite ou trop pâle pour être lue."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O M1K3 não encontrou nenhum texto. Se for uma digitalização ou uma foto, a escrita pode ser à mão ou fraca demais para ler."
+          }
+        }
+      }
+    },
+    "M1K3 couldn’t read its scanned pages on this device. Try again in a moment." : {
+
+    },
     "Memory" : {
       "localizations" : {
         "de" : {
@@ -165,6 +224,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Foto"
+          }
+        }
+      }
+    },
+    "This looks like raw markup (SVG/XML/HTML), not readable text — convert it to prose or PDF first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das sieht nach rohem Markup (SVG/XML/HTML) aus, nicht nach lesbarem Text – wandle es zuerst in Fließtext oder PDF um."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto parece marcado sin procesar (SVG/XML/HTML), no texto legible: conviértelo primero a prosa o PDF."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela ressemble à du balisage brut (SVG/XML/HTML), pas à du texte lisible — convertis-le d’abord en texte ou en PDF."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isto parece marcação bruta (SVG/XML/HTML), não texto legível — converta primeiro para texto corrido ou PDF."
           }
         }
       }

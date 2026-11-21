@@ -147,6 +147,12 @@
 //  live-path turn records the tools it ran (`tools` skip check). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-11-19 — the language arm: `_REPLY_LANGUAGE=1` wires the app's reply-language
 //  clause, `_DEVICE_LANGUAGE` stands in for the device's (default en). Off by default, so older arms are unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `_THINKING_SHAPE=off|think|steps` sets the live path's
+//  `thinkingShapeProvider`, the app's `-thinkingShape` arm (unset = off). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — an unset `_THINKING_SHAPE` now runs the app's shipped shape for the
+//  tier (steps on Lil), so a plain eval still wires like the app. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — the activity switch lists `.deliberating` ("The Tell"); the eval
+//  wires no `thinkAsideProvider`, so it never fires here. Confidence 0.9.
 
 import Foundation
 
@@ -472,6 +478,12 @@ enum ChatEvalStage {
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            thinkingShapeProvider: {
+                ThinkingShapeMode(
+                    argument: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINKING_SHAPE"),
+                    fallback: .shippedDefault(isLil: thinking.isLil)
+                )
+            },
             turnNoteProvider: turnNote,
             groundingBudgetProvider: { Self.groundingBudget },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
@@ -509,7 +521,7 @@ enum ChatEvalStage {
                     switch activity {
                     case let .usingTool(name, _): tools.append(name)
                     case let .note(line): notes.withLock { $0.append(line) }
-                    case .retrieving, .thinking: break
+                    case .retrieving, .thinking, .deliberating: break
                     }
                 }
             )

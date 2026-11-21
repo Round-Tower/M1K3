@@ -43,6 +43,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — the chip rows are gone; the card keeps its greeting, the import hero and the ingest
 //  morph.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -106,9 +107,9 @@ struct GreetingCard: View {
 
     private var greetingLine: String {
         if let userName, !userName.isEmpty {
-            "Nice to meet you, \(userName)."
+            String(localized: "Nice to meet you, \(userName).")
         } else {
-            "Nice to meet you."
+            String(localized: "Nice to meet you.")
         }
     }
 

@@ -25,6 +25,10 @@
 //  Confidence 0.7 — the figure is ~1,000 tokens, chosen before the capped arm ran; see its doc.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the doc says a forcing brain (Lil since today) replaces the figure
 //  each turn with a net above its budget. Comment only.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `shape: ThinkingShapeMode` (default `.off`, today's policy) and
+//  `stepsClause`: the A/B arms Kev asked for after the 11-19 diagnostic. `think` lets a speed tier think on a
+//  `PuzzleShape` turn or a wave-one "explain" ask; `steps` keeps the think phase off and adds a work-in-steps clause
+//  on a puzzle. Off by default: nothing changes until the arm wins. Confidence 0.75.
 //
 
 import Foundation
@@ -128,7 +132,8 @@ enum ThinkingPolicy {
         question: String,
         hasGroundedKnowledge: Bool,
         mode: ThinkingMode,
-        fastByDefault: Bool = false
+        fastByDefault: Bool = false,
+        shape: ThinkingShapeMode = .off
     ) -> Bool {
         switch mode {
         case .always: return true
@@ -138,8 +143,13 @@ enum ThinkingPolicy {
         let lowered = question.lowercased()
         if fastByDefault {
             // Speed tier: bias hard to fast. Only an explicit deep-reasoning ask
-            // earns CoT — not grounding, not a weak opener, not length.
-            return strongAnalyticMarkers.contains { lowered.contains($0) }
+            // earns CoT — not grounding, not a weak opener, not length. The `think` arm
+            // adds a puzzle-shaped turn and the wave-one twins of those asks.
+            if strongAnalyticMarkers.contains(where: { lowered.contains($0) }) { return true }
+            // Both arms: a wave-one "explain / step by step" ask thinks like the English one (language parity,
+            // not the variable under test). The `think` arm also thinks on a puzzle.
+            if shape != .off, PuzzleShape.asksForReasoning(question) { return true }
+            return shape == .think && PuzzleShape.detects(question)
         }
         // Heavier tiers: grounding, an analytic verb, or length all earn CoT.
         if hasGroundedKnowledge { return true }
@@ -147,4 +157,21 @@ enum ThinkingPolicy {
         let words = lowered.split(whereSeparator: \.isWhitespace).count
         return words >= longQuestionWordCount
     }
+
+    /// The `steps` arm's turn clause: a puzzle-shaped turn that is NOT thinking is told to work in
+    /// short steps before it answers, so the reasoning lands in the answer instead of a think phase.
+    /// nil on every other arm, on Always / Fast, on a turn that thinks anyway, and off the shape.
+    static func stepsClause(
+        question: String, mode: ThinkingMode, shape: ThinkingShapeMode, thinking: Bool, fastByDefault: Bool
+    ) -> String? {
+        // A speed-tier arm: a heavier brain thinks on its own signals and never gets the clause.
+        guard shape == .steps, mode == .auto, fastByDefault, !thinking, PuzzleShape.detects(question) else { return nil }
+        return stepsClauseText
+    }
+
+    /// One instruction, English like every prompt clause; the reply-language clause after it
+    /// sets the language the steps come back in.
+    static let stepsClauseText =
+        "This is a multi-step problem. Before you answer, work it out in a few short numbered steps, "
+            + "checking each one; then give the answer on its own line."
 }

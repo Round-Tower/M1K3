@@ -182,6 +182,9 @@
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": the send's avatar holds `.thinking` while the answer carries a
+//  `thinkAside` (a think was announced), so the pose matches the quiet; other turns keep the 600 ms advance.
+//  Verify-by-launch. Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -913,6 +916,13 @@ final class AppEnvironment {
         appStateLive.withLock { $0?.snapshot.answeringBrain } ?? persisted
     }
 
+    /// Lil is chosen AND answering: false while Mini stands in for a downloading Lil, so Lil's reasoning shape
+    /// and "The Tell" never ride on a brain with no think phase.
+    nonisolated static func lilIsAnswering(persisted raw: String?) -> Bool {
+        guard BrainTier(persisted: raw ?? "") == .lil else { return false }
+        return answeringBrainName(persisted: BrainTier.lil.displayName) == BrainTier.lil.displayName
+    }
+
     /// Last ingest outcome, surfaced to the UI.
     private(set) var lastIngestStatus: String?
     /// The last successfully ingested document's title, threaded properly for
@@ -1551,6 +1561,11 @@ final class AppEnvironment {
         // bounces while the LLM streams. Self-cancelling if the response is fast.
         let advance = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
+            // "The Tell": a turn that announced a think holds the thinking pose until the answer's first words,
+            // instead of miming speech through a ~35 s think. Every other turn advances as before.
+            while !Task.isCancelled, self?.chat.messages.last?.thinkAside != nil {
+                try? await Task.sleep(for: .milliseconds(150))
+            }
             guard let self else { return }
             if case .thinking = avatar.state.activity {
                 avatar.setActivity(.generating)

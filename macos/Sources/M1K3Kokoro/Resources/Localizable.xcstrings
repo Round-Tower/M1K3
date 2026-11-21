@@ -28,6 +28,62 @@
           }
         }
       }
+    },
+    "Kokoro download failed with HTTP status %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kokoro-Download fehlgeschlagen (HTTP-Status %lld)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La descarga de Kokoro falló con el estado HTTP %lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec du téléchargement de Kokoro (statut HTTP %lld)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O download do Kokoro falhou com o status HTTP %lld"
+          }
+        }
+      }
+    },
+    "Kokoro's %@ does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datei %@ von Kokoro stimmt nicht mit dem für round-tower/Kokoro-82M-bf16 festgelegten Digest überein – sie wird nicht verwendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El archivo %@ de Kokoro no coincide con el digest fijado para round-tower/Kokoro-82M-bf16; se rechaza su uso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier %@ de Kokoro ne correspond pas à l’empreinte fixée pour round-tower/Kokoro-82M-bf16 — utilisation refusée"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O arquivo %@ do Kokoro não corresponde ao digest fixado para round-tower/Kokoro-82M-bf16 — uso recusado"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -137,6 +137,9 @@
 //  background can fail there; its local fallback starts only in front or off this GPU
 //  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
 //  answer in the background and asks again on return.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": a `.deliberating` activity puts one `ThinkAside` line on the
+//  answer (`thinkAside`, transient: not in CodingKeys, never in `text`); a reasoning flush keeps it, the first answer
+//  text and the settle clear it. Lines rotate per session (`thinkAsideCount`). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -267,6 +270,10 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// `.streaming` and no tokens have arrived. Transient — omitted from
     /// `CodingKeys` like `citations`.
     public var activityLabel: String?
+    /// "The Tell": the one line M1K3 says before a long think (`ThinkAside`), shown over the live reasoning until
+    /// the first answer text. Transient like `activityLabel`, never in `text`, so no replay, speech-of-the-answer,
+    /// distillation or leak guard ever reads it.
+    public var thinkAside: String?
     /// Which tools actually served this turn, in dispatch order, deduped by
     /// name. PERSISTED — unlike `activityLabel`, which vanishes the moment
     /// tokens stream, this is the transcript's durable provenance ("Used web
@@ -444,6 +451,16 @@ public final class ChatSession {
     public private(set) var feedbackComments: [UUID: String] = [:]
 
     private let responder: any RAGResponding
+    /// How many thinks this session has announced, so the `ThinkAside` lines rotate.
+    private var thinkAsideCount = 0
+
+    /// The Tell's line for a `.deliberating` activity (the next in rotation), else nil.
+    private func takeThinkAside(for activity: ResponderActivity) -> String? {
+        guard case .deliberating = activity else { return nil }
+        defer { thinkAsideCount += 1 }
+        return ThinkAside.line(forThink: thinkAsideCount)
+    }
+
     /// Internal (not private): ChatSession+Conversations.swift is a cross-file
     /// same-module extension and needs the seams.
     let history: (any ChatHistoryPersisting)?
@@ -652,6 +669,7 @@ public final class ChatSession {
                 if leaked { $0.toolsUsed = nil }
                 $0.citedURLs = leaked || citedURLs.isEmpty ? nil : citedURLs
                 $0.activityLabel = nil
+                $0.thinkAside = nil
                 $0.interrupted = stopped ? true : nil
                 $0.status = .complete
             }
@@ -659,6 +677,7 @@ public final class ChatSession {
             update(assistantID) { msg in
                 msg.status = .failed(String(describing: error))
                 msg.activityLabel = nil
+                msg.thinkAside = nil
                 if msg.text.isEmpty {
                     msg.text = ChatFailureMessage.userFacing(for: error)
                 }
@@ -727,6 +746,8 @@ public final class ChatSession {
                 history: history,
                 onActivity: { [weak self] activity in
                     Task { @MainActor in
+                        // "The Tell": the line for this think, chosen once, before the update below.
+                        let aside = self?.takeThinkAside(for: activity)
                         self?.update(assistantID) {
                             // These hops are unstructured per-event Tasks with no
                             // happens-before against the final update or the
@@ -738,6 +759,11 @@ public final class ChatSession {
                             // Cool Head's line stays on the answer; the label is for what's running now.
                             if case let .note(line) = activity {
                                 $0.turnNote = line
+                                return
+                            }
+                            // The Tell's line is a caption over the think, never the label.
+                            if let aside {
+                                $0.thinkAside = aside
                                 return
                             }
                             $0.activityLabel = ActivityLabeler.label(for: activity)
@@ -804,8 +830,10 @@ public final class ChatSession {
                 update(assistantID) {
                     $0.text = liveText
                     $0.reasoning = shown || liveReasoning.isEmpty ? nil : liveReasoning
-                    // Real tokens replace the activity label.
+                    // Real tokens replace the activity label; the Tell's line holds through the think and goes
+                    // with the first answer text.
                     $0.activityLabel = nil
+                    if !liveText.isEmpty { $0.thinkAside = nil }
                 }
             }
             splitter.finish()

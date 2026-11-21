@@ -12,6 +12,7 @@
 //  Prior: PrivacySettingsPane.swift (mcpSection, accessTokenRow, connectAnAgent and the
 //  copy helpers; Kev + claude-opus-5 / claude-opus-5-5 lineage, see that file) and
 //  AdvancedSettingsPane.swift (the Agent conversation log section).
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the Local API section (switch, status, base URL, the ready model, its
 //  own API key with Copy and New Key). Kev: "the server. Swiss army Mike!" Confidence 0.6 (untried on screen).
@@ -137,7 +138,7 @@ struct MCPServerSettingsPane: View {
                 }
             }
             LabeledContent("Model") {
-                Text(env.localAPI.localModelIDs.first ?? "No brain ready yet")
+                Text(env.localAPI.localModelIDs.first ?? String(localized: "No brain ready yet"))
                     .font(.system(.caption, design: .monospaced))
             }
             localAPITokenRow

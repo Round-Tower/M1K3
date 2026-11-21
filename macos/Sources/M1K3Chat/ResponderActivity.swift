@@ -13,6 +13,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `.note(String)` (#697): a line about the turn itself (Cool Head's
 //  eased effort), shown as a caption on the answer, never as the in-flight label. Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — the look's tag (#768) reads "the camera" in the trace row.
+//  Review: claude-opus-5-5, 2026-11-20 — `.deliberating` ("The Tell"): the turn is about to think, so the shell
+//  can say one `ThinkAside` line before the quiet. Its label is the plain "Thinking…". Confidence 0.8.
 
 import Foundation
 
@@ -25,6 +27,9 @@ public enum ResponderActivity: Sendable, Equatable {
     /// pressure eased the effort (#697). ChatSession keeps it on the answer (`ChatMessage.turnNote`),
     /// not in the transient label, and never in the text the brain, the replay or speech reads.
     case note(String)
+    /// The turn will think before it answers (a speed-tier brain that really thinks, `ThinkingPolicy.shouldThink`
+    /// chose to): ChatSession puts one `ThinkAside` line on the answer as a transient caption, said before the quiet.
+    case deliberating
 }
 
 /// Pure activity → user-facing copy.
@@ -39,7 +44,7 @@ public enum ActivityLabeler {
             // they fired on every turn when they hadn't (Kev, 2026-08-16). A
             // self-action verb keeps the phase and the tool distinguishable.
             "Recalling what I know…"
-        case .thinking:
+        case .thinking, .deliberating:
             "Thinking…"
         case let .usingTool(name, argument):
             toolLabel(name: name, argument: argument)

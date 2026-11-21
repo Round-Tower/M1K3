@@ -804,8 +804,14 @@ the action list?<br />
       el.dataset.decoded = '1';
       var target = el.getAttribute('data-num') || el.textContent;
       /* settle: zeros become .z spans so the pixel-zero widen applies to every 0, not just the lone one.
-         innerHTML is safe ONLY because data-num is author-written literal text — never wire it to dynamic data. */
-      function settle() { el.innerHTML = target.replace(/0/g, '<span class="z">0</span>'); }
+         Built with DOM nodes, never innerHTML: the value is DOM text (CodeQL #57, tools/site/test_stat_decode_dom.py). */
+      function settle() {
+        el.textContent = '';
+        target.split('0').forEach(function (part, i) {
+          if (i) { var z = document.createElement('span'); z.className = 'z'; z.textContent = '0'; el.appendChild(z); }
+          if (part) el.appendChild(document.createTextNode(part));
+        });
+      }
       if (reduceMotion) { settle(); return; }
       var pool = '0123456789%/<>#█▚▮∞';
       var L = target.length, tick = 0, ticks = 11;
@@ -1202,6 +1208,10 @@ tick();
      drawn-logo buttons, a download glyph sits on the DMG button and GitHub's mark on Source, labels are terse ("DMG",
      "Install", "Send to my Mac", "Mac App Store"); the footer credits the service marks. Verified in a local render
      on the Mac and the iOS door. Confidence 0.85. 
-     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: hero: the click hint and the double-click companion swap removed (Kev: "it's noisy"); claims pass against the repo: on-device "by default", the four stats reworded, storage no longer called encrypted (only saved call records are), 19 tools, Qwen3.5, EmbeddingGemma, 6,600+ tests, iPhone and iPad named; three cards added (Local API, Look, Private Cloud Compute); footer from tools/site/footer.py. Confidence 0.8. Open: the 0 / 100% / 1 / ∞ stat wording is new and Kev has not read it. -->
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: hero: the click hint and the double-click companion swap removed (Kev: "it's noisy"); claims pass against the repo: on-device "by default", the four stats reworded, storage no longer called encrypted (only saved call records are), 19 tools, Qwen3.5, EmbeddingGemma, 6,600+ tests, iPhone and iPad named; three cards added (Local API, Look, Private Cloud Compute); footer from tools/site/footer.py. Confidence 0.8. Open: the 0 / 100% / 1 / ∞ stat wording is new and Kev has not read it.
+     Review: Kev + claude-opus-5.5, 2026-11-21 — the stat decode's settle() builds its .z spans with DOM nodes instead of
+     writing data-num back through innerHTML (CodeQL #57, js/xss-through-dom; not exploitable while data-num is
+     author-written, closed so it never becomes so). Same rendered markup for 0 / 100% / 1 / ∞; guarded by
+     tools/site/test_stat_decode_dom.py. Confidence 0.85. -->
 </body>
 </html>

@@ -18,6 +18,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-08, Confidence 0.9 (pure resolver,
 //  every branch pinned red-first; the rendered feel on the card is ⌘R
 //  verify-owed). Prior: none (new file).
+//  Review: claude-opus-5-5, 2026-11-20 — the hold lines reach the string catalog (`bundle: .module`); English
+//  unchanged, so the tests' English literals hold on an English machine. Confidence 0.85.
 //
 
 import Foundation
@@ -81,16 +83,19 @@ public enum HeartbeatHoldLine {
             return nil
         }
         if quietHours.contains(hour: hour) {
-            return "Quiet hours — the next pulse comes with the morning."
+            return String(localized: "Quiet hours — the next pulse comes with the morning.", bundle: .module)
         }
         if let lastHold, now.timeIntervalSince(lastHold.at) <= holdRecency {
             switch lastHold.reason {
             case .thermal:
-                return "Holding off while the machine runs warm."
+                return String(localized: "Holding off while the machine runs warm.", bundle: .module)
             case .machineBusy:
-                return "Holding off while the machine is busy."
+                return String(localized: "Holding off while the machine is busy.", bundle: .module)
             case .quietWindow:
-                return "A quiet stretch — the next pulse comes when something happens, or with the morning."
+                return String(
+                    localized: "A quiet stretch — the next pulse comes when something happens, or with the morning.",
+                    bundle: .module
+                )
             case .quietHours:
                 // Quiet hours ended but the hold hasn't refreshed yet — the
                 // loop fires within minutes; don't explain a night that's
@@ -100,7 +105,7 @@ public enum HeartbeatHoldLine {
             }
         }
         if lastPulse == nil {
-            return "The first pulse is on its way."
+            return String(localized: "The first pulse is on its way.", bundle: .module)
         }
         return nil
     }

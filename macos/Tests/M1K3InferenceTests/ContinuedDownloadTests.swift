@@ -9,6 +9,7 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.85. Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — pins: the disk is checked before iOS hears the
 //  download succeeded. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — byte counts via the one localised formatter; pins compare or assert structure. Confidence 0.75.
 //
 
 import Foundation
@@ -31,8 +32,11 @@ struct ContinuedDownloadTests {
     func words() {
         let lil = ContinuedDownload(tier: .lil)
         #expect(lil.title == "Downloading Lil")
-        #expect(lil.subtitle == "About 3.1 GB, kept on this device")
-        #expect(ContinuedDownload(tier: .pocket).subtitle == "About 630 MB, kept on this device")
+        // The size comes from the one shared (localised) formatter; the sentence around it is English in an English run.
+        let lilSize = BrainTier.downloadSizeLabel(megabytes: BrainTier.lil.approxDownloadMB ?? 0)
+        #expect(lil.subtitle == "About \(lilSize), kept on this device")
+        let pocketSize = BrainTier.downloadSizeLabel(megabytes: BrainTier.pocket.approxDownloadMB ?? 0)
+        #expect(ContinuedDownload(tier: .pocket).subtitle == "About \(pocketSize), kept on this device")
     }
 
     @Test("progress in permille: fine enough that a slow link never reads as stalled, clamped, never past done")

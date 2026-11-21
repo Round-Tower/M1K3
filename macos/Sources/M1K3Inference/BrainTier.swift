@@ -56,6 +56,7 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-17 — supportsImageInput gains .mini on macOS 27+ via
 //  FoundationModels' Attachment(imageURL:) API, gated with #if compiler(>=6.4) + @available.
 //  Confidence now 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `.mini`'s window is MiniContextWindow.current (the
 //  device's, recorded at launch; 4,096 floor), no longer a literal 4,096.
@@ -76,6 +77,9 @@
 //  receiving `HostPlatform.yourDevice` as an English argument ("Läuft vollständig auf your machine."). `detail` is
 //  display-only (rg: OnboardingCards and OnboardingScreen); `HostPlatform` stays the prompt surface's English.
 //  English bytes unchanged, pinned against `HostPlatform.yourDevice` in BrainTierTests.
+//  Review: claude-opus-5-5, 2026-11-21 (PR #876 review) — `downloadSizeLabel` formats a measurement with one
+//  decimal over a gigabyte: the byte-count formatter printed "3.06 GB" and "1 GB" where English always said
+//  "3.1 GB" and "1.0 GB". English is byte-identical again; the unit and separator still localise. Confidence 0.9.
 
 import Foundation
 
@@ -389,8 +393,22 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// "630 MB" / "2.2 GB" from an approx MB figure (1 GB = 1000 MB, matching
     /// how download sizes are quoted to users) — the one formatter every shell
     /// copies from.
-    public static func downloadSizeLabel(megabytes: Int) -> String {
-        megabytes >= 1000 ? String(format: "%.1f GB", Double(megabytes) / 1000) : "\(megabytes) MB"
+    ///
+    /// Built on `ByteCountFormatStyle` with the `.decimal` style (1 GB = 1000 MB, never the binary 1024), so the
+    /// digits and the unit follow the person's language ("3.1 GB", "3,1 GB", "3,1 Go"). `locale` is injectable
+    /// for tests; the shells use the current one.
+    public static func downloadSizeLabel(megabytes: Int, locale: Locale = .current) -> String {
+        // A measurement, not ByteCountFormatStyle: that prints "3.06 GB" and "1 GB" where the English label always
+        // said "3.1 GB" and "1.0 GB". One decimal over a gigabyte, none under; the unit and separator localise.
+        let overAGigabyte = megabytes >= 1000
+        let size = overAGigabyte
+            ? Measurement(value: Double(megabytes) / 1000, unit: UnitInformationStorage.gigabytes)
+            : Measurement(value: Double(megabytes), unit: UnitInformationStorage.megabytes)
+        let style = Measurement<UnitInformationStorage>.FormatStyle(
+            width: .abbreviated, locale: locale, usage: .asProvided,
+            numberFormatStyle: .number.precision(.fractionLength(overAGigabyte ? 1 : 0))
+        )
+        return size.formatted(style)
     }
 
     /// The memory floor below which this brain shouldn't even be SELECTABLE
