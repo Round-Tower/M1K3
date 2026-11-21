@@ -36,6 +36,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — readAloud knows about chat auto-speak (master's
 //  button and the branch's auto-speak met in the merge): a tap while an answer is being auto-spoken stops the whole
 //  answer, where it used to skip one sentence or queue a second reading over it. Confidence 0.8 (verify on the phone).
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 //
 
 import AVFoundation
@@ -145,7 +146,7 @@ extension AppCore {
             }
             await Self.activateSampleAudioSession()
             guard !isVoiceModeActive, !chat.isResponding else { return }
-            await speech.speak(spoken)
+            await speech.speak(SpokenVoice.utterance(text: spoken, language: SpokenLanguage.decide(text: spoken)))
         }
     }
 

@@ -59,6 +59,9 @@
 //  and an English sign-off line on a short foreign turn (same shape as an English question without "?" over a
 //  foreign paste, b2-cj-13; a fix there would name a wrong language). Batches 137/150, 89/105, 103/125 (was 101).
 //  Confidence 0.7 (the question-mark signal is cheap and only ever removes a clause; b3-pa-40, with no "?", stays).
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `liveClause(voiceLanguage:)`: a voice turn falls back to the voice's
+//  language (`spokenLanguage`, English), never the device's. The challenger on the voice design found a German Mac
+//  answering a short voice turn in German through the English Kokoro voice. Confidence 0.85.
 //
 
 import Foundation
@@ -232,6 +235,14 @@ public enum ReplyLanguage {
         return (device, .device)
     }
 
+    /// The language the PERSON is writing or speaking in, from this turn or their last readable one; never the
+    /// device's. Seeds the spoken answer's language (`SpokenAnswerLanguage.begin(seed:)`). Nil when unknown.
+    public static func personLanguage(turn: String, earlierTurns: [String] = []) -> String? {
+        guard let resolved = resolve(turn: turn, earlierTurns: earlierTurns, deviceLanguage: nil),
+              resolved.source == .person else { return nil }
+        return resolved.code
+    }
+
     /// The turn's reply-language line, or nil for English (and when nothing can be said).
     public static func clause(for turn: String, earlierTurns: [String] = [], deviceLanguage: String?) -> String? {
         guard let resolved = resolve(turn: turn, earlierTurns: earlierTurns, deviceLanguage: deviceLanguage),
@@ -247,13 +258,22 @@ public enum ReplyLanguage {
     /// The switch (`M1K3 -replyLanguage NO` turns it off for an A/B). On when unset.
     public static let enabledKey = "replyLanguage"
 
+    /// The language voice mode speaks: English until voice is localised (the shells pass it as a voice
+    /// turn's `voiceLanguage`).
+    public static let spokenLanguage = "en"
+
     /// What the shells wire (Mac and iPhone): the clause for this turn, the device language read from the
     /// person's preferred list (the app itself is English-only, so its own localisation says nothing).
+    ///
+    /// `voiceLanguage` is set on a voice turn. It replaces the device as the fallback for a turn too short to
+    /// read, so "hi" in voice mode on a German Mac is answered in the voice's language, not in German read
+    /// aloud by an English voice. What the person actually said still wins.
     public static func liveClause(
-        for turn: String, earlierTurns: [String] = [], defaults: UserDefaults = .standard
+        for turn: String, earlierTurns: [String] = [], voiceLanguage: String? = nil,
+        deviceLanguage: String? = Locale.preferredLanguages.first, defaults: UserDefaults = .standard
     ) -> String? {
         guard defaults.object(forKey: enabledKey) as? Bool ?? true else { return nil }
-        return clause(for: turn, earlierTurns: earlierTurns, deviceLanguage: Locale.preferredLanguages.first)
+        return clause(for: turn, earlierTurns: earlierTurns, deviceLanguage: voiceLanguage ?? deviceLanguage)
     }
 
     /// The part of the prose that speaks for the person, or nil when that part is too short to read.

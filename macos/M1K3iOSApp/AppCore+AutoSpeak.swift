@@ -28,6 +28,7 @@
 //  AnswerAudioSessionPolicyTests; the sound is verify-by-ear on the phone, music playing).
 //  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
 //  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 //
 
 import Foundation
@@ -66,6 +67,8 @@ extension AppCore {
                 leakGuard: Self.spokenLeakGuard
             )
             var pinnedID: UUID?
+            let answerLanguage = SpokenAnswerLanguage() // one spoken language per answer, never per sentence
+            answerLanguage.begin(seed: self?.spokenSeed() ?? SpokenLanguage.seed) // the person's language
             let firstMessageTickBudget = 66 // ~10 s at 150 ms; a message normally appears within one tick
             var ticks = 0
             @MainActor func pinnedMessage() -> ChatMessage? {
@@ -83,7 +86,7 @@ extension AppCore {
                     if !self.isSpeakingAnswer { self.isSpeakingAnswer = true }
                     for sentence in folder.ingest(message.text) {
                         guard !Task.isCancelled else { return }
-                        await self.speakAnswerSentence(sentence)
+                        await self.speakAnswerSentence(sentence, language: answerLanguage)
                     }
                     switch message.status {
                     case .failed:
@@ -91,11 +94,11 @@ extension AppCore {
                     case .complete:
                         // A leak swapped for the refusal between two polls: say what the screen says.
                         if !folder.tripped, message.text == PersonaLeakGuard.refusal {
-                            if !Task.isCancelled { await self.speakAnswerSentence(PersonaLeakGuard.refusal) }
+                            if !Task.isCancelled { await self.speakAnswerSentence(PersonaLeakGuard.refusal, language: nil) }
                             return
                         }
                         if !Task.isCancelled, let tail = folder.flush() {
-                            await self.speakAnswerSentence(tail)
+                            await self.speakAnswerSentence(tail, language: answerLanguage)
                         }
                         return
                     default:
@@ -127,8 +130,9 @@ extension AppCore {
 
     /// One sentence, polished for speech (URLs to hosts, citation tokens dropped) and highlighted as it plays. A
     /// sentence that polishes to nothing (a Sources trailer streams in as its own) is skipped, never read raw.
-    private func speakAnswerSentence(_ text: String) async {
+    private func speakAnswerSentence(_ text: String, language: SpokenAnswerLanguage?) async {
         guard let spoken = SpeechTextPolish.spokenSentence(text) else { return }
+        language?.observe(spoken)
         if !answerAudioHeld {
             // The first sentence takes the session: heard on a muted phone, the user's music ducked while M1K3
             // talks (the readout's and the sample's session). Marked held BEFORE the hop, so a stop during it
@@ -138,7 +142,7 @@ extension AppCore {
             guard !Task.isCancelled else { return }
         }
         speechHighlight.beginUtterance(text: spoken)
-        await speakAndWait(spoken)
+        await speakAndWait(spoken, language: language?.current ?? "en")
     }
 
     /// The session's end: finished, failed, stopped or superseded. Only the current session cleans up; a superseded

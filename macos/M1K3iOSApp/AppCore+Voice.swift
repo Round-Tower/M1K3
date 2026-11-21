@@ -99,6 +99,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 — localisation wave one: the polish pass transcribes in `SpeechLocalePolicy.forThisApp`, English
 //  whatever the interface language (a translated app turns `Locale.current` German; voice stays English until
 //  Phase 2). English locales unchanged. Confidence 0.85.
+//  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
+//  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the streaming turn begins the answer latch
+//  before anything awaits again; a page command re-begins it with the interface's language. Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -276,6 +279,14 @@ extension AppCore {
 
     // MARK: - Loop dependencies
 
+    /// The spoken answer's seed (2026-11-20): the person's own language from this turn or their last readable one,
+    /// English when unknown, so a German question's answer is German from its first short sentence.
+    @MainActor func spokenSeed(for turn: String? = nil) -> String {
+        let earlier = chat.messages.filter { $0.role == .user }.map(\.text)
+        let current = turn ?? earlier.last ?? ""
+        return ReplyLanguage.personLanguage(turn: current, earlierTurns: earlier) ?? SpokenLanguage.seed
+    }
+
     /// The voice turn's room line (VoiceTurnPreparer), read by the responder's `voiceClauseProvider`.
     nonisolated static let voiceTurnClause = TurnClauseSlot()
 
@@ -361,7 +372,10 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
-                if let reply = await handleVoicePageCommand(question) { return .success(reply) }
+                if let reply = await handleVoicePageCommand(question) {
+                    spokenAnswerLanguage.begin(seed: SpokenLanguage.interfaceLanguage()) // a catalog string
+                    return .success(reply)
+                }
                 await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: String(localized: "No answer arrived.")))
@@ -372,6 +386,8 @@ extension AppCore {
                 guard !last.text.isEmpty else {
                     return .failure(VoiceTurnFailure(message: String(localized: "The model had nothing to say.")))
                 }
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question))
+                spokenAnswerLanguage.observe(last.text)
                 // The rating ask counts spoken wins — the phone's main signal.
                 if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: last.interrupted == true) {
                     reviewLedger.recordCompletedTurn()
@@ -386,7 +402,10 @@ extension AppCore {
                 let polished = SpeechTextPolish.polish(answer)
                 let spoken = polished.isEmpty ? answer : polished
                 speechHighlight.beginUtterance(text: spoken)
-                await speakAndWait(spoken)
+                // Narration and the refusal stay English; answer sentences take the answer's latched language.
+                let language = SpokenLanguage.language(forChunk: answer, answerLanguage: spokenAnswerLanguage.current,
+                                                       fixedEnglish: [PersonaLeakGuard.refusal])
+                await speakAndWait(spoken, language: language)
             },
             stopSpeaking: { [weak self] in
                 // A stop can run before the chunk's enqueue Task has — cancel
@@ -412,8 +431,12 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
-                // A spoken page command is the person's, never the model's: answer it here (#839).
+                // Begin before anything awaits, so a tail of the previous answer never reads a stale latch.
+                spokenAnswerLanguage.begin(seed: spokenSeed(for: question)) // one language per answer, read off its first sentences
+                // A spoken page command is the person's, never the model's: answer it here (#839). Its reply is a
+                // catalog string, so it speaks the interface's language, not the speaker's: re-begin with that.
                 if let reply = await handleVoicePageCommand(question) {
+                    spokenAnswerLanguage.begin(seed: SpokenLanguage.interfaceLanguage())
                     onChunk(reply)
                     return .success(())
                 }
@@ -437,6 +460,7 @@ extension AppCore {
                 var pinnedID: UUID?
                 @MainActor func foldForward(_ text: String) {
                     for sentence in folder.ingest(text) {
+                        spokenAnswerLanguage.observe(sentence)
                         onChunk(sentence)
                     }
                 }
@@ -486,6 +510,7 @@ extension AppCore {
                     return .success(())
                 }
                 if let tail = folder.flush() {
+                    spokenAnswerLanguage.observe(tail)
                     onChunk(tail)
                 }
                 guard folder.emittedAny else {
@@ -511,13 +536,15 @@ extension AppCore {
     /// this; exit/stop paths resume it explicitly as a belt.
     /// Speak and wait for the end (the callbacks are wired once at launch, so it works outside voice mode too:
     /// chat auto-speak uses it).
-    func speakAndWait(_ text: String) async {
+    /// `language` is the answer's spoken language (its latch's, one decision per answer); nil decides from this text.
+    func speakAndWait(_ text: String, language: String? = nil) async {
+        let spokenLanguage = language ?? SpokenLanguage.decide(text: text)
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             resumePendingSpeech() // never strand an earlier waiter
             pendingSpeechEnd = continuation
             pendingSpeak = Task { [weak self] in
                 guard !Task.isCancelled else { return }
-                await self?.speech.speak(text)
+                await self?.speech.speak(SpokenVoice.utterance(text: text, language: spokenLanguage))
             }
         }
     }
