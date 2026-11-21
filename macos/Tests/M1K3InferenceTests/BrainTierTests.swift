@@ -32,6 +32,8 @@
 //  their English bytes (each was a `+` join before it became one key).
 //  Review: claude-opus-5-5, 2026-11-20 — byte counts via the one localised formatter; pins compare or assert structure. Confidence 0.75.
 //  Review: claude-opus-5-5, 2026-11-20 (full suite) — imports Foundation for `Locale`; the bundle did not compile.
+//  Review: claude-opus-5-5, 2026-11-21 (PR #876 review) — exact-string pins for the tiers' sizes in English,
+//  German and French. Confidence 0.9.
 //
 
 import Foundation
@@ -501,6 +503,15 @@ struct BrainTierTests {
         let de = BrainTier.downloadSizeLabel(megabytes: 1500, locale: german)
         #expect(en.contains("1.5") && en.contains("GB"))
         #expect(de.contains("1,5") && de.contains("GB"))
+        // English is byte-identical to the label it replaced: one decimal over a gigabyte (the PR #876 review
+        // caught "3.06 GB" and "1 GB" from the byte-count formatter). The tiers' own sizes, exactly.
+        #expect(BrainTier.downloadSizeLabel(megabytes: 630, locale: english) == "630 MB")
+        #expect(BrainTier.downloadSizeLabel(megabytes: 1000, locale: english) == "1.0 GB")
+        #expect(BrainTier.downloadSizeLabel(megabytes: 3060, locale: english) == "3.1 GB")
+        #expect(BrainTier.downloadSizeLabel(megabytes: 6740, locale: english) == "6.7 GB")
+        // Translated: the separator and the unit follow the locale.
+        #expect(BrainTier.downloadSizeLabel(megabytes: 3060, locale: german) == "3,1\u{00A0}GB", "a no-break space")
+        #expect(BrainTier.downloadSizeLabel(megabytes: 3060, locale: Locale(identifier: "fr_FR")) == "3,1\u{202F}Go", "a narrow no-break space")
     }
 
     @Test("a pocket below its floor eases to Mini (unready → the shell's Home-only path), never to itself")

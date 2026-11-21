@@ -77,6 +77,9 @@
 //  receiving `HostPlatform.yourDevice` as an English argument ("Läuft vollständig auf your machine."). `detail` is
 //  display-only (rg: OnboardingCards and OnboardingScreen); `HostPlatform` stays the prompt surface's English.
 //  English bytes unchanged, pinned against `HostPlatform.yourDevice` in BrainTierTests.
+//  Review: claude-opus-5-5, 2026-11-21 (PR #876 review) — `downloadSizeLabel` formats a measurement with one
+//  decimal over a gigabyte: the byte-count formatter printed "3.06 GB" and "1 GB" where English always said
+//  "3.1 GB" and "1.0 GB". English is byte-identical again; the unit and separator still localise. Confidence 0.9.
 
 import Foundation
 
@@ -395,7 +398,17 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// digits and the unit follow the person's language ("3.1 GB", "3,1 GB", "3,1 Go"). `locale` is injectable
     /// for tests; the shells use the current one.
     public static func downloadSizeLabel(megabytes: Int, locale: Locale = .current) -> String {
-        Int64(megabytes * 1_000_000).formatted(ByteCountFormatStyle(style: .decimal, locale: locale))
+        // A measurement, not ByteCountFormatStyle: that prints "3.06 GB" and "1 GB" where the English label always
+        // said "3.1 GB" and "1.0 GB". One decimal over a gigabyte, none under; the unit and separator localise.
+        let overAGigabyte = megabytes >= 1000
+        let size = overAGigabyte
+            ? Measurement(value: Double(megabytes) / 1000, unit: UnitInformationStorage.gigabytes)
+            : Measurement(value: Double(megabytes), unit: UnitInformationStorage.megabytes)
+        let style = Measurement<UnitInformationStorage>.FormatStyle(
+            width: .abbreviated, locale: locale, usage: .asProvided,
+            numberFormatStyle: .number.precision(.fractionLength(overAGigabyte ? 1 : 0))
+        )
+        return size.formatted(style)
     }
 
     /// The memory floor below which this brain shouldn't even be SELECTABLE
