@@ -206,6 +206,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — the reply-language clause takes `voiceLanguage` on a voice turn
 //  (voice mode active): a short spoken turn falls back to the voice's language, not the device's. Confidence 0.85.
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — `thinkingShapeProvider`, the Mac's `-thinkingShape` arm mirrored
+//  (unset = off). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — Lil reasons in steps here too (Kev: "the same everywhere"); the
+//  A/B was Mac-only, so the phone's read is owed in the TestFlight notes. Confidence 0.75.
 
 import AVFoundation
 #if os(iOS)
@@ -1731,6 +1735,17 @@ final class AppCore {
             fastThinkingProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            // Lil reasons in steps, the same as the Mac (Kev, 2026-11-20); `-thinkingShape` still picks an A/B arm.
+            thinkingShapeProvider: {
+                let defaults = UserDefaults.standard
+                // Brain at Home answers on the host: the phone's Lil shape stays out of that turn.
+                let isLil = BrainTier(persisted: defaults.string(forKey: Self.selectedBrainKey) ?? "") == .lil
+                    && !Self.homeBrainLive.withLock { $0 }
+                return ThinkingShapeMode(
+                    argument: defaults.string(forKey: ThinkingShapeMode.defaultsKey),
+                    fallback: .shippedDefault(isLil: isLil)
+                )
             },
             historyBudgetProvider: {
                 // Read fresh each turn (hot-swap).

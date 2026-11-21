@@ -78,6 +78,10 @@
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 //  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the streaming turn begins the answer latch
 //  before anything awaits again; a page command re-begins it with the interface's language. Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-11-20 — "The Tell": voice mode says the turn's `thinkAside` once through `onChunk`,
+//  ahead of the think's quiet (only when the voice-thinking toggle let the turn think). Verify-by-ear. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-20 — the line is said only after `ThinkAside.spokenDelay` (6 s) of real quiet
+//  (Kev took the steer); a think that answers sooner is never announced aloud. Confidence 0.75.
 
 import AppKit
 import AVFoundation
@@ -700,6 +704,19 @@ extension AppEnvironment {
                     return candidate
                 }
                 var announcedAnyTool = false
+                // "The Tell": the line said once a think's quiet is real (`ThinkAside.spokenDelay` with the caption
+                // up and no answer text), never at the decision. Through the same onChunk lane, so it queues behind
+                // nothing and the turn-generation guard drops a stale one.
+                var saidAside = false
+                var asideSince: ContinuousClock.Instant?
+                @MainActor func sayAside(on message: ChatMessage) {
+                    guard !saidAside, let aside = message.thinkAside else { return }
+                    let since = asideSince ?? .now
+                    asideSince = since
+                    guard ThinkAside.shouldSay(shownFor: since.duration(to: .now)) else { return }
+                    saidAside = true
+                    onChunk(aside)
+                }
                 @MainActor func announceTools(on message: ChatMessage) {
                     for name in toolAnnouncer.newAnnouncements(from: message.toolsUsed ?? []) {
                         announcedAnyTool = true
@@ -710,6 +727,7 @@ extension AppEnvironment {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .milliseconds(150))
                         guard self != nil, let message = pinnedMessage() else { continue }
+                        sayAside(on: message)
                         announceTools(on: message)
                         foldForward(message.text)
                     }
@@ -754,6 +772,7 @@ extension AppEnvironment {
                     // as a lie.
                     return .failure(VoiceTurnFailure(message: announcedAnyTool
                             ? "I checked, but no answer came back."
+                            : saidAside ? "I thought it over, but no answer came back."
                             : "The model had nothing to say."))
                 }
                 // A refused turn is not a spoken exchange to record, nor a win to rate.
