@@ -11,7 +11,7 @@ New in this build, please try:
 • Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
 
 Still worth a look:
-• Read a text: attach a .txt, .md, .csv or .log file from Files and ask about it, in Airplane Mode too
+• Read a text: attach a .txt, .md, .csv or .log file from Files and ask about it, in Airplane Mode too. Tell us how long a long file takes before the first words appear, on Lil and on Mini: we have not timed it on a phone yet
 • Live Activity: on Mini, ask something, then lock the phone. The card should turn to "Answer ready" and a notification should arrive. On Lil it says "Paused"
 • On Lil, ask something long, then go home or lock the phone. M1K3 should never close
 • Voice mode, ask something that needs the web, then tap the chip or say "show me that"
@@ -22,4 +22,4 @@ And the basics:
 • Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
 
-The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+A read happens on your device: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.

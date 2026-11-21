@@ -21,4 +21,4 @@ And the basics:
 • Drop a PDF onto the chat and ask about it
 • Brain at Home from your iPhone or iPad
 
-The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
+A read happens on this Mac: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
