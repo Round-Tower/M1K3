@@ -41,6 +41,23 @@ struct PrivateCloudFilesStayTests {
         #expect(shown.contains("Tidy this up"))
     }
 
+    /// Kev's phone, 2026-11-22: the file's turn was stripped, and the YAML answer under it was the file.
+    @Test("answers made after a file don't ride either: they can be the file")
+    func answersAfterTheFile() throws {
+        let history = [
+            ChatTurn(role: .user, text: "Hello"),
+            ChatTurn(role: .assistant, text: "Hello back."),
+            ChatTurn(role: .user, text: file.contextBlock + "\n\nConvert this to YAML"),
+            ChatTurn(role: .assistant, text: "name: CANARY-NAME\nbody: CANARY-BODY"),
+            ChatTurn(role: .user, text: "And again"),
+            ChatTurn(role: .assistant, text: "body: CANARY-BODY"),
+        ]
+        let shown = try #require(PrivateCloudTurn.consent(question: "Thanks", history: history).conversation)
+        #expect(!shown.contains("CANARY"))
+        #expect(shown.contains("Hello back."))
+        #expect(shown.contains("And again"))
+    }
+
     @Test("a line break in a file's name doesn't carry its text past the strip")
     func lineBreakInTheName() throws {
         let odd = FileAttachment(filename: "CANARY\nNAME.txt", extractedText: "CANARY-BODY")

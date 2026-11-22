@@ -285,6 +285,9 @@
 //  the history is offered no web tool, nor delegate_deep (which has them). An empty pick searches the question (file
 //  text included) and a page pick opens the first address in it; on the agent route the model could copy a file into
 //  a query. Confidence 0.85 (FilesStayOffTheWebTests, red first).
+//  Review: Kev + claude-opus-5.5, 2026-11-22 (2, drill 3) — withholding alone made Lil invent headlines on Kev's
+//  phone. An explicit search in such a chat gets a fixed line and no generation; every other turn is told there is
+//  no web. Confidence 0.8: the cue list is English and narrow, the clause covers the rest.
 
 import Foundation
 import M1K3Agent
@@ -499,6 +502,35 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
 
     /// The honest line M1K3 gives when Cool Head defers a heavy turn (critical
     /// thermal). Warm, brief, and truthful — never a silent non-answer.
+    /// What an explicit search gets in a chat that holds a file: said by the app, so nothing is invented.
+    static let fileKeepsWebOffMessage =
+        "I keep the web off in a chat with an attached file, so nothing from the file can end up in a search. "
+            + "Start a new chat and I'll look that up."
+    static let fileKeepsWebOffClause =
+        "This chat holds an attached file, so you have no web here. Never present news, prices or anything "
+            + "current as looked up: say you can't check it in this chat."
+
+    private static func chatHoldsFile(_ question: String, history: [ChatTurn]) -> Bool {
+        FileAttachment.carriesContextBlocks(question)
+            || history.contains { $0.role == .user && FileAttachment.carriesContextBlocks($0.text) }
+    }
+
+    /// An unmistakable ask for the web in the typed words. Narrow on purpose: "write a search function"
+    /// is work on the file, and a miss still gets `fileKeepsWebOffClause`.
+    private static func plainlyAsksToSearch(_ question: String) -> Bool {
+        let typed = FileAttachment.omittingContextBlocks(from: question)
+            .lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        let cues = [
+            #"\bsearch(ing)? (on |in )?(the )?(web|internet|online)\b"#,
+            #"\bsearch (google|for the (latest|news))\b"#,
+            #"\bgoogle (it|this|that|for)\b"#,
+            #"\blook [^\n]{0,30}\bup online\b"#,
+            #"\bcheck (the (web|internet)|online)\b"#,
+            #"\b(today's|latest) (news|headlines|weather)\b"#,
+        ]
+        return cues.contains { typed.range(of: $0, options: .regularExpression) != nil }
+    }
+
     static let coolHeadDeferralMessage =
         "My \(HostPlatform.noun)'s gone properly warm, so I'm easing off the heavy thinking for a "
             + "moment to let it cool down. Give it a minute and ask me again."
@@ -717,14 +749,22 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // the model cannot call what it is never offered.
         var withheld = isSelfQuery ? SelfQueryGate.withheldToolNames : []
         // Files stay off the web: whatever can read a file's text must not write a query or pick a URL.
-        let carriesFile = FileAttachment.carriesContextBlocks(question)
-            || history.contains { $0.role == .user && FileAttachment.carriesContextBlocks($0.text) }
+        let carriesFile = Self.chatHoldsFile(question, history: history)
         // The bigger brain is a way round: a fresh responder, with the web, on a task the model wrote.
         if carriesFile {
             withheld.formUnion(ToolPalettePolicy.webToolNames.union(ToolPalettePolicy.deepBrainToolNames))
         }
         let withheldNames = withheld
-        let tools = toolsProvider().filter { !withheldNames.contains($0.name) }
+        let offered = toolsProvider()
+        let tools = offered.filter { !withheldNames.contains($0.name) }
+        // Only where the file is the reason: with the switch off, "start a new chat" would be untrue.
+        let webHeldBack = carriesFile && offered.contains { ToolPalettePolicy.webToolNames.contains($0.name) }
+        if webHeldBack, Self.plainlyAsksToSearch(question) {
+            let (stream, continuation) = AsyncStream<String>.makeStream()
+            continuation.yield(Self.fileKeepsWebOffMessage)
+            continuation.finish()
+            return (sources: [], stream: stream)
+        }
 
         // The tool router (Mini, flagged): a turn it reads as plain chat skips the
         // palette and the agent loop for one streamed generation. Images always
@@ -1327,7 +1367,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         )
         // Last, nearest the question: the language the reply must come back in (nil for English).
         let replyLanguage = replyLanguageClauseProvider(question, history.filter { $0.role == .user }.map(\.text))
-        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, steps, replyLanguage]
+        let noWeb = Self.chatHoldsFile(question, history: history) ? Self.fileKeepsWebOffClause : nil
+        return [
+            ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook, noWeb, steps,
+            replyLanguage,
+        ]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail

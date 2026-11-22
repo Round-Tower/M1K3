@@ -26,7 +26,8 @@
 //  a file's text to the words, so it rode the question and the conversation (ADR 0010 says files never do). `consent`,
 //  the one constructor both sheet and request read, omits context blocks from the conversation. The question is left
 //  verbatim (stripping ate a pasted "FILE: …"): both composers build it from the typed words alone. Assistant turns
-//  still ride and may quote a file; the sheet shows them. Confidence 0.8 (PrivateCloudFilesStayTests, seen red first).
+//  stay back too from the first file on: on Kev's phone the answer under a stripped file WAS the file, as YAML.
+//  Confidence 0.85 (PrivateCloudFilesStayTests, seen red first).
 
 import Foundation
 import M1K3Inference
@@ -80,13 +81,20 @@ public enum PrivateCloudTurn {
     }
 
     /// The composers prepend a file's text to the user's words and the transcript keeps the turn
-    /// whole. Files never ride a PCC turn (ADR 0010), so what is shown and sent leaves them out.
+    /// whole. Files never ride a PCC turn (ADR 0010), so what is shown and sent leaves them out, and
+    /// with them every answer from the first file on: any of those can quote it or be a copy of it.
     private static func withoutFiles(_ history: [ChatTurn]) -> [ChatTurn] {
-        history.map { turn in
-            guard turn.role == .user else { return turn }
+        var fileSeen = false
+        return history.map { turn in
+            guard turn.role == .user else {
+                return fileSeen ? ChatTurn(role: turn.role, text: answerAfterFileOmitted) : turn
+            }
+            fileSeen = fileSeen || FileAttachment.carriesContextBlocks(turn.text)
             return ChatTurn(role: turn.role, text: FileAttachment.omittingContextBlocks(from: turn.text))
         }
     }
+
+    static let answerAfterFileOmitted = "[answer not included — this chat has an attached file]"
 
     public static func request(_ consent: Consent, includeConversation: Bool, now: Date) -> Request {
         let instructions = M1K3Persona.privateCloudPrompt(now: now)
