@@ -967,3 +967,93 @@ struct ToolDispatchMenuTests {
         #expect(menu.contains("action:"))
     }
 }
+
+/// A file's text is glued to the front of the question, and an empty pick searches for the
+/// question: the file became the search query, or the first address inside it the page fetched.
+/// Review: Kev + claude-opus-5.5, 2026-11-22 (557's egress trace). Confidence 0.85.
+struct FilesStayOffTheWebTests {
+    private let file = FileAttachment(
+        filename: "notes.json", extractedText: "{\"canary\": \"PURPLE-HERON\", \"link\": \"https://example.com/private\"}"
+    ).contextBlock
+
+    @Test("a turn carrying a file runs no web tool, whatever the pick", arguments: [
+        "web_search", "lookup_fact", "fetch_page",
+    ])
+    func fileInTheQuestion(tool: String) async throws {
+        let calls = Calls()
+        let web = Recording(name: tool, output: "a result", calls: calls)
+        _ = try await run(
+            Scripted(["An answer.", "An answer."]), tools: [web], pick: ToolPick(tool: tool, query: ""),
+            question: file + "\n\nwhat's the latest on this?"
+        )
+        let ran = calls.log.withLock { $0 }
+        #expect(ran == [])
+    }
+
+    @Test("a file earlier in the chat keeps later turns off the web: the model can still read it")
+    func fileInTheHistory() async throws {
+        let calls = Calls()
+        let web = Recording(name: "web_search", output: "a result", calls: calls)
+        _ = try await run(
+            Scripted(["An answer.", "An answer."]), tools: [web],
+            pick: ToolPick(tool: "web_search", query: "PURPLE-HERON"), question: "what's the latest on that?",
+            history: [
+                ChatTurn(role: .user, text: file + "\n\nTidy this"),
+                ChatTurn(role: .assistant, text: "Done."),
+            ]
+        )
+        let ran = calls.log.withLock { $0 }
+        #expect(ran == [])
+    }
+
+    @Test("the agent route is never offered a web tool either")
+    func agentRoute() async throws {
+        let web = Recording(name: "web_search", output: "a result", calls: Calls())
+        let provider = Scripted(["An answer.", "An answer."])
+        _ = try await run(
+            provider, tools: [web], pick: nil, hasPicker: false, question: file + "\n\nwhat's the latest on this?"
+        )
+        let prompts = provider.prompts.joined()
+        #expect(!prompts.contains("web_search"))
+    }
+
+    /// Kev's phone, 2026-11-22: with the web withheld, Lil answered "Search the web for today's news" with
+    /// four invented headlines and "Pulling up the latest". No model gets that turn.
+    @Test("asked to search in a file's chat, M1K3 says it can't: nothing is generated to invent", arguments: [
+        "Search the web for today’s news", "what's today's news?", "can you look that up online", "google it for me",
+    ])
+    func searchAskIsAnsweredPlainly(ask: String) async throws {
+        let web = Recording(name: "web_search", output: "a result", calls: Calls())
+        let provider = Scripted(["Invented headlines.", "Invented headlines."])
+        let text = try await run(
+            provider, tools: [web], pick: ToolPick(tool: "web_search", query: "news"), question: ask,
+            history: [ChatTurn(role: .user, text: file + "\n\nTidy this")]
+        )
+        #expect(text == AgentRAGResponder.fileKeepsWebOffMessage)
+        #expect(provider.prompts.isEmpty)
+    }
+
+    @Test("other turns in a file's chat are told there's no web, and still answered")
+    func otherTurnsAreTold() async throws {
+        let web = Recording(name: "web_search", output: "a result", calls: Calls())
+        let provider = Scripted(["An answer.", "An answer."])
+        let text = try await run(
+            provider, tools: [web], pick: nil, hasPicker: false,
+            question: file + "\n\nwrite a function to search this list"
+        )
+        #expect(text != AgentRAGResponder.fileKeepsWebOffMessage)
+        let prompts = provider.prompts.joined()
+        #expect(prompts.contains(AgentRAGResponder.fileKeepsWebOffClause))
+    }
+
+    @Test("nor the bigger brain: its responder has the web, and only a task the model wrote from the file")
+    func noDelegation() async throws {
+        let deep = Recording(name: "delegate_deep", output: "a result", calls: Calls())
+        let provider = Scripted(["An answer.", "An answer."])
+        _ = try await run(
+            provider, tools: [deep], pick: nil, hasPicker: false, question: file + "\n\nthink hard about this"
+        )
+        let prompts = provider.prompts.joined()
+        #expect(!prompts.contains("delegate_deep"))
+    }
+}

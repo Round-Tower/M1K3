@@ -143,6 +143,12 @@
 //  line are String(localized:). English unchanged.
 //  Review: claude-opus-5-5, 2026-11-21 — a failed answer offers "Send a report" (the brain report, "couldn't
 //  answer", MLX's own messages included), gated like the brain-load one. Verify-by-launch. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — a staged file keeps the turn on this device, as on the Mac (ADR 0010):
+//  `hasAttachments` counted images only, so with Private Cloud picked a file's text left with the question. One
+//  `hasStagedAttachments` feeds the send, the label and the consent sheet's send, and the cloud question is the typed
+//  draft alone, never the file-prefixed text. Only `sendToPrivateCloud` clears it, after its guards, and hands it
+//  back on a refusal, as on the Mac (the first cut cleared first: on Kev's phone every consented send vanished).
+//  Device try owed. Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
@@ -390,8 +396,7 @@ struct ChatScreen: View {
                 core.privateCloudArming.consented(
                     includeConversation: includeConversation, seen: pending.onDeviceShown
                 )
-                guard core.privateCloudSendAllowed() else { send(); return }
-                clearDraft()
+                guard core.privateCloudSendAllowed(), !hasStagedAttachments else { send(); return }
                 sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
             },
             onCancel: {
@@ -1126,11 +1131,10 @@ struct ChatScreen: View {
             }
             return
         }
-        let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
         // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.
         let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : core.privateCloudArming.action(
-            control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
+            control: privateCloudControl, hasAttachments: hasStagedAttachments, onDeviceMessages: onDevice
         )
         var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         if !pendingFiles.isEmpty {
@@ -1140,12 +1144,11 @@ struct ChatScreen: View {
         switch action {
         case .askConsent:
             privateCloudPending = PendingPrivateCloudSend(
-                consent: core.chat.privateCloudConsent(for: text), onDeviceShown: onDevice
+                consent: core.chat.privateCloudConsent(for: draft), onDeviceShown: onDevice
             )
             return
         case let .sendDirect(includeConversation) where core.privateCloudSendAllowed():
-            clearDraft()
-            sendToPrivateCloud(core.chat.privateCloudConsent(for: text), includeConversation: includeConversation)
+            sendToPrivateCloud(core.chat.privateCloudConsent(for: draft), includeConversation: includeConversation)
         case .sendDirect, .local:
             // A send PCC can't honour right now stays on this device, like an
             // attachment or an outage — never dropped.
@@ -1173,12 +1176,27 @@ struct ChatScreen: View {
     /// Only when the next typed send really leaves: not with an image staged or PCC out.
     private var privateCloudServesNextSend: Bool {
         core.voiceLoop == nil && core.privateCloudArming.servesNextSend(
-            control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
+            control: privateCloudControl, hasAttachments: hasStagedAttachments
         )
     }
 
+    /// Images and files alike: neither ever rides a Private Cloud turn (ADR 0010).
+    private var hasStagedAttachments: Bool {
+        !pendingAttachments.isEmpty || !pendingFiles.isEmpty
+    }
+
     private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
-        Task { await core.sendPrivateCloud(consent, includeConversation: includeConversation) }
+        // The session refuses both silently, so they are checked while the words are still in the box:
+        // a sheet that outlived its chat, and an answer still arriving.
+        guard consent.conversationID == nil || consent.conversationID == core.chat.activeConversationID,
+              !core.chat.isResponding
+        else { return }
+        let words = draft
+        clearDraft()
+        Task {
+            let sent = await core.sendPrivateCloud(consent, includeConversation: includeConversation)
+            if !sent, draft.isEmpty { draft = words }
+        }
     }
 
     // MARK: - Attachments

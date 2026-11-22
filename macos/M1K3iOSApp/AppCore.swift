@@ -214,6 +214,9 @@
 //  domains and codes) instead of `try?`: a failed open made chat non-persistent or the graph go quiet, unseen.
 //  Review: claude-opus-5-5, 2026-11-21 — `MLXGuardedEvaluation.installRecordingHandler()` at launch, beside the
 //  memory budget: an MLX error outside every scope writes its message to the ledger before it traps. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — the age band reaches this responder, as on the Mac: under 16 the palette
+//  and the privacy facts have no web, and minors get the age clause. The review notes promised both; this shell read
+//  neither. Confidence 0.8 (IOSAgeWiringScanTests; device try owed).
 
 import AVFoundation
 #if os(iOS)
@@ -640,6 +643,16 @@ final class AppCore {
     nonisolated static func webSearchAllowed() -> Bool {
         let defaults = UserDefaults.standard
         return defaults.object(forKey: webSearchEnabledKey) == nil || defaults.bool(forKey: webSearchEnabledKey)
+    }
+
+    /// The age band's policy, read per turn from what Content Controls persisted.
+    nonisolated static func agePolicy() -> AgeAppropriateness {
+        AgeAppropriateness.policy(for: PersistedAgeBandProvider().currentBand())
+    }
+
+    /// The switch AND the age band: the Mac's rule (the review notes' code gate under 16).
+    nonisolated static func webToolsAllowedNow() -> Bool {
+        webSearchAllowed() && agePolicy().webToolsAllowed
     }
 
     /// Device-side pairing persistence (defaults metadata + Keychain PSK).
@@ -1712,7 +1725,7 @@ final class AppCore {
                 ]
                 // The turn straight after a look goes without the web unless its own words asked for a
                 // search (LookAftermath, #768): it may be about the picture, and this turn cannot see it.
-                let webAllowed = Self.webSearchAllowed() && !LookAftermath.withholdsWeb
+                let webAllowed = Self.webToolsAllowedNow() && !LookAftermath.withholdsWeb
                 if webAllowed {
                     tools.insert(WikipediaTool(), at: 0)
                     tools.insert(FetchPageTool(), at: 0)
@@ -1788,6 +1801,7 @@ final class AppCore {
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
             },
+            ageClauseProvider: { Self.agePolicy().promptClause },
             egressClauseProvider: {
                 // Offered = the phone's brain-list row exists (`pickerControl`): it honours the org policy
                 // switch, which `privateCloudBackend != nil` alone did not (review fold, 2026-10-19).
@@ -1797,7 +1811,7 @@ final class AppCore {
                     quota: .unknown
                 )
                 let facts = EgressFacts(
-                    webSearch: Self.webSearchAllowed(),
+                    webSearch: Self.webToolsAllowedNow(),
                     privateCloudOffered: PrivateCloudRung.pickerControl(pcc) != .hidden,
                     brainIsHome: Self.homeBrainLive.withLock { $0 }
                 )

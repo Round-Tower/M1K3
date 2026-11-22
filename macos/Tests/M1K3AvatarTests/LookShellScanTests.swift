@@ -24,6 +24,8 @@
 //  app, a question about the photo is decided before Private Cloud arming, and the web withhold is read where the
 //  tool palette is built.
 //
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — the two web pins name `webToolsAllowedNow` (switch AND age band),
+//  stricter than the switch they named. Confidence 0.85.
 
 import Foundation
 import Testing
@@ -120,7 +122,7 @@ struct LookShellScanTests {
         #expect(again.contains("chat.lookAgain(question, looker: looker, knowing:"))
         #expect(!again.contains("lookCamera"), "asking again uses the stored frame: no camera")
         let draft = try Self.body(of: "func draftLookSearch()", in: wiring)
-        #expect(draft.contains("Self.webSearchAllowed()"), "no draft while web search is off")
+        #expect(draft.contains("Self.webToolsAllowedNow()"), "no draft while web search is off")
         #expect(draft.contains("chat.draftLookSearch(looker: looker)"))
         // The chat screen puts the draft in the composer; it never sends it.
         let screen = try Self.code("M1K3iOSApp/ChatScreen.swift")
@@ -157,8 +159,8 @@ struct LookShellScanTests {
     @Test("the turn straight after a look gets no web tools")
     func theNextTurnHasNoWeb() throws {
         let core = try Self.flat("M1K3iOSApp/AppCore.swift")
-        #expect(core.contains("let webAllowed = Self.webSearchAllowed() && !LookAftermath.withholdsWeb"))
-        #expect(core.components(separatedBy: "let webAllowed = Self.webSearchAllowed()").count == 2)
+        #expect(core.contains("let webAllowed = Self.webToolsAllowedNow() && !LookAftermath.withholdsWeb"))
+        #expect(core.components(separatedBy: "let webAllowed = Self.webToolsAllowedNow()").count == 2)
     }
 
     @Test("the eye is offered only when the answering brain sees on this device")
