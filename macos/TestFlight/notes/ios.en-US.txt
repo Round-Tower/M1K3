@@ -1,6 +1,6 @@
 Thanks for testing M1K3 1.5.0 on iPhone and iPad.
 
-First, this build's privacy fixes. In one chat, please check:
+First, this build's fixes, privacy above all. Please check:
 • Files stay here: pick Private Cloud Compute, attach a .json or code file and ask "convert this to YAML". No consent sheet, and Mini or Lil answers
 • Sharing a chat: then send "thanks". If the sheet asks, turn on "Also send this conversation" and open what it sends: no file text, and no answer made after the file. Send a second message too: it must show and get an answer
 • No invented searches: pick Lil and ask "search the web for today's news" in that chat. Mike should say the web is off in a chat with a file. In a new chat the same words should search, with sources

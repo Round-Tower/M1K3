@@ -118,7 +118,7 @@ def test_the_english_listings_qualify_on_device_and_keep_files_out_of_both_cross
 def test_the_privacy_page_owns_the_2026_11_22_fix():
     page = _visible(PRIVACY)
     assert "text from an attached file could reach web search" in page
-    assert "A chat with an attached file keeps the web off" in page
+    assert "From 1.5, a chat with an attached file keeps the web off" in page
 
 
 def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason():

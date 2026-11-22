@@ -1,6 +1,6 @@
 Thanks for testing M1K3 1.5.0 on the Mac.
 
-First, this build's privacy fixes. In one chat, please check:
+First, this build's fixes, privacy above all. Please check:
 • Files stay off the web: attach a .json or code file, ask "convert this to YAML", then "search the web for today's news". Mike should say the web is off in a chat with a file. In a new chat the same words should search, with sources
 • Sharing a chat: pick Private Cloud Compute, send "thanks", turn on "Also send this conversation" and look at what it sends: no file text, and no answer made after the file
 • No file memories: that file should not appear in Memories
