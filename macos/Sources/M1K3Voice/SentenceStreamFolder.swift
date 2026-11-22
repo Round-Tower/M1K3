@@ -23,6 +23,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `init(stopMatcher:)`: a predicate beside the
 //  literal marker, so speech cuts on every trailer variant the chat splitter knows.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — a block fence closes only on a fence LINE as long as its opener.
+//  The first ``` anywhere used to close it, so backticks inside the code spilled the rest out as prose to be read.
 //
 
 import Foundation
@@ -149,11 +151,7 @@ public struct SentenceStreamFolder: Sendable {
             // closing fence lands, held open until then.
             if text[i...].hasPrefix("```") {
                 if i > from { return i }
-                let afterOpen = text.index(i, offsetBy: 3)
-                guard let close = text.range(of: "```", range: afterOpen ..< text.endIndex) else {
-                    return nil // fence still open — hold everything
-                }
-                return close.upperBound
+                return fenceEnd(in: text, opening: i)
             }
             let ch = text[i]
             if Self.terminators.contains(ch) {
@@ -178,6 +176,35 @@ public struct SentenceStreamFolder: Sendable {
                 if newlines >= 2 { return j }
             }
             i = text.index(after: i)
+        }
+        return nil
+    }
+
+    /// Where the fence opening at `opening` ends, or nil while it is still open. A block fence (it
+    /// starts its line, no backticks after the run) closes on a line of at least as many backticks;
+    /// a mid-line ``` is a span and closes on the next one.
+    private func fenceEnd(in text: String, opening: String.Index) -> String.Index? {
+        let run = text[opening...].prefix { $0 == "`" }
+        let newline = text[opening...].firstIndex(where: \.isNewline)
+        let info = text[run.endIndex ..< (newline ?? text.endIndex)]
+        let indent = text[..<opening].reversed().prefix { !$0.isNewline }
+        guard indent.allSatisfy({ $0 == " " || $0 == "\t" }), !info.contains("`") else {
+            let afterOpen = text.index(opening, offsetBy: 3)
+            return text.range(of: "```", range: afterOpen ..< text.endIndex)?.upperBound
+        }
+        guard let newline else { return nil } // the opening line is still streaming
+        var lineStart = text.index(after: newline)
+        while lineStart < text.endIndex {
+            let end = text[lineStart...].firstIndex(where: \.isNewline) ?? text.endIndex
+            let line = text[lineStart ..< end].drop { $0 == " " || $0 == "\t" }
+            let closing = line.prefix { $0 == "`" }.count
+            if closing >= run.count, line.dropFirst(closing).allSatisfy(\.isWhitespace) {
+                // A close is a whole line: "```" with more to stream may be a nested "```sh".
+                // An answer ending on its fence goes out on `flush`.
+                return end < text.endIndex ? end : nil
+            }
+            guard end < text.endIndex else { break }
+            lineStart = text.index(after: end)
         }
         return nil
     }
