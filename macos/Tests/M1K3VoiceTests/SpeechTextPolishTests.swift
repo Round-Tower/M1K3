@@ -125,10 +125,10 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("First.\n\u{2728}\n\nSecond.") == "First.\n\nSecond.")
     }
 
-    @Test("emoji inside a fenced code block stay verbatim")
+    @Test("emoji inside a fenced code block are neither read nor named")
     func emojiInFenceSurvives() {
         let text = "```\nprint(\"\u{1F389}\")\n```"
-        #expect(SpeechTextPolish.polish(text) == text)
+        #expect(SpeechTextPolish.polish(text) == "I've put that on screen.")
     }
 
     // MARK: - Contracts
@@ -193,12 +193,11 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(text) == "Before.\n\nAfter.")
     }
 
-    @Test("fenced code passes through verbatim — a shell comment keeps its hash")
+    @Test("fenced code is never read aloud: one line says it is on screen")
     func fencedCodeIsVerbatim() {
         let text = "Install like this:\n```sh\n# deps first\nbrew install *thing*\n```\nDone."
         let polished = SpeechTextPolish.polish(text)
-        #expect(polished.contains("# deps first"))
-        #expect(polished.contains("brew install *thing*"))
+        #expect(polished == "Install like this:\nI've put that on screen.\nDone.")
     }
 
     @Test("markdown flattening is idempotent too")
@@ -208,7 +207,7 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(once) == once)
     }
 
-    @Test("CRLF text still pairs its fences — code stays verbatim, prose still flattens")
+    @Test("CRLF text still pairs its fences — code is silent, prose still flattens")
     func crlfFencesPair() {
         // Swift folds "\r\n" into ONE grapheme: a literal-\n line split sees
         // this as a single line and never finds the fences (the exact bug
@@ -216,7 +215,8 @@ struct SpeechTextPolishTests {
         let text = "Intro **bold**.\r\n```\r\nkeep *ptr* verbatim\r\n```\r\nAfter *italic*."
         let polished = SpeechTextPolish.polish(text)
         #expect(!polished.contains("**"))
-        #expect(polished.contains("keep *ptr* verbatim"))
+        #expect(!polished.contains("ptr"))
+        #expect(polished.contains("I've put that on screen."))
         #expect(polished.contains("After italic."))
     }
 
@@ -269,22 +269,23 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(text) == "Pick one:\nTea or coffee? Options: Tea or Coffee.")
     }
 
-    @Test("an ordinary fence that merely mentions a typed tag is still read verbatim")
+    @Test("an ordinary fence that merely mentions a typed tag is code: never read")
     func ordinaryFenceWithTypedTagVerbatim() {
         let text = "The format:\n````\n```m1k3-steps\n{\"steps\": [\"One\"]}\n```\n````\nDone."
         let polished = SpeechTextPolish.polish(text)
-        #expect(polished.contains("{\"steps\": [\"One\"]}"))
+        #expect(polished == "The format:\nI've put that on screen.\nDone.")
     }
 
     // Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the typed blocks beside an
     // ordinary fence (where the segmenter's fence rules and fencedCodeRanges must agree), a block's words
     // through the later passes (URL, emoji, the name), and the fixed point on every typed output.
-    @Test("typed blocks around an ordinary fence: both spoken, the code between them verbatim")
+    @Test("typed blocks around an ordinary fence: both spoken, the code between them not")
     func typedBlocksAroundOrdinaryFence() {
         let text = "First:\n```m1k3-steps\n{\"steps\": [\"Boil\"]}\n```\nCode:\n```swift\nlet p = *ptr*\n```\n"
             + "Then:\n```m1k3-choices\n{\"prompt\": \"Milk?\", \"options\": [\"Yes\", \"No\"]}\n```"
         let polished = SpeechTextPolish.polish(text)
-        #expect(polished.contains("```swift\nlet p = *ptr*\n```"))
+        #expect(!polished.contains("ptr"))
+        #expect(polished.contains("Code:\nI've put that on screen."))
         #expect(polished.hasPrefix("First:\nStep 1: Boil.\n"))
         #expect(polished.hasSuffix("Then:\nMilk? Options: Yes or No."))
         #expect(!polished.contains("m1k3-"))
@@ -461,12 +462,11 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(polished) == polished)
     }
 
-    @Test("a pipe inside a fenced code block, and a pipe mid-prose, stay verbatim")
+    @Test("a pipe inside fenced code is not read; a pipe mid-prose stays")
     func pipesOutsideTablesSurvive() {
         let code = "Pipe it:\n```sh\ncat a | grep b\n|---|\n```\nDone."
         let polished = SpeechTextPolish.polish(code)
-        #expect(polished.contains("cat a | grep b"))
-        #expect(polished.contains("|---|"))
+        #expect(polished == "Pipe it:\nI've put that on screen.\nDone.")
         // A pipe in a sentence is not a row: only a line that OPENS with one is.
         #expect(SpeechTextPolish.polish("Either A | B works.") == "Either A | B works.")
     }
@@ -480,9 +480,9 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("A well-known trick.") == "A well-known trick.")
         #expect(SpeechTextPolish.polish("Cold:\n-5 degrees tonight.") == "Cold:\n-5 degrees tonight.")
         #expect(SpeechTextPolish.polish("1. Boil the water.\n2. Pour it over.") == "1. Boil the water.\n2. Pour it over.")
-        // Still: a thematic break is silent and the fence is verbatim (the pinned cases).
+        // Still: a thematic break is silent, and a fence is never read.
         #expect(SpeechTextPolish.polish("Before.\n---\nAfter.") == "Before.\n\nAfter.")
-        #expect(SpeechTextPolish.polish("```\n- not a bullet\n```") == "```\n- not a bullet\n```")
+        #expect(SpeechTextPolish.polish("```\n- not a bullet\n```") == "I've put that on screen.")
     }
 
     @Test("a bold Sources label still heads a stripped block — the strip runs before the flatten now")

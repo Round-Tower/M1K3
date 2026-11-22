@@ -82,6 +82,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — the colonless site arm read any dotted run as a site, so
 //  "(from 3.5)" went silent on both platforms; a site's last label now starts with a letter, in any script
 //  (".рф" still strips; pre-push review). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — code is never read aloud (Kev: "Mike still speaks code"): an ordinary
+//  fence becomes `AnswerBlockSpeech.onScreen` before the other passes, retiring "verbatim" for what is spoken. Words,
+//  not "": the shells speak the raw chunk when polish returns nothing. Confidence 0.85 (SpokenCodeTests, red first).
 //
 
 import Foundation
@@ -95,6 +98,7 @@ public enum SpeechTextPolish {
     public static func polish(_ text: String) -> String {
         var result = text
         result = AnswerBlockSpeech.replacingTypedFences(in: result)
+        result = replacingCode(in: result)
         result = stripFollowUpTrailer(result)
         // Both trailing source blocks go BEFORE the flatten (#716): the model's
         // "Sources:" block is recognised by the "- " markers the flatten now
@@ -123,6 +127,21 @@ public enum SpeechTextPolish {
     public static func spokenSentence(_ text: String) -> String? {
         let polished = polish(text)
         return polished.isEmpty ? nil : polished
+    }
+
+    // MARK: - Code
+
+    /// Code is for the eyes: each fenced block, closed or cut off, says it's on screen.
+    private static func replacingCode(in text: String) -> String {
+        var result = ""
+        var cursor = text.startIndex
+        for range in fencedCodeRanges(in: text) {
+            result += text[cursor ..< range.lowerBound]
+            result += AnswerBlockSpeech.onScreen
+            cursor = range.upperBound
+        }
+        result += text[cursor...]
+        return result
     }
 
     // MARK: - The name
