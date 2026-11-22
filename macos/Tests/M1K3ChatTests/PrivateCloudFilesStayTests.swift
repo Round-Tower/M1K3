@@ -58,6 +58,24 @@ struct PrivateCloudFilesStayTests {
         #expect(shown.contains("And again"))
     }
 
+    /// Kev's phone, 2026-11-22: two memories held the file's name and contents. A memory follows the person
+    /// into new chats, where the web is on. A file becomes lasting only when kept (DistillationTaint's rule).
+    @Test("nothing from a file's turn onward becomes a memory, whichever slice distillation reads")
+    func filesDontBecomeMemories() {
+        let messages = [
+            ChatMessage(role: .user, text: "I live in Cork", status: .complete),
+            ChatMessage(role: .assistant, text: "Noted: Cork.", status: .complete),
+            ChatMessage(role: .user, text: file.contextBlock + "\n\nConvert this", status: .complete),
+            ChatMessage(role: .assistant, text: "body: CANARY-BODY", status: .complete),
+            ChatMessage(role: .user, text: "Thanks", status: .complete),
+            ChatMessage(role: .assistant, text: "CANARY-BODY, any time.", status: .complete),
+        ]
+        let whole = ChatSession.distillableTurns(in: messages, from: 0).map(\.text)
+        #expect(whole == ["I live in Cork", "Noted: Cork."])
+        let afterWatermark = ChatSession.distillableTurns(in: messages, from: 4).map(\.text)
+        #expect(afterWatermark == [])
+    }
+
     @Test("a line break in a file's name doesn't carry its text past the strip")
     func lineBreakInTheName() throws {
         let odd = FileAttachment(filename: "CANARY\nNAME.txt", extractedText: "CANARY-BODY")

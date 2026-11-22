@@ -142,6 +142,8 @@
 //  text and the settle clear it. Lines rotate per session (`thinkAsideCount`). Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-21 — a stream that ends with no answer and no reasoning, unasked, settles as a
 //  failure with `ChatFailureMessage.emptyAnswer`, not a blank bubble (an MLX error ends the stream). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — distillation stops at a chat's first attached file: on Kev's
+//  phone two memories held a file's name and contents. Confidence 0.85 (PrivateCloudFilesStayTests, red first).
 
 import Foundation
 import M1K3Inference
@@ -1956,6 +1958,17 @@ public final class ChatSession {
         }
     }
 
+    /// What distillation reads from the watermark on, and never past the chat's first attached file
+    /// (looked for in the whole chat: the watermark may already be beyond it). A file's words, and
+    /// answers that can quote them, become lasting only when the user keeps the file.
+    nonisolated static func distillableTurns(in messages: [ChatMessage], from watermark: Int) -> [ChatTurn] {
+        let end = messages.firstIndex {
+            $0.role == .user && FileAttachment.carriesContextBlocks($0.text)
+        } ?? messages.count
+        guard watermark < end else { return [] }
+        return distillableTurns(messages[watermark ..< end])
+    }
+
     /// The distillation worker, deliberately WITHOUT an `isResponding` guard.
     /// ⚠️ Contract: callers must guarantee no response is actively streaming —
     /// `scheduleDistillationIfNeeded` enforces it via the latch for the
@@ -1970,7 +1983,7 @@ public final class ChatSession {
         let snapshotCount = messages.count
         let watermark = (try? history.distilledWatermark(id: conversationID)) ?? 0
         guard watermark < snapshotCount else { return }
-        let fresh = Self.distillableTurns(messages[min(watermark, snapshotCount)...])
+        let fresh = Self.distillableTurns(in: messages, from: watermark)
         // At least one full new exchange — never distill a lone dangling turn.
         guard fresh.contains(where: { $0.role == .user }),
               fresh.contains(where: { $0.role == .assistant }) else { return }
