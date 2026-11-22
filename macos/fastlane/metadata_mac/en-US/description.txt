@@ -1,27 +1,33 @@
-My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Beyond the models you ask me to download, two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once. You can lend that private cloud to your other apps too; that is a separate switch, off by default.
+An AI with a face that lives on your Mac. Talk to it, show it things, ask your PDFs — on-device, offline-ready, with no account.
+
+My friends call me Mike. I run on your Mac, I remember what matters to you, and you can see everything I keep.
 
 WHAT I DO
-• Chat with a capable on-device language model — fast on Apple Silicon.
-• Talk to me: on-device speech recognition and a natural neural voice (Kokoro TTS).
-• Bring your own knowledge: drop in notes and PDFs and I'll answer from them (on-device retrieval).
-• Read a text: drop in a .txt, .md, .csv or .log file with a question, and the answer sticks to the file.
-• Speaks your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
-• I remember what matters to you — a temporal knowledge graph you can see, search, and delete at any time.
-• Three brain tiers — Mini (instant on Apple Intelligence Macs, a small download on others), Lil (4B), and Big (12B) — pick the one that fits your machine.
-• Show me things: Lil and Big read images. Attach a photo, a screenshot or a whiteboard and ask about it, and one tap keeps a private caption in my memory so you can ask again later.
-• A friendly 3D companion and a pixel face, if you want them.
-• Brain at Home: pair your iPhone or iPad over LAN and use your Mac's big brain from the couch.
+• Talk: on-device speech recognition and a natural neural voice (Kokoro).
+• See: Lil and Big read images. Attach a photo, a screenshot or a whiteboard and ask about it; one tap keeps a private caption so you can ask again later.
+• Know your stuff: drop in notes, PDFs and text files (.txt, .md, .csv, .log) and I answer from them, with on-device retrieval.
+• Remember: a knowledge graph of what matters to you, which you can see, search and delete at any time.
+• Speak your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
+• Brain at Home: pair your iPhone or iPad over your own network and use your Mac's big brain from the couch.
 
-PUNK BY DESIGN
-• Everything runs locally. Inference, search, and voice are all on-device.
-• I use the network for two things: downloading models when you ask (brains, speech and voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
-• No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence (github.com/Round-Tower/M1K3).
+A FACE, NOT A TEXT BOX
+• A pixel face that listens, thinks and talks back — or a friendly 3D companion, if you want one.
 
-BUILT FOR YOUR MACHINE
-• Optimized for Apple Silicon (Metal/MLX).
-• Multiple model tiers so I run well from MacBook Air to Mac Studio.
-• A command-line client (m1k3) and a local tool server with 18 tools, so your coding agents — Claude, Cursor, VS Code, Codex, Zed — can use my knowledge and voice.
-• A local server for your other apps: switch on the Local API and any tool that speaks the OpenAI API can use the brain you have loaded. This Mac only, off by default, with its own key.
-• Apple's private cloud for those apps too, if you switch it on: a bigger brain when the job needs one. Only what the app sends goes out, and Settings counts every call.
+THREE BRAINS, PICK YOUR SIZE
+• Mini: instant on Apple Intelligence Macs, a small download on others.
+• Lil (4B): fast, sees images, and thinks a puzzle through step by step.
+• Big (12B): the deep one, for Macs with 16 GB or more.
+• Optimized for Apple Silicon (Metal and MLX), from MacBook Air to Mac Studio.
+
+FOR DEVELOPERS
+• A command-line client (m1k3) and a local MCP server, so your coding agents — Claude, Cursor, VS Code, Codex, Zed — can use my knowledge and voice.
+• The Local API: any tool that speaks the OpenAI API can use the brain you have loaded. This Mac only, off by default, with its own key.
+
+PRIVATE BY DESIGN
+• No account, no analytics, no tracking. No data collected.
+• Inference, search over your documents and voice all run on the Mac.
+• The network is for downloading models when you ask (brains, speech and voice), and for web search — on by default so answers can be current, one switch in Settings to turn it off.
+• Optional: Apple's Private Cloud Compute as a brain, which you pick and consent to once. You can lend it to your other apps too: a separate switch, off by default, and Settings counts every call. Only what the app sends goes out.
+• The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 
 Punk intelligence: yours, private, on your terms.

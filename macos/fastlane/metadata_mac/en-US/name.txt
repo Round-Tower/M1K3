@@ -1,1 +1,1 @@
-Local Offline AI Agent – M1K3
+M1K3: Local Offline AI Agent

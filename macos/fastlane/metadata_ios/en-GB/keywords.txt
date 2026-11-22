@@ -1,1 +1,1 @@
-LLM,on-device,chatbot,memory,PDF,notes,transcribe,summarise,secure,model,privacy,speech
+LLM,on-device,chatbot,memory,PDF,chat,transcribe,summarise,secure,model,privacy,speech,assistant

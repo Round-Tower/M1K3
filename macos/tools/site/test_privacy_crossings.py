@@ -14,6 +14,9 @@ for web search (the one managed key is PCC's), or "No cloud attached". Signature
 skipped. Confidence 0.8.
 Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the page names the short report offered after a session that
 didn't close cleanly, says "no automatic crash reporting", and the one-thing-we-can-receive pin names both. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-11-22 — #886 (description realign): the store descriptions' intro download
+qualifiers moved into PRIVATE BY DESIGN with the other disclosures; the pin now asks for "web search — on by default"
+and no "nothing leaves" in either. This test caught the Mac draft dropping speech downloads. Confidence 0.8.
 """
 import json
 import re
@@ -28,7 +31,7 @@ IOS_DESC = (ROOT / "macos" / "fastlane" / "metadata_ios" / "en-US" / "descriptio
 
 def _jsonld_answers() -> dict[str, str]:
     out: dict[str, str] = {}
-    for block in re.findall(r'<script type="application/ld\+json">\s*(.*?)</script>', PRIVACY, re.S):
+    for block in re.findall(r'<script type="application/ld\+json">\s*(.*?)</script>', PRIVACY, re.DOTALL):
         data = json.loads(block)
         for q in data.get("mainEntity", []):
             out[q["name"]] = q["acceptedAnswer"]["text"]
@@ -66,7 +69,7 @@ def test_kokoro_is_mlx_not_onnx():
 
 def test_the_short_answer_and_its_json_ld_twin_share_the_downloads_clause_byte_for_byte():
     clause = "one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search,"
-    short = _visible(re.search(r'<div class="answer">(.*?)</div>', PRIVACY, re.S).group(1))
+    short = _visible(re.search(r'<div class="answer">(.*?)</div>', PRIVACY, re.DOTALL).group(1))
     assert clause in short
     assert clause in _jsonld_answers()["Is M1K3 really private?"]
 
@@ -84,8 +87,11 @@ def test_store_descriptions_name_brains_voice_and_speech_downloads():
     assert "downloading a brain when you ask" not in MAC_DESC
     assert "downloading models when you choose them (brains and my voice)" in IOS_DESC
     assert "downloading a brain when you choose one" not in IOS_DESC
-    assert "Beyond the models you ask me to download" in MAC_DESC
-    assert "apart from the models you ask me to download" in IOS_DESC
+    # Since #886 the fold sells and every disclosure sits under PRIVATE BY DESIGN, so the intro's
+    # download qualifier went with them; what must hold is that web search is named as on by default.
+    for desc in (MAC_DESC, IOS_DESC):
+        assert "web search — on by default" in desc
+        assert "nothing leaves" not in desc.lower()
 
 
 def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason():
@@ -96,7 +102,7 @@ def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason()
 
 def test_no_page_claims_nothing_to_download_without_the_apple_intelligence_qualifier():
     """Mini needs Apple Intelligence to be instant; on a Mac without it, a ~630 MB brain downloads (C2/C3)."""
-    claim = re.compile(r"(nothing to download|no download)", re.I)
+    claim = re.compile(r"(nothing to download|no download)", re.IGNORECASE)
     pages = sorted((ROOT / "site").glob("*.html")) + sorted((ROOT / "site").glob("*.txt"))
     pages = [p for p in pages if p.name != "llms-full.txt"]  # generated from the pages below
     for page in pages:
@@ -150,7 +156,7 @@ def test_no_page_describes_the_retired_pcc_button_or_an_admin_web_search_switch(
     # #529's site part. Signature comments record what a page used to say, so they are read out first.
     pages = sorted((ROOT / "site").glob("*.html")) + [ROOT / "site" / "llms-full.txt", ROOT / "site" / "brains.json"]
     for page in pages:
-        text = re.sub(r"<!--.*?-->", "", page.read_text(), flags=re.S)
+        text = re.sub(r"<!--.*?-->", "", page.read_text(), flags=re.DOTALL)
         for phrase in RETIRED_PCC_AND_EGRESS_CLAIMS:
             assert phrase not in text, f"{page.name}: {phrase!r}"
     # The one policy key the site may promise an administrator.
