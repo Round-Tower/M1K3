@@ -26,7 +26,7 @@ FOR DEVELOPERS
 PRIVATE BY DESIGN
 • No account, no analytics, no tracking. No data collected.
 • Inference, search over your documents and voice all run on the Mac.
-• The network is for downloading the brains and voices you choose, and for web search — on by default so answers can be current, one switch in Settings to turn it off.
+• The network is for downloading models when you ask (brains, speech and voice), and for web search — on by default so answers can be current, one switch in Settings to turn it off.
 • Optional: Apple's Private Cloud Compute as a brain, which you pick and consent to once. You can lend it to your other apps too: a separate switch, off by default, and Settings counts every call. Only what the app sends goes out.
 • The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 

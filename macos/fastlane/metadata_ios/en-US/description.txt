@@ -21,7 +21,7 @@ TWO BRAINS ON THE DEVICE
 PRIVATE BY DESIGN
 • No account, no sign-up, no analytics, no tracking. No data collected.
 • The brains, the search over your documents and the voice all run on the device.
-• The network is for two things: downloading the brains and voice you choose, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• The network is for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
 • The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 
 Works offline — on a plane, up a mountain, anywhere the signal isn't.
