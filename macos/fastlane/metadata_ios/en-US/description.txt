@@ -1,20 +1,28 @@
-My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device by default; apart from the models you ask me to download, web search (and the lookups it makes) is the one thing that sends anything out, and it's a switch in Settings.
+An AI with a face that lives on your iPhone and iPad. Talk to it, show it things, ask your PDFs — on the device, offline, with no account.
+
+My friends call me Mike. I run on your device, I remember what matters to you, and you can see everything I keep.
 
 WHAT I DO
-• Chat with an on-device brain — Mini starts instantly on Apple Intelligence devices (a small download everywhere else), and Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory.
-• Show me things: tap the eye and point your camera, or attach a photo, and ask about it. I read it on your device and send it nowhere, and one tap keeps a private caption of an attached image for later.
-• Talk to me: on-device speech recognition and a natural neural voice.
-• Bring your own knowledge: add PDFs and text files and I'll answer from them, on device.
-• Read a text: attach a .txt, .md, .csv or .log file with a question, and the answer sticks to the file.
-• Speaks your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
-• I remember what matters to you, and you can see and search everything I've kept.
-• A friendly 3D companion or a pixel face — and on iPad, a constellation of your memories.
+• Talk: on-device speech recognition and a natural neural voice.
+• See: tap the eye and point your camera, or attach a photo, and ask about it. I read it on the device and send it nowhere.
+• Know your stuff: add PDFs and text files (.txt, .md, .csv, .log) and I answer from them.
+• Remember: I keep what matters to you, and you can see and search all of it.
+• Speak your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
 • Brain at Home: pair with your Mac over your own Wi-Fi and borrow its big brain from the couch.
 
+A FACE, NOT A TEXT BOX
+• A pixel face that listens, thinks and talks back — or a friendly 3D companion.
+• On iPad, a constellation of your memories.
+
+TWO BRAINS ON THE DEVICE
+• Mini starts instantly on Apple Intelligence devices (a small download everywhere else).
+• Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory, and thinks a puzzle through step by step.
+
 PRIVATE BY DESIGN
+• No account, no sign-up, no analytics, no tracking. No data collected.
 • The brains, the search over your documents and the voice all run on the device.
-• I use the network for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
-• No analytics. No tracking. No data collected. The source code is published under a source-available licence, so you can check (github.com/Round-Tower/M1K3).
+• The network is for two things: downloading the brains and voice you choose, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 
 Works offline — on a plane, up a mountain, anywhere the signal isn't.
 
