@@ -282,9 +282,9 @@
 //  speed tier and cannot think: the app's provider leaves it out, so the line never promises a think that won't
 //  happen. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-22 — files stay off the web: a turn with an attached file in the question or
-//  the history is offered no web tool, nor delegate_deep (which has them). An empty pick searches the question (file text included) and a page pick opens
-//  the first address in it; on the agent route the model could copy a file into a query. Confidence 0.85
-//  (FilesStayOffTheWebTests, red first).
+//  the history is offered no web tool, nor delegate_deep (which has them). An empty pick searches the question (file
+//  text included) and a page pick opens the first address in it; on the agent route the model could copy a file into
+//  a query. Confidence 0.85 (FilesStayOffTheWebTests, red first).
 
 import Foundation
 import M1K3Agent
