@@ -281,6 +281,10 @@
 //  after the decision and before any generation, so the shell can say one line before the quiet. Mini sits in the
 //  speed tier and cannot think: the app's provider leaves it out, so the line never promises a think that won't
 //  happen. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — files stay off the web: a turn with an attached file in the question or
+//  the history is offered no web tool, nor delegate_deep (which has them). An empty pick searches the question (file text included) and a page pick opens
+//  the first address in it; on the agent route the model could copy a file into a query. Confidence 0.85
+//  (FilesStayOffTheWebTests, red first).
 
 import Foundation
 import M1K3Agent
@@ -711,9 +715,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // what's actually callable (no advertising a disabled web_search).
         // On a self-query turn the retrieval tools are withheld entirely —
         // the model cannot call what it is never offered.
-        let tools = isSelfQuery
-            ? toolsProvider().filter { !SelfQueryGate.withheldToolNames.contains($0.name) }
-            : toolsProvider()
+        var withheld = isSelfQuery ? SelfQueryGate.withheldToolNames : []
+        // Files stay off the web: whatever can read a file's text must not write a query or pick a URL.
+        let carriesFile = FileAttachment.carriesContextBlocks(question)
+            || history.contains { $0.role == .user && FileAttachment.carriesContextBlocks($0.text) }
+        // The bigger brain is a way round: a fresh responder, with the web, on a task the model wrote.
+        if carriesFile {
+            withheld.formUnion(ToolPalettePolicy.webToolNames.union(ToolPalettePolicy.deepBrainToolNames))
+        }
+        let withheldNames = withheld
+        let tools = toolsProvider().filter { !withheldNames.contains($0.name) }
 
         // The tool router (Mini, flagged): a turn it reads as plain chat skips the
         // palette and the agent loop for one streamed generation. Images always

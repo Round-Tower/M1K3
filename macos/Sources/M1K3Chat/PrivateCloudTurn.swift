@@ -22,6 +22,11 @@
 //  (`Consent.conversationID`) and a send from any other conversation is refused: with PCC now on for a
 //  whole conversation, a sheet left open across a switch would have sent A's history and answered into B.
 //  Confidence 0.9 (ChatSessionPrivateCloudTests.consentIsBoundToItsConversation).
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — "no parameter for documents" was not enough: the composers prepend
+//  a file's text to the words, so it rode the question and the conversation (ADR 0010 says files never do). `consent`,
+//  the one constructor both sheet and request read, omits context blocks from the conversation. The question is left
+//  verbatim (stripping ate a pasted "FILE: …"): both composers build it from the typed words alone. Assistant turns
+//  still ride and may quote a file; the sheet shows them. Confidence 0.8 (PrivateCloudFilesStayTests, seen red first).
 
 import Foundation
 import M1K3Inference
@@ -67,7 +72,20 @@ public enum PrivateCloudTurn {
     /// `history` is the replayable conversation (display-only messages such as
     /// script output are already excluded by the caller, as for local turns).
     public static func consent(question: String, history: [ChatTurn], conversationID: UUID? = nil) -> Consent {
-        Consent(question: question, conversation: conversationText(history), conversationID: conversationID)
+        Consent(
+            question: question,
+            conversation: conversationText(withoutFiles(history)),
+            conversationID: conversationID
+        )
+    }
+
+    /// The composers prepend a file's text to the user's words and the transcript keeps the turn
+    /// whole. Files never ride a PCC turn (ADR 0010), so what is shown and sent leaves them out.
+    private static func withoutFiles(_ history: [ChatTurn]) -> [ChatTurn] {
+        history.map { turn in
+            guard turn.role == .user else { return turn }
+            return ChatTurn(role: turn.role, text: FileAttachment.omittingContextBlocks(from: turn.text))
+        }
     }
 
     public static func request(_ consent: Consent, includeConversation: Bool, now: Date) -> Request {

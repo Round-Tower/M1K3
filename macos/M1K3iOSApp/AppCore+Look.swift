@@ -44,6 +44,8 @@
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `look` and `lookAgain` are followed by the Live Activity (begin/end
 //  around the brain). Compile-checked; owes a try on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — the look's search draft follows the age band as well as the switch
+//  (`webToolsAllowedNow`), like the palette. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -125,7 +127,7 @@ extension AppCore {
     /// comes back for the composer and nothing is sent: the user reads it, edits it and sends it as their own
     /// turn. Nil when web search is off, there is no look to draft from, or the eyes could name nothing.
     func draftLookSearch() async -> String? {
-        guard canAskAboutLastLook, Self.webSearchAllowed(), !chat.isResponding, !isLooking else { return nil }
+        guard canAskAboutLastLook, Self.webToolsAllowedNow(), !chat.isResponding, !isLooking else { return nil }
         isLooking = true
         defer { isLooking = false }
         return await chat.draftLookSearch(looker: looker).map(LookSearch.composerText)

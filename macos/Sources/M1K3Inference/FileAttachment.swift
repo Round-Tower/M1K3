@@ -16,6 +16,8 @@
 //  would carry every attached file's text; this keeps the typed words and leaves one marker that
 //  names neither the files nor their text. Ambiguity settles toward stripping. Confidence 0.85.
 //
+//  Review: Kev + claude-opus-5.5, 2026-11-22 — `omittingContextBlocks` finds the header's rule past a line break
+//  in the file's name, which used to carry the whole text through. Confidence 0.85 (seen red first).
 
 import Foundation
 
@@ -55,12 +57,11 @@ public struct FileAttachment: Identifiable, Sendable, Equatable, Hashable, Codab
         // and a file text ending in a bare CR fuses with the block's "\n" into one "\r\n"
         // grapheme, which `hasSuffix("\n---")` would miss — and the last block would ride along.
         let turn = text as NSString
-        let firstBreak = turn.range(of: "\n", options: .literal)
-        guard turn.hasPrefix(blockHeader), firstBreak.location != NSNotFound,
-              turn.range(
-                  of: "\n---\n", options: [.literal, .anchored],
-                  range: NSRange(location: firstBreak.location, length: turn.length - firstBreak.location)
-              ).location != NSNotFound
+        // The rule closes the header, but not always at the first line break: a file's name may hold
+        // one. A name is at most 255 bytes, so the rule is looked for within that reach.
+        let reach = NSRange(location: 0, length: min(turn.length, headerReach))
+        guard turn.hasPrefix(blockHeader),
+              turn.range(of: "\n---\n", options: .literal, range: reach).location != NSNotFound
         else { return text }
         var blocks = text
         var typed = ""
@@ -74,7 +75,14 @@ public struct FileAttachment: Identifiable, Sendable, Equatable, Hashable, Codab
         return typed.isEmpty ? marker : marker + "\n\n" + typed
     }
 
+    /// Whether a turn opens with an attached file's block (the composers put them nowhere else).
+    public static func carriesContextBlocks(_ text: String) -> Bool {
+        omittingContextBlocks(from: text) != text
+    }
+
     private static let blockHeader = "FILE: "
+    /// "FILE: ", the longest file name, and the rule under them, in UTF-16.
+    private static let headerReach = 6 + 255 + 5
     /// A block's close and the blank line after it: what follows is the next block or the typed words.
     private static let blockSeparator = "\n---\n\n"
 }
