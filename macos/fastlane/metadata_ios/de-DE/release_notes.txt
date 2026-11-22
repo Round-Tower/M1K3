@@ -12,6 +12,7 @@ NEU IN 1.5
 • Barrierefreiheit: Jedes Bedienelement hat einen Namen für VoiceOver und Sprachsteuerung, und Daten und Kleingedrucktes werden größer gelesen.
 • Ein sauberer Start: Ein neuer Chat öffnet sich ohne Vorschlagsfragen.
 • Behoben: Eine Antwort konnte bei bestimmten Emoji abbrechen.
+• Behoben: Text aus angehängten Dateien konnte in die Websuche gelangen oder in Apples Private Cloud, wenn du sie gewählt hattest. Auf iPhone und iPad schalteten die Inhaltskontrollen für Jüngere weder die Websuche aus noch passten sie Mikes Ton an. Beides ist behoben.
 
 NEU BEI M1K3? DAS MACHE ICH
 
@@ -23,4 +24,4 @@ NEU BEI M1K3? DAS MACHE ICH
 • Ein freundlicher 3D-Begleiter oder ein Pixelgesicht.
 • Brain at Home: Kopple iPhone oder iPad über dein eigenes WLAN mit deinem Mac und leih dir sein großes Hirn vom Sofa aus.
 
-Alles läuft auf deinem Gerät. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Hirn-Downloads und die Websuche; ein Schalter in den Einstellungen schaltet die Websuche aus.
+Standardmäßig läuft alles auf deinem Gerät. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Downloads von Hirnen und Stimme, die Websuche (per Schalter abschaltbar) und, nur wenn du es wählst, Private Cloud Compute.

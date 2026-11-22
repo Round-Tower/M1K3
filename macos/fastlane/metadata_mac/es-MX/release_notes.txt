@@ -10,6 +10,7 @@ NOVEDADES DE LA 1.5
 • Accesibilidad: cada control tiene un nombre para VoiceOver y Control por voz, y el contraste está medido.
 • Un comienzo limpio: un chat nuevo se abre sin preguntas sugeridas.
 • Corregido: una respuesta podía detenerse en ciertos emoji.
+• Corregido: el texto de un archivo adjunto podía llegar a la búsqueda web, o a la Private Cloud de Apple si la habías elegido. En iPhone y iPad, los Controles de contenido no apagaban la búsqueda web ni adaptaban el tono de Mike para los más jóvenes. Ambos están corregidos.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 
@@ -17,11 +18,11 @@ NOVEDADES DE LA 1.5
 • Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural.
 • Trae tu propio conocimiento: agrega notas, PDF y archivos de texto y respondo a partir de ellos, en tu Mac.
 • Recuerdo lo que te importa, en una memoria que puedes ver, buscar y borrar.
-• Memoria de llamadas: con tu consentimiento, transcribo y resumo llamadas, cifradas en tu Mac.
+• Memoria de llamadas: con tu consentimiento, transcribo y resumo llamadas en tu Mac. El registro guardado de la llamada está cifrado.
 • Brain at Home: empareja tu iPhone o iPad por tu propia red Wi-Fi y usa el cerebro de tu Mac desde el sofá.
 • Tus agentes de código pueden usar mi conocimiento y mi voz a través de un servidor MCP local y la herramienta de línea de comandos m1k3.
 • Tus otras apps pueden usar mi cerebro a través de la Local API, solo en esta Mac.
 • Siri y Atajos pueden hacerme preguntas y agregar cosas a lo que sé.
-• Private Cloud Compute, si lo quieres: desactivado por defecto, un mensaje a la vez, con tu consentimiento.
+• Private Cloud Compute, si lo quieres: desactivado por defecto. Si lo eliges, te pregunto la primera vez.
 
 Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads nombra cada descarga; la búsqueda web y la nube privada son interruptores en Settings > Privacy, y prestar la nube privada a otras apps es un interruptor propio en Settings > Server.

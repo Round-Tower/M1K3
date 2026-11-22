@@ -13,7 +13,7 @@ O QUE EU FAÇO
 • Brain at Home: conecte seu iPhone ou iPad via LAN e use o grande cérebro do seu Mac do sofá.
 
 PUNK POR DESIGN
-• Tudo roda localmente. Inferência, busca e voz são tudo no dispositivo.
+• Por padrão, tudo roda localmente. Inferência, busca e voz são tudo no dispositivo.
 • Uso a rede para duas coisas: baixar um modelo quando você pede e a busca web — ligada por padrão para respostas atualizadas; um botão nos Ajustes a desliga.
 • Sem analytics. Sem rastreamento. Sem coleta de dados. Você pode verificar — o código-fonte é publicado sob licença source-available (github.com/Round-Tower/M1K3).
 

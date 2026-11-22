@@ -1,10 +1,10 @@
-An AI with a face that lives on your iPhone and iPad. Talk to it, show it things, ask your PDFs — on the device, offline, with no account.
+An AI with a face that lives on your iPhone and iPad. Talk to it, show it things, ask your PDFs — on your device by default, even offline, with no account.
 
 My friends call me Mike. I run on your device, I remember what matters to you, and you can see everything I keep.
 
 WHAT I DO
 • Talk: on-device speech recognition and a natural neural voice.
-• See: tap the eye and point your camera, or attach a photo, and ask about it. I read it on the device and send it nowhere.
+• See (with Lil, or Mini on iOS 27): tap the eye and point your camera, or attach a photo, and ask about it. I read it on the device and send it nowhere.
 • Know your stuff: add PDFs and text files (.txt, .md, .csv, .log) and I answer from them.
 • Remember: I keep what matters to you, and you can see and search all of it.
 • Speak your language: the app in English, German, French, Spanish and Brazilian Portuguese, and I reply in the language you write in.
@@ -20,8 +20,11 @@ TWO BRAINS ON THE DEVICE
 
 PRIVATE BY DESIGN
 • No account, no sign-up, no analytics, no tracking. No data collected.
-• The brains, the search over your documents and the voice all run on the device.
-• The network is for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• By default the brains, the search over your documents and the voice all run on the device.
+• By default the network is for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• Optional, on iOS 27: Apple's Private Cloud Compute as a brain. Off until you pick it, and the first time I show you what will be sent and ask. It gets what you type, plus the earlier conversation if you tick that. Never your photos or files.
+• A chat with an attached file keeps the web off, so nothing from the file can end up in a search.
+• If you choose to report a problem, you see the exact text first and your own mail app sends it.
 • The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 
 Works offline — on a plane, up a mountain, anywhere the signal isn't.

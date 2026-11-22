@@ -1,8 +1,8 @@
-Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem iPhone und iPad lebt — kein Konto, keine Anmeldung, keine Telemetrie. Deine Chats, Notizen und Dokumente bleiben standardmäßig auf dem Gerät; die Websuche ist die eine Ausnahme, und sie ist ein Schalter in den Einstellungen.
+Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem iPhone und iPad lebt — kein Konto, keine Anmeldung, keine Telemetrie. Deine Chats, Notizen und Dokumente bleiben standardmäßig auf dem Gerät; Ausnahmen sind Downloads, die du auswählst, die Websuche (ein Schalter in den Einstellungen) und das optionale Private-Cloud-Compute-Hirn, das du selbst auswählst und einmal bestätigst.
 
 WAS ICH KANN
 • Chatte mit einem Gehirn auf dem Gerät — Mini startet sofort auf Geräten mit Apple Intelligence (sonst mit einem kleinen Download), und Lil (4B) läuft komplett offline auf iPhones und iPads mit 8 GB Arbeitsspeicher.
-• Zeig mir Dinge: Tippe auf das Auge und richte deine Kamera darauf, oder häng ein Foto an, und frag mich dazu. Ich lese es auf deinem Gerät und sende es nirgendwohin, und mit einem Fingertipp halte ich eine private Bildunterschrift zu einem angehängten Bild für später fest.
+• Zeig mir Dinge (mit Lil, oder Mini ab iOS 27): Tippe auf das Auge und richte deine Kamera darauf, oder häng ein Foto an, und frag mich dazu. Ich lese es auf deinem Gerät und sende es nirgendwohin, und mit einem Fingertipp halte ich eine private Bildunterschrift zu einem angehängten Bild für später fest.
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
 • Bring dein eigenes Wissen mit: Füge PDFs und Textdateien hinzu, und ich antworte auf ihrer Grundlage — auf dem Gerät.
 • Einen Text lesen: Häng eine .txt-, .md-, .csv- oder .log-Datei mit einer Frage an, und die Antwort bleibt bei der Datei.
@@ -12,8 +12,9 @@ WAS ICH KANN
 • Brain at Home: Kopple iPhone oder iPad über dein eigenes WLAN mit deinem Mac und nutze sein großes Gehirn vom Sofa aus.
 
 PRIVAT AUS PRINZIP
-• Die Gehirne, die Suche in deinen Dokumenten und die Stimme laufen alle auf dem Gerät.
-• Das Netzwerk nutze ich für zwei Dinge: ein Gehirn herunterladen, wenn du eins wählst, und die Websuche — standardmäßig an, damit Antworten aktuell sind, mit einem Schalter in den Einstellungen abschaltbar.
+• Standardmäßig laufen die Gehirne, die Suche in deinen Dokumenten und die Stimme auf dem Gerät.
+• Standardmäßig nutze ich das Netzwerk für zwei Dinge: Modelle herunterladen, die du wählst (Gehirne und meine Stimme), und die Websuche — standardmäßig an, damit Antworten aktuell sind, mit einem Schalter in den Einstellungen abschaltbar.
+• Optional, ab iOS 27: Private Cloud Compute von Apple als Hirn. Es bekommt, was du tippst, und das bisherige Gespräch nur, wenn du das ankreuzt. Nie deine Fotos oder Dateien.
 • Keine Analysen. Kein Tracking. Keine Datenerfassung. Der Quellcode ist unter einer Source-Available-Lizenz veröffentlicht — du kannst es prüfen (github.com/Round-Tower/M1K3).
 
 Funktioniert offline — im Flugzeug, auf dem Berg, überall ohne Netz.

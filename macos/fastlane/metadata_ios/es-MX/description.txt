@@ -1,8 +1,8 @@
-Mis amigos me llaman Mike. Soy un agente de IA local que vive en tu iPhone y tu iPad — sin cuenta, sin registro, sin telemetría. Tus chats, notas y documentos se quedan en el dispositivo de forma predeterminada; la búsqueda web es la única excepción, y es un interruptor en Configuración.
+Mis amigos me llaman Mike. Soy un agente de IA local que vive en tu iPhone y tu iPad — sin cuenta, sin registro, sin telemetría. Tus chats, notas y documentos se quedan en el dispositivo de forma predeterminada; las excepciones son las descargas que elijas, la búsqueda web (un interruptor en Configuración) y el cerebro opcional Private Cloud Compute, que eliges tú y autorizas una sola vez.
 
 LO QUE HAGO
 • Chatea con un cerebro en el dispositivo — Mini arranca al instante en dispositivos con Apple Intelligence (en los demás, una pequeña descarga), y Lil (4B) funciona totalmente sin conexión en iPhone y iPad con 8 GB de memoria.
-• Muéstrame cosas: toca el ojo y apunta tu cámara, o adjunta una foto, y pregúntame sobre ella. La leo en tu dispositivo y no la envío a ninguna parte, y un toque guarda en mi memoria una descripción privada de una imagen adjunta, para después.
+• Muéstrame cosas (con Lil, o Mini en iOS 27): toca el ojo y apunta tu cámara, o adjunta una foto, y pregúntame sobre ella. La leo en tu dispositivo y no la envío a ninguna parte, y un toque guarda en mi memoria una descripción privada de una imagen adjunta, para después.
 • Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural.
 • Trae tu propio conocimiento: agrega PDF y archivos de texto y responderé a partir de ellos, en el dispositivo.
 • Leer un texto: adjunta un archivo .txt, .md, .csv o .log con una pregunta, y la respuesta se ciñe al archivo.
@@ -12,8 +12,9 @@ LO QUE HAGO
 • Brain at Home: empareja tu iPhone o iPad con tu Mac por tu propia red Wi-Fi y usa su gran cerebro desde el sofá.
 
 PRIVADO POR DISEÑO
-• Los cerebros, la búsqueda en tus documentos y la voz funcionan en el dispositivo.
-• Uso la red para dos cosas: descargar un cerebro cuando eliges uno y la búsqueda web — activada por defecto para que las respuestas estén al día; un interruptor en Configuración la apaga.
+• Por defecto, los cerebros, la búsqueda en tus documentos y la voz funcionan en el dispositivo.
+• Por defecto uso la red para dos cosas: descargar los modelos que eliges (cerebros y mi voz) y la búsqueda web — activada por defecto para que las respuestas estén al día; un interruptor en Configuración la apaga.
+• Opcional, en iOS 27: Private Cloud Compute de Apple como cerebro. Recibe lo que escribes, y la conversación anterior solo si lo marcas. Nunca tus fotos ni tus archivos.
 • Sin analíticas. Sin rastreo. Sin recopilación de datos. El código fuente está publicado con una licencia source-available: puedes comprobarlo (github.com/Round-Tower/M1K3).
 
 Funciona sin conexión — en un avión, en la montaña, donde no llegue la cobertura.

@@ -1,8 +1,8 @@
-Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et ton iPad — pas de compte, pas d’inscription, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil par défaut ; la recherche web est la seule exception, et c’est un interrupteur dans les Réglages.
+Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et ton iPad — pas de compte, pas d’inscription, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil par défaut ; les exceptions sont les téléchargements que tu choisis, la recherche web (un interrupteur dans les Réglages) et le cerveau optionnel Private Cloud Compute, que tu choisis et autorises une seule fois.
 
 CE QUE JE FAIS
 • Discute avec un cerveau sur l’appareil — Mini démarre instantanément sur les appareils compatibles Apple Intelligence (ailleurs, un petit téléchargement), et Lil (4B) tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
-• Montre-moi des choses : touche l’œil et pointe ta caméra, ou joins une photo, et pose-moi des questions dessus. Je la lis sur ton appareil et je ne l’envoie nulle part, et un geste garde une légende privée d’une image jointe, pour plus tard.
+• Montre-moi des choses (avec Lil, ou Mini sous iOS 27) : touche l’œil et pointe ta caméra, ou joins une photo, et pose-moi des questions dessus. Je la lis sur ton appareil et je ne l’envoie nulle part, et un geste garde une légende privée d’une image jointe, pour plus tard.
 • Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
 • Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur l’appareil.
 • Lire un texte : joins un fichier .txt, .md, .csv ou .log avec une question, et la réponse reste collée au fichier.
@@ -12,8 +12,9 @@ CE QUE JE FAIS
 • Brain at Home : associe-moi à ton Mac via ton propre Wi-Fi et emprunte son grand cerveau depuis le canapé.
 
 PRIVÉ PAR CONCEPTION
-• Les cerveaux, la recherche dans tes documents et la voix tournent tous sur l’appareil.
-• J’utilise le réseau pour deux choses : télécharger un cerveau quand tu en choisis un, et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
+• Par défaut, les cerveaux, la recherche dans tes documents et la voix tournent sur l’appareil.
+• Par défaut, j’utilise le réseau pour deux choses : télécharger les modèles que tu choisis (cerveaux et ma voix), et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
+• Optionnel, sous iOS 27 : Private Cloud Compute d’Apple comme cerveau. Il reçoit ce que tu tapes, et la conversation précédente seulement si tu le coches. Jamais tes photos ni tes fichiers.
 • Pas d’analytique. Pas de pistage. Aucune donnée collectée. Le code source est publié sous une licence source-available : tu peux vérifier (github.com/Round-Tower/M1K3).
 
 Fonctionne hors ligne — en avion, en montagne, partout où le réseau ne passe pas.

@@ -10,6 +10,7 @@ NEW IN 1.5
 • Accessibility: every control has a name for VoiceOver and Voice Control, and the contrast is measured.
 • A clean start: a new chat opens without suggested questions.
 • Fixed: an answer could stop at certain emoji.
+• Fixed privacy bugs: text from an attached file could reach web search, or Apple's Private Cloud if you had picked it. On iPhone and iPad, Content Controls didn't turn off web search or adjust Mike's tone for younger users. Both are fixed.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
@@ -17,11 +18,11 @@ NEW TO M1K3? HERE'S WHAT I DO
 • Talk to me: on-device speech recognition and a natural neural voice.
 • Bring your own knowledge: drop in notes, PDFs and text files and I answer from them, on your Mac.
 • I remember what matters to you, in a memory you can see, search and delete.
-• Call memory: with your consent, I transcribe and summarise calls, encrypted on your Mac.
+• Call memory: with your consent, I transcribe and summarise calls on your Mac. The saved call record is encrypted.
 • Brain at Home: pair your iPhone or iPad over your own Wi-Fi and use your Mac's brain from the sofa.
 • Your coding agents can use my knowledge and voice through a local MCP server and the m1k3 command-line tool.
 • Your other apps can use my brain through the Local API, on this Mac only.
 • Siri and Shortcuts can ask me things and add to what I know.
-• Private Cloud Compute, if you want it: off by default, one message at a time, with your consent.
+• Private Cloud Compute, if you want it: off by default. Pick it as a brain and I ask the first time.
 
 Everything else runs on your Mac. No account, no telemetry. The network is used for model downloads, web search and the optional private cloud. Settings > Brains & downloads names every download; web search and the private cloud are switches in Settings > Privacy, and lending the private cloud to other apps is its own switch in Settings > Server.

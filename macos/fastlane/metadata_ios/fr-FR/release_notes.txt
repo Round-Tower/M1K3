@@ -12,6 +12,7 @@ NOUVEAU DANS LA 1.5
 • Accessibilité : chaque commande a un nom pour VoiceOver et Contrôle vocal, et les dates et les petits caractères s’affichent plus grands.
 • Un départ propre : une nouvelle conversation s’ouvre sans questions suggérées.
 • Corrigé : une réponse pouvait s’arrêter à certains emoji.
+• Corrigé : le texte d’un fichier joint pouvait atteindre la recherche web, ou le Private Cloud d’Apple si tu l’avais choisi. Sur iPhone et iPad, les Contrôles du contenu ne coupaient pas la recherche web et n’adaptaient pas le ton de Mike pour les plus jeunes. Les deux sont corrigés.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
@@ -23,4 +24,4 @@ NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 • Un compagnon 3D sympa ou un visage en pixels.
 • Brain at Home : associe-moi à ton Mac via ton propre Wi-Fi et emprunte son grand cerveau depuis le canapé.
 
-Tout tourne sur ton appareil. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de cerveaux et à la recherche web ; un interrupteur dans les Réglages coupe la recherche web.
+Par défaut, tout tourne sur ton appareil. Pas de compte, pas de télémétrie. Le réseau sert à télécharger cerveaux et voix, à la recherche web (un interrupteur la coupe) et, seulement si tu le choisis, à Private Cloud Compute.

@@ -12,6 +12,7 @@ NEW IN 1.5
 • Accessibility: every control has a name for VoiceOver and Voice Control, and dates and small print read larger.
 • A clean start: a new chat opens without suggested questions.
 • Fixed: an answer could stop at certain emoji.
+• Fixed privacy bugs: text from an attached file could reach web search, or Apple's Private Cloud if you had picked it. On iPhone and iPad, Content Controls didn't turn off web search or adjust Mike's tone for younger users. Both are fixed.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
@@ -23,4 +24,4 @@ NEW TO M1K3? HERE'S WHAT I DO
 • A friendly 3D companion or a pixel face.
 • Brain at Home: pair with your Mac over your own Wi-Fi and borrow its big brain from the sofa.
 
-Everything runs on your device. No account, no telemetry. The network is used for brain downloads and web search — one switch in Settings turns web search off.
+By default everything runs on your device. No account, no telemetry. The network is used for brain and voice downloads, web search (one switch in Settings turns it off) and, only if you pick it, Private Cloud Compute.

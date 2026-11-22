@@ -10,6 +10,7 @@ NOUVEAU DANS LA 1.5
 • Accessibilité : chaque commande a un nom pour VoiceOver et Contrôle vocal, et le contraste est mesuré.
 • Un départ propre : une nouvelle conversation s'ouvre sans questions suggérées.
 • Corrigé : une réponse pouvait s'arrêter à certains emoji.
+• Corrigé : le texte d’un fichier joint pouvait atteindre la recherche web, ou le Private Cloud d’Apple si tu l’avais choisi. Sur iPhone et iPad, les Contrôles du contenu ne coupaient pas la recherche web et n’adaptaient pas le ton de Mike pour les plus jeunes. Les deux sont corrigés.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
@@ -17,11 +18,11 @@ NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 • Parle-moi : reconnaissance vocale sur l'appareil et une voix neuronale naturelle.
 • Apporte tes connaissances : dépose des notes, des PDF et des fichiers texte, et je réponds à partir d'eux, sur ton Mac.
 • Je retiens ce qui compte pour toi, dans une mémoire que tu peux voir, chercher et supprimer.
-• Mémoire des appels : avec ton accord, je transcris et résume tes appels, chiffrés sur ton Mac.
+• Mémoire des appels : avec ton accord, je transcris et résume tes appels. L’appel enregistré est chiffré.
 • Brain at Home : associe ton iPhone ou ton iPad via ton propre Wi-Fi et utilise le cerveau de ton Mac depuis le canapé.
 • Tes agents de code peuvent utiliser mes connaissances et ma voix via un serveur MCP local et l'outil en ligne de commande m1k3.
 • Tes autres apps peuvent utiliser mon cerveau via la Local API, sur ce Mac uniquement.
 • Siri et Raccourcis peuvent me poser des questions et enrichir ce que je sais.
-• Private Cloud Compute, si tu le veux : désactivé par défaut, un message à la fois, avec ton accord.
+• Private Cloud Compute, si tu le veux : désactivé par défaut. Si tu le choisis, je demande la première fois.
 
 Tout le reste tourne sur ton Mac. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de modèles, à la recherche web et au cloud privé optionnel. Settings > Brains & downloads nomme chaque téléchargement ; la recherche web et le cloud privé sont des interrupteurs dans Settings > Privacy, et prêter le cloud privé à d'autres apps est un interrupteur à part dans Settings > Server.
