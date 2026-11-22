@@ -12,6 +12,7 @@ NOVIDADES DA 1.5
 • Acessibilidade: todo controle tem um nome para o VoiceOver e o Controle por Voz, e datas e letras miúdas aparecem maiores.
 • Um começo limpo: uma conversa nova abre sem perguntas sugeridas.
 • Corrigido: uma resposta podia parar em certos emojis.
+• Corrigido: o texto de um arquivo anexado podia chegar à busca na web, ou à Private Cloud da Apple se você a tivesse escolhido. No iPhone e no iPad, os Controles de Conteúdo não desligavam a busca na web nem adaptavam o tom do Mike para os mais jovens. Os dois foram corrigidos.
 
 NOVO NO M1K3? O QUE EU FAÇO
 
@@ -23,4 +24,4 @@ NOVO NO M1K3? O QUE EU FAÇO
 • Um companheiro 3D simpático ou um rosto de pixels.
 • Brain at Home: pareie com seu Mac pela sua própria rede Wi-Fi e use o cérebro grande dele do sofá.
 
-Tudo roda no seu aparelho. Sem conta, sem telemetria. A rede é usada para downloads de cérebros e busca na web; um interruptor nos Ajustes desliga a busca na web.
+Por padrão, tudo roda no seu aparelho. Sem conta, sem telemetria. A rede é usada para baixar cérebros e voz, para a busca na web (um interruptor desliga) e, só se você escolher, para o Private Cloud Compute.

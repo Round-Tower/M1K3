@@ -1,4 +1,4 @@
-An AI with a face that lives on your Mac. Talk to it, show it things, ask your PDFs — on-device, offline-ready, with no account.
+An AI with a face that lives on your Mac. Talk to it, show it things, ask your PDFs — on-device by default, offline-ready, with no account.
 
 My friends call me Mike. I run on your Mac, I remember what matters to you, and you can see everything I keep.
 
@@ -25,9 +25,11 @@ FOR DEVELOPERS
 
 PRIVATE BY DESIGN
 • No account, no analytics, no tracking. No data collected.
-• Inference, search over your documents and voice all run on the Mac.
-• The network is for downloading models when you ask (brains, speech and voice), and for web search — on by default so answers can be current, one switch in Settings to turn it off.
-• Optional: Apple's Private Cloud Compute as a brain, which you pick and consent to once. You can lend it to your other apps too: a separate switch, off by default, and Settings counts every call. Only what the app sends goes out.
+• By default inference, search over your documents and voice all run on the Mac.
+• By default the network is for downloading models when you ask (brains, speech and voice), and for web search — on by default so answers can be current, one switch in Settings to turn it off.
+• Optional: Apple's Private Cloud Compute as a brain, which you pick and consent to once. It gets what you type, plus the earlier conversation if you tick that, never your photos or files. You can lend it to your other apps too: a separate switch, off by default, and Settings counts every call. Only what the app sends goes out.
+• A chat with an attached file keeps the web off, so nothing from the file can end up in a search.
+• If you choose to report a problem, you see the exact text first and your own mail app sends it.
 • The source is published under a source-available licence, so you can check: github.com/Round-Tower/M1K3
 
 Punk intelligence: yours, private, on your terms.

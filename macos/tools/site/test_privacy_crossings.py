@@ -17,6 +17,8 @@ didn't close cleanly, says "no automatic crash reporting", and the one-thing-we-
 Review: Kev + claude-opus-5.5, 2026-11-22 — #886 (description realign): the store descriptions' intro download
 qualifiers moved into PRIVATE BY DESIGN with the other disclosures; the pin now asks for "web search — on by default"
 and no "nothing leaves" in either. This test caught the Mac draft dropping speech downloads. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-11-22 (2) — every iPhone listing and note names Private Cloud while the
+entitlement ships, the English folds say "by default", and the page owns the file / web fix. Seen red. Confidence 0.8.
 """
 import json
 import re
@@ -92,6 +94,31 @@ def test_store_descriptions_name_brains_voice_and_speech_downloads():
     for desc in (MAC_DESC, IOS_DESC):
         assert "web search — on by default" in desc
         assert "nothing leaves" not in desc.lower()
+
+
+def test_every_iphone_listing_names_private_cloud_while_the_app_ships_it():
+    """The iPhone app offered PCC from 1.1.0 and no listing said so, in any locale (found 2026-11-22)."""
+    ent = (ROOT / "macos" / "M1K3iOSApp" / "M1K3iOS.entitlements").read_text()
+    assert "<key>com.apple.developer.private-cloud-compute</key>" in ent
+    listings = sorted((ROOT / "macos" / "fastlane" / "metadata_ios").glob("*/description.txt"))
+    assert len(listings) >= 12
+    for path in listings:
+        assert "Private Cloud Compute" in path.read_text() or "Private-Cloud-Compute" in path.read_text(), path
+        notes = (path.parent / "release_notes.txt").read_text()
+        assert "Private Cloud Compute" in notes, path.parent / "release_notes.txt"
+
+
+def test_the_english_listings_qualify_on_device_and_keep_files_out_of_both_crossings():
+    for desc in (MAC_DESC, IOS_DESC):
+        assert "by default" in desc.split("\n")[0]
+        assert "never your photos or files" in desc.lower()
+        assert "keeps the web off" in desc
+
+
+def test_the_privacy_page_owns_the_2026_11_22_fix():
+    page = _visible(PRIVACY)
+    assert "text from an attached file could reach web search" in page
+    assert "From 1.5, a chat with an attached file keeps the web off" in page
 
 
 def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason():

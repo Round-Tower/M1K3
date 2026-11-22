@@ -1,6 +1,15 @@
 Thanks for testing M1K3 1.5.0 on iPhone and iPad.
 
-New in this build, please try:
+First, this build's fixes, privacy above all. Please check:
+• Files stay here: pick Private Cloud Compute, attach a .json or code file and ask "convert this to YAML". No consent sheet, and Mini or Lil answers
+• Sharing a chat: then send "thanks". If the sheet asks, turn on "Also send this conversation" and open what it sends: no file text, and no answer made after the file. Send a second message too: it must show and get an answer
+• No invented searches: pick Lil and ask "search the web for today's news" in that chat. Mike should say the web is off in a chat with a file. In a new chat the same words should search, with sources
+• No file memories: that file should not appear in Memories
+• Content Controls: with an under-16 age range shared, Mike should have no web search and a younger-friendly tone
+• Code is not read aloud: ask for some code with Speak answers on. Mike says "I've put that on screen."
+• Launch: tell us if opening M1K3 stalls for a second or two
+
+Also new in 1.5, please try:
 • Your language: in Settings > General > Language & Region, put German, French, Spanish or Portuguese (Brazil) first, then open M1K3. The app should be in that language. Tell us about any English left on screen (a few privacy notes stay in English on purpose until a native speaker has read them) and any wording that reads oddly
 • Write to Mike in another language: he should reply in it
 • Voice mode in German or Spanish: ask Mike to answer in that language. The answer should be read by a voice that speaks it. Voice still listens in English

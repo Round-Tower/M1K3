@@ -1,6 +1,12 @@
 Thanks for testing M1K3 1.5.0 on the Mac.
 
-New in this build, please try:
+First, this build's fixes, privacy above all. Please check:
+• Files stay off the web: attach a .json or code file, ask "convert this to YAML", then "search the web for today's news". Mike should say the web is off in a chat with a file. In a new chat the same words should search, with sources
+• Sharing a chat: pick Private Cloud Compute, send "thanks", turn on "Also send this conversation" and look at what it sends: no file text, and no answer made after the file
+• No file memories: that file should not appear in Memories
+• Code is not read aloud: ask for some code with Speak answers on. Mike says "I've put that on screen."
+
+Also new in 1.5, please try:
 • Your language: in System Settings > General > Language & Region, put German, French, Spanish or Portuguese (Brazil) first, then relaunch M1K3. The app should be in that language. Tell us about any English left on screen (a few privacy notes stay in English on purpose until a native speaker has read them) and any wording that reads oddly
 • Write to Mike in another language: he should reply in it, on Mini, Lil and Big
 • Voice mode in German or Spanish: ask Mike to answer in that language. The answer should be read by a voice that speaks it, not an English voice reading German. Voice still listens in English

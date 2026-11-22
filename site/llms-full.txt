@@ -566,7 +566,7 @@ No. The Local API is part of M1K3 on the Mac.
 
 ## Is M1K3 really private?
 
-Updated 2026-11-06 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-11-22 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
 Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (Apple's on-device speech recognition, or WhisperKit if you download it), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, and saved call records are encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — Apple's Private Cloud Compute, which receives your typed messages while you've picked it as your brain, or another app's own prompt if you separately switch on lending it. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.
 
@@ -598,7 +598,7 @@ the complete list of crossings
 
 - Model downloads, once each When you ask for them: the Lil or Big brain, semantic memory, sharper speech recognition (WhisperKit) and the M1K3 Voice, from Hugging Face — the voice also fetches one small voice-styles file from GitHub. On a Mac without Apple Intelligence the first run downloads a small Mini brain (about 630 MB) instead; with Apple Intelligence, the default Mini is Apple's built-in model and needs nothing.
 
-- Web search & page reading (on by default) Agent tools behind one privacy toggle, so answers can be current. Web off means web off.
+- Web search & page reading (on by default) Agent tools behind one privacy toggle, so answers can be current. Web off means web off. From 1.5, a chat with an attached file keeps the web off.
 
 - Updates Via the Mac App Store, TestFlight for the betas, or a new DMG from GitHub Releases. The app has no self-updater phoning home.
 
@@ -614,7 +614,7 @@ A privacy page earns its keep in the exceptions, so here they are, plainly:
 
 - Model downloads (one-time, when you ask). M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (huggingface.co); the voice also fetches one voice-styles file from github.com. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment. Which models, from which repositories, under which licences, and how each file is checked before it loads: Where the brains come from.
 
-- The web tools (on by default, one switch to turn them off). The local agent has web-search and page-reading tools so answers can be current. One toggle in Settings ▸ Privacy turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.
+- The web tools (on by default, one switch to turn them off). The local agent has web-search and page-reading tools so answers can be current. One toggle in Settings ▸ Privacy turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do. From 1.5, a chat with an attached file keeps the web off, whatever the toggle says, so nothing from the file can end up in a search.
 
 - Updates (via the channel you chose). There is no Sparkle-style self-updater inside the app. Mac App Store builds — and TestFlight builds, for the betas — update through Apple's infrastructure; the DMG updates when you download a new one from GitHub Releases (https://github.com/Round-Tower/M1K3/releases); a source build updates when you pull and rebuild.
 
@@ -629,6 +629,10 @@ This is Apple's claim, not ours — read it yourself:
 “PCC uses that data only to perform the operations requested by the user” and “no user data is retained in any form after the response is returned.” — Apple, Private Cloud Compute (https://security.apple.com/blog/private-cloud-compute/)
 
 M1K3 itself has no servers and never sees or stores your conversations, whether they stay on your Mac or make the trip to PCC. With the switch off — the default — none of this applies.
+
+### What did we get wrong?
+
+Found on 2026-11-22 and fixed in version 1.5: text from an attached file could reach web search, or Apple's Private Cloud if you had picked it. On iPhone and iPad, Content Controls didn't turn off web search or adjust Mike's tone for younger users. Versions before 1.5 still have these bugs: update when 1.5 reaches you. Until then, turn web search off in Settings, don't attach files while Private Cloud Compute is picked, and don't rely on Content Controls on iPhone or iPad.
 
 ### How is data stored on the Mac?
 

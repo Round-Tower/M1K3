@@ -12,6 +12,7 @@ NOVEDADES DE LA 1.5
 • Accesibilidad: cada control tiene un nombre para VoiceOver y Control por voz, y las fechas y la letra pequeña se leen más grandes.
 • Un comienzo limpio: un chat nuevo se abre sin preguntas sugeridas.
 • Corregido: una respuesta podía detenerse en ciertos emoji.
+• Corregido: el texto de un archivo adjunto podía llegar a la búsqueda web, o a la Private Cloud de Apple si la habías elegido. En iPhone y iPad, los Controles de contenido no apagaban la búsqueda web ni adaptaban el tono de Mike para los más jóvenes. Ambos están corregidos.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 
@@ -23,4 +24,4 @@ NOVEDADES DE LA 1.5
 • Un compañero 3D simpático o una cara de píxeles.
 • Brain at Home: empareja tu iPhone o iPad con tu Mac por tu propia wifi y toma prestado su gran cerebro desde el sofá.
 
-Todo se ejecuta en tu dispositivo. Sin cuenta, sin telemetría. La red se usa para descargar cerebros y para la búsqueda web; un interruptor en Ajustes apaga la búsqueda web.
+Por defecto, todo se ejecuta en tu dispositivo. Sin cuenta, sin telemetría. La red se usa para descargar cerebros y voz, para la búsqueda web (se apaga con un interruptor en Ajustes) y, solo si lo eliges, para Private Cloud Compute.

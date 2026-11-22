@@ -10,6 +10,7 @@ NEU IN 1.5
 • Barrierefreiheit: Jedes Bedienelement hat einen Namen für VoiceOver und Sprachsteuerung, und der Kontrast ist gemessen.
 • Ein sauberer Start: Ein neuer Chat öffnet sich ohne Vorschlagsfragen.
 • Behoben: Eine Antwort konnte bei bestimmten Emoji abbrechen.
+• Behoben: Text aus angehängten Dateien konnte in die Websuche gelangen oder in Apples Private Cloud, wenn du sie gewählt hattest. Auf iPhone und iPad schalteten die Inhaltskontrollen für Jüngere weder die Websuche aus noch passten sie Mikes Ton an. Beides ist behoben.
 
 NEU BEI M1K3? DAS MACHE ICH
 
@@ -17,11 +18,11 @@ NEU BEI M1K3? DAS MACHE ICH
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
 • Bring dein eigenes Wissen mit: Zieh Notizen, PDFs und Textdateien hinein, und ich antworte auf ihrer Grundlage, auf deinem Mac.
 • Ich merke mir, was dir wichtig ist, in einem Gedächtnis, das du sehen, durchsuchen und löschen kannst.
-• Anruf-Gedächtnis: Mit deiner Zustimmung transkribiere ich Anrufe und fasse sie zusammen, verschlüsselt auf deinem Mac.
+• Anruf-Gedächtnis: Mit deiner Zustimmung transkribiere ich Anrufe und fasse sie zusammen. Der gespeicherte Anruf ist verschlüsselt.
 • Brain at Home: Kopple dein iPhone oder iPad über dein eigenes WLAN und nutze das Hirn deines Macs vom Sofa aus.
 • Deine Coding-Agenten können mein Wissen und meine Stimme nutzen, über einen lokalen MCP-Server und das Kommandozeilen-Tool m1k3.
 • Deine anderen Apps können mein Hirn über die Local API nutzen, nur auf diesem Mac.
 • Siri und Kurzbefehle können mir Fragen stellen und mein Wissen ergänzen.
-• Private Cloud Compute, wenn du willst: standardmäßig aus, jede Nachricht einzeln, mit deiner Zustimmung.
+• Private Cloud Compute, wenn du willst: standardmäßig aus. Wählst du es, frage ich beim ersten Mal.
 
 Alles andere läuft auf deinem Mac. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Modell-Downloads, die Websuche und die optionale Private Cloud. Settings > Brains & downloads nennt jeden Download; Websuche und Private Cloud sind Schalter unter Settings > Privacy, und die Private Cloud an andere Apps zu verleihen ist ein eigener Schalter unter Settings > Server.

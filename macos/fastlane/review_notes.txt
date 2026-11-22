@@ -1,10 +1,8 @@
-Thank you for reviewing M1K3.
-
 NO ACCOUNT REQUIRED — just launch and use it.
 
 FIRST LAUNCH:
   Mac: on most Macs, uses Apple Intelligence (instant, no download).
-  iPhone/iPad: the same. Apple Intelligence where available (instant, no download); Lil (~3 GB, 8 GB devices) downloads only when chosen, on first use. After that, fully offline.
+  iPhone/iPad: the same. Apple Intelligence where available (instant, no download); Lil (~3 GB, 8 GB devices) downloads only when chosen. Then it works offline.
   Without Apple Intelligence on any platform, downloads a local model (~630 MB–3 GB).
   Images are read on-device: the paperclip takes an image file or photo.
 
@@ -12,7 +10,7 @@ CAMERA (iPhone/iPad): scans the Brain at Home pairing code, and "Look" (the eye 
 
 SEASONAL LOOKS (iPhone/iPad in-app events; opt-out: Settings > Face > Seasonal looks; Mac: Settings > M1K3 > Companion > Seasonal looks). Offline AI Flight Club (m1k3://event/offline-ai-flight-club), Nov 3 to Dec 1 on the device's calendar AND only while the device has no network: the fox's lattice turns runway blue at rest and the chat greeting reads "Offline? I'm still right here, on your device." To see it: turn on Airplane Mode, leave Wi-Fi off, relaunch M1K3. Offline answers need an on-device brain; without one the look and greeting still show. The app only asks the system whether a network path exists; nothing is sent.
 
-OUTBOUND (network.client): model download + web search (ON by default so answers can be current; one switch turns it off: Settings > Privacy > Web search (DuckDuckGo)). Optional, OFF by default: Private Cloud Compute (Settings > Privacy), also lendable to other apps on this Mac via two OFF switches in Settings > Server; only the caller's text is sent. No analytics, tracking, or telemetry.
+OUTBOUND (network.client): model download + web search (ON by default so answers can be current; one switch turns it off: Settings > Privacy > Web search (DuckDuckGo)). Optional, OFF by default: Private Cloud Compute as a brain (Mac: Settings > Privacy; iOS 27: Settings > Brain; typed text, history only if ticked, never files/photos), lendable on Mac via two OFF switches in Settings > Server (caller's text only). Chats with a file get no web. No analytics, tracking, or telemetry.
 
 INBOUND (network.server): three features, all OFF by default, in Settings (Server, Brain at Home):
   1. MCP server — loopback only (127.0.0.1:4242), needs an access token, lets AI coding agents call M1K3's tools. Verify: Settings > Server > Access token > Copy; then run /Applications/M1K3.app/Contents/Helpers/m1k3 login (paste it), then .../m1k3 status
@@ -20,7 +18,7 @@ INBOUND (network.server): three features, all OFF by default, in Settings (Serve
   3. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
 The helper (Contents/Helpers/m1k3) is a client only; no server entitlement.
 
-CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone. Declining = full capability. Only a coarse band enum is persisted.
+CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone on-device. Declining = full capability. Only a coarse band enum is persisted.
   Mac: Settings > Privacy tab > Content Controls > "Set up"
   iPhone/iPad: Settings > Content Controls > "Set up"
 
@@ -38,4 +36,3 @@ HOW TO TEST:
   4. Memories > "forget" an item
   5. Content Controls (paths above)
 
-Happy to clarify anything — thank you.
