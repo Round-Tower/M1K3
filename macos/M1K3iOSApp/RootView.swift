@@ -24,6 +24,9 @@
 //  pops to the chat root. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the chat screen carries SnagNoteHost, outside ChatScreen's own
 //  modifier chain. Confidence unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — share to M1K3 (#893 C): onOpenURL moves to the root Group, so a file
+//  shared at cold launch or during onboarding is caught and held (`sharedFiles`) until the chat screen stages it;
+//  `SharedFileIntake.classify` tells a file from an `m1k3://` link. Confidence 0.8 (verify on the phone).
 //
 
 import M1K3Inference
@@ -35,6 +38,9 @@ struct RootView: View {
     @State private var onboarded: Bool
     /// Only the screengrab harness writes this (ChatScreen, once the brain is ready).
     @State private var screengrabPath: [ScreengrabRoute] = []
+    /// Files shared to M1K3 (AirDrop, Files, Share → Open in), held until the chat screen stages them. Lives here,
+    /// above the onboarding gate, so a file shared on first run or at cold launch waits instead of being lost.
+    @State private var sharedFiles: [URL] = []
 
     init(startOnboarded: Bool) {
         _onboarded = State(initialValue: startOnboarded)
@@ -44,14 +50,9 @@ struct RootView: View {
         Group {
             if onboarded {
                 NavigationStack(path: $screengrabPath) {
-                    ChatScreen(screengrabPath: $screengrabPath).modifier(SnagNoteHost())
+                    ChatScreen(screengrabPath: $screengrabPath, sharedFiles: $sharedFiles).modifier(SnagNoteHost())
                 }
                 .preferredColorScheme(.dark)
-                .onOpenURL { url in
-                    // Every `m1k3://` link (event or not) is the chat screen, the stack's root.
-                    guard DeepLink(url: url) != nil else { return }
-                    screengrabPath = []
-                }
             } else {
                 OnboardingScreen {
                     // Sole writer of the first-run gate: selectBrain can no-op
@@ -62,6 +63,19 @@ struct RootView: View {
                     withAnimation { onboarded = true }
                 }
                 .transition(.opacity)
+            }
+        }
+        .onOpenURL { url in
+            switch SharedFileIntake.classify(url) {
+            case .deepLink:
+                // Every `m1k3://` link (event or not) is the chat screen, the stack's root.
+                screengrabPath = []
+            case let .file(file):
+                // Staged (never sent) by the chat screen, after onboarding if it isn't done yet.
+                sharedFiles.append(file)
+                screengrabPath = []
+            case .ignore:
+                break
             }
         }
         #if os(iOS)

@@ -149,6 +149,10 @@
 //  draft alone, never the file-prefixed text. Only `sendToPrivateCloud` clears it, after its guards, and hands it
 //  back on a refusal, as on the Mac (the first cut cleared first: on Kev's phone every consented send vanished).
 //  Device try owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — share to M1K3 (#893 C): `sharedFiles` from RootView land through
+//  `receiveSharedFiles()` → `attach(urls)`, the ＋ picker's path, in a new chat when this one has messages, waiting
+//  out a turn in flight; never sent; iOS's Inbox copy is deleted once staged. Confidence 0.8 (verify on the phone).
+//
 
 import M1K3Avatar
 import M1K3Chat
@@ -172,6 +176,8 @@ struct ChatScreen: View {
     @State private var voiceLaunched = false
     /// The screengrab harness's push (RootView's stack path); untouched otherwise.
     @Binding var screengrabPath: [ScreengrabRoute]
+    /// Files shared to M1K3 from another app (RootView's `onOpenURL`), staged here and never sent (#893 C).
+    @Binding var sharedFiles: [URL]
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
@@ -346,6 +352,9 @@ struct ChatScreen: View {
             .onChange(of: core.reviewLedger.completedTurns) { _, _ in
                 askForRatingIfEarned()
             }
+            // A shared file waits out a turn in flight, then lands in a new chat's composer.
+            .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
+            .onChange(of: core.chat.isResponding) { _, _ in receiveSharedFiles() }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
                 if Self.voiceAtLaunch {
@@ -1277,6 +1286,29 @@ struct ChatScreen: View {
             }
         }
         return failures
+    }
+
+    /// A file shared from another app (AirDrop, Files, Share → Open in): staged through the ＋ picker's own
+    /// `attach`, so it takes the same route and the same on-device rules (ADR 0010), in a new chat when this one
+    /// has messages. Never sent: the person reads what landed and sends it themselves (#893 C).
+    private func receiveSharedFiles() {
+        guard !sharedFiles.isEmpty else { return }
+        switch SharedFileIntake.step(isResponding: core.chat.isResponding, hasMessages: !core.chat.messages.isEmpty) {
+        case .wait:
+            return
+        case .newChatThenStage:
+            core.chat.startNewConversation()
+            core.turnActivity.turnFinished(.newChat)
+        case .stageHere:
+            break
+        }
+        let urls = sharedFiles
+        sharedFiles = []
+        attach(urls)
+        // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images).
+        for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     private static let attachmentStore = AppCore.attachmentStore
