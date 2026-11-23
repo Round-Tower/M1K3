@@ -159,7 +159,8 @@
 //  AirDrop's siblings are still on their way; RootView sweeps leftovers on background), and a shared file also
 //  waits out a consented Private Cloud send still launching. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (1.6 follow-up: B meets C) — a shared .html/.md also opens beside the
-//  chat (read before the Inbox copy goes; 2 MB cap). Confidence 0.75 (device try owed).
+//  chat (read before the Inbox copy goes; 2 MB cap, asked by size before the read; UTF-8 else Latin-1). Confidence
+//  0.75 (device try owed).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
 //  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
 //  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
@@ -1381,9 +1382,12 @@ struct ChatScreen: View {
         guard CodeArtifact.Language(fileExtension: url.pathExtension)?.isRenderable == true else { return nil }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url), data.count <= sharedPageByteCap,
-              let text = String(data: data, encoding: .utf8)
+        // The size is asked first: a huge page is never read on the main actor just to be refused.
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= sharedPageByteCap,
+              let data = try? Data(contentsOf: url)
         else { return nil }
+        // Older pages are often Latin-1 / Windows-1252; Latin-1 decodes any bytes, so such a page still opens.
+        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else { return nil }
         return (url.lastPathComponent, text)
     }
 
