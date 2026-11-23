@@ -155,8 +155,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — a shared file also waits behind the Private Cloud
 //  consent sheet (it would have joined the send the sheet confirms), and staging sweeps Inbox leftovers a killed app
 //  left. Confidence 0.8.
-//  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — the Inbox sweep spares fresh copies (a batch
-//  AirDrop), and a shared file also waits out a consented Private Cloud send still launching. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — staging deletes only its own Inbox copies (a batch
+//  AirDrop's siblings are still on their way; RootView sweeps leftovers on background), and a shared file also
+//  waits out a consented Private Cloud send still launching. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
 //  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
 //  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
@@ -1363,16 +1364,8 @@ struct ChatScreen: View {
         sharedFiles = []
         attach(urls)
         // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
-        // it goes, and so does anything a killed app left there that isn't still waiting to be staged.
-        let inbox = URL.documentsDirectory.appending(path: "Inbox")
-        let listed = (try? FileManager.default.contentsOfDirectory(
-            at: inbox, includingPropertiesForKeys: [.contentModificationDateKey]
-        )) ?? []
-        let aged = listed.map { url in
-            (url: url, modified: try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
-        }
-        let copies = urls.filter { SharedFileIntake.isSystemInboxCopy($0, documents: URL.documentsDirectory) }
-        for url in copies + SharedFileIntake.inboxLeftovers(aged, waiting: sharedFiles, now: .now) {
+        // it goes. Only these: a batch's siblings may still be on their way (RootView sweeps leftovers on background).
+        for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
             try? FileManager.default.removeItem(at: url)
         }
     }

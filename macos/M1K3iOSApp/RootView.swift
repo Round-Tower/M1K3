@@ -27,6 +27,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — share to M1K3 (#893 C): onOpenURL moves to the root Group, so a file
 //  shared at cold launch or during onboarding is caught and held (`sharedFiles`) until the chat screen stages it;
 //  `SharedFileIntake.classify` tells a file from an `m1k3://` link. Confidence 0.8 (verify on the phone).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 third pass) — Inbox leftovers are swept here when the app goes to
+//  the background, sparing `sharedFiles`; never while staging (a batch AirDrop's siblings). Confidence 0.8.
 //
 
 import M1K3Inference
@@ -41,6 +43,7 @@ struct RootView: View {
     /// Files shared to M1K3 (AirDrop, Files, Share → Open in), held until the chat screen stages them. Lives here,
     /// above the onboarding gate, so a file shared on first run or at cold launch waits instead of being lost.
     @State private var sharedFiles: [URL] = []
+    @Environment(\.scenePhase) private var scenePhase
 
     init(startOnboarded: Bool) {
         _onboarded = State(initialValue: startOnboarded)
@@ -78,6 +81,9 @@ struct RootView: View {
                 break
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { sweepInboxLeftovers() }
+        }
         #if os(iOS)
         // An auto-lock suspends a foreground download (the retry restarts the file from zero). When iOS carries it
         // (a continued-processing task) the screen may sleep: the system keeps it going and shows the progress.
@@ -85,5 +91,17 @@ struct RootView: View {
             UIApplication.shared.isIdleTimerDisabled = downloading
         }
         #endif
+    }
+}
+
+extension RootView {
+    /// Inbox copies no one will stage (the app was killed mid-onboarding, say), swept when the app leaves the screen:
+    /// by then every URL of a batch share has arrived, and anything still waiting to be staged is kept (#895).
+    private func sweepInboxLeftovers() {
+        let inbox = URL.documentsDirectory.appending(path: "Inbox")
+        let listed = (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? []
+        for url in SharedFileIntake.inboxLeftovers(listed, waiting: sharedFiles) {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 }
