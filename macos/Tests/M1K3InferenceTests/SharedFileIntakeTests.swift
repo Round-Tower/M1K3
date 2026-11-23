@@ -156,6 +156,17 @@ struct SharedFileIntakeScanTests {
         #expect(code.contains("phase == .background"), "by then every URL of a batch has arrived")
     }
 
+    @Test("a shared page also opens beside the chat, read from the file before iOS's copy is deleted")
+    func sharedPageOpensBeforeTheCopyGoes() throws {
+        let code = try Self.flat("M1K3iOSApp/ChatScreen.swift")
+        let receive = try Self.body(of: "private func receiveSharedFiles()", in: code)
+        let open = try #require(receive.range(of: "core.openSharedPage("))
+        let remove = try #require(receive.range(of: "removeItem"))
+        #expect(open.lowerBound < remove.lowerBound, "the page is read from the file, so it must open before the delete")
+        let core = try Self.flat("M1K3iOSApp/AppCore+Artifact.swift")
+        #expect(core.contains("ArtifactOpenPolicy.sharedPage("), "the shell asks the pure policy which files are pages")
+    }
+
     @Test("the root catches a shared file before onboarding is done, so cold launch and first run keep it")
     func rootCatchesDuringOnboarding() throws {
         let code = try Self.flat("M1K3iOSApp/RootView.swift")
