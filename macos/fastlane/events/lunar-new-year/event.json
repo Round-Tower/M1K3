@@ -9,6 +9,7 @@
   "eventStart": "2027-02-05T10:00:00Z",
   "eventEnd": "2027-02-07T10:00:00Z",
   "deepLink": "m1k3://event/lunar-new-year",
+  "looks": ["lunarnewyear"],
   "copy": {
     "name": "Lunar New Year Glow",
     "shortDescription": "Lucky red and gold for the new year.",

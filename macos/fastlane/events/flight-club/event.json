@@ -9,6 +9,7 @@
   "eventStart": "2026-11-03T10:00:00Z",
   "eventEnd": "2026-12-01T11:00:00Z",
   "deepLink": "m1k3://event/offline-ai-flight-club",
+  "looks": ["flightclub"],
   "copy": {
     "name": "Offline AI Flight Club",
     "shortDescription": "Airplane Mode on. Your AI keeps answering.",

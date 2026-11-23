@@ -40,9 +40,15 @@ after the look is off. The 31-day events end an hour short of Apple's cap.
 Arabia). So on the days that may be either the last fast or Eid (Ramadan 29–30, Shawwal 1), the app says a line
 that names neither, and "Eid Mubarak" waits for Shawwal 2.
 
-**Next year:** Ramadan moves about 11 days earlier each year (2028: Jan 28; 2029: Jan 16), and the
-app follows it on its own. The specs' dates don't, so re-date each one with `events.py update`
-before resubmitting. The 2026 Christmas dates assume 1.6 is live by Nov 25. If it isn't, move
+**Next year:** Ramadan moves about 11 days earlier each year (2028: Jan 28; 2029: Jan 16), Nowruz
+falls on Mar 20 or 21, and the app follows both on its own. The specs follow with one command:
+`tools/asc/events.py next --all` reads the app's own windows (it compiles `SeasonalLook.swift`, so no
+calendar is restated anywhere) and prints each yearly spec's next dates as a diff; `--write` saves them,
+and `events.py create` / `update` (Kev's) is still how App Store Connect hears. It re-dates, never
+re-words: copy that names the old day (Nowruz's "From Mar 21") is flagged for a re-word. A spec is
+yearly when it lists its `"looks"`, so a new event is its look in the app plus a spec with that line.
+`events.py check` and `SeasonalEventSpecTests` hold every yearly spec inside its looks from UTC−10 to
+UTC+14. The 2026 Christmas dates assume 1.6 is live by Nov 25. If it isn't, move
 `publishStart` (and `eventStart` if needed) to after the release; never publish ahead of the build.
 
 **Rules every event keeps:**
@@ -66,3 +72,7 @@ Review: Kev + claude-opus-5-5, 2026-11-23 (Diwali + Lunar New Year) — two rows
 new looks collide with older ones (Halloween, Flight Club, Ramadan, Eid), so each feast's main days now win first.
 Lunar New Year 2027 is a two-day event because Ramadan begins on its third day. hi, zh-Hant and vi aren't in the
 12-locale table; adding them is Kev's call. Confidence 0.7.
+
+Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible") — "Next year" now names
+`events.py next` / `check` and the specs' `looks` line instead of re-dating each spec by hand.
+Confidence 0.85.
