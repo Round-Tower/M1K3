@@ -1,35 +1,11 @@
-Thanks for testing M1K3 1.5.0 on iPhone and iPad.
+Thanks for testing M1K3 1.6.0 on iPhone and iPad.
 
-First, this build's fixes, privacy above all. Please check:
-• Files stay here: pick Private Cloud Compute, attach a .json or code file and ask "convert this to YAML". No consent sheet, and Mini or Lil answers
-• Sharing a chat: then send "thanks". If the sheet asks, turn on "Also send this conversation" and open what it sends: no file text, and no answer made after the file. Send a second message too: it must show and get an answer
-• No invented searches: pick Lil and ask "search the web for today's news" in that chat. Mike should say the web is off in a chat with a file. In a new chat the same words should search, with sources
-• No file memories: that file should not appear in Memories
-• Content Controls: with an under-16 age range shared, Mike should have no web search and a younger-friendly tone
-• Code is not read aloud: ask for some code with Speak answers on. Mike says "I've put that on screen."
-• Launch: tell us if opening M1K3 stalls for a second or two
-
-Also new in 1.5, please try:
-• Your language: in Settings > General > Language & Region, put German, French, Spanish or Portuguese (Brazil) first, then open M1K3. The app should be in that language. Tell us about any English left on screen (a few privacy notes stay in English on purpose until a native speaker has read them) and any wording that reads oddly
-• Write to Mike in another language: he should reply in it
-• Voice mode in German or Spanish: ask Mike to answer in that language. The answer should be read by a voice that speaks it. Voice still listens in English
-• Lil and a puzzle (iPhones and iPads with 8 GB): ask "A bat and a ball cost 1.10 in total. The bat costs 1.00 more than the ball. How much is the ball?" Lil should work it out in a few short numbered steps, then answer. Tell us how long it took: we have not timed this on a phone yet
-• Thinking out loud: Settings > Reasoning > Always think, then ask Lil something hard. A plain line such as "Let me think this one through." should show under Thinking… and go when the answer starts
-• Plainer talk: ask Mike to talk plainer. He should, and stay that way for the rest of the chat
-• A new chat should open with no suggested questions
-• Ask for an answer with a few emoji in it, such as hearts and ticks: it should finish, not stop at an emoji
-• If an answer fails, M1K3 now says so instead of going quiet, with Send a report under it. If you ever see one, please send the report: it now says what the brain ran into
-
-Still worth a look:
-• Read a text: attach a .txt, .md, .csv or .log file from Files and ask about it, in Airplane Mode too. Tell us how long a long file takes before the first words appear, on Lil and on Mini: we have not timed it on a phone yet
-• Live Activity: on Mini, ask something, then lock the phone. The card should turn to "Answer ready" and a notification should arrive. On Lil it says "Paused"
-• On Lil, ask something long, then go home or lock the phone. M1K3 should never close
-• Voice mode, ask something that needs the web, then tap the chip or say "show me that"
-• The largest text sizes, VoiceOver and Voice Control: tell us about anything cut off or read as just "button"
+New in 1.6, please try:
+• Seasonal looks: from 2 December to 7 January, Mike's fox glows candy red and gold and says a Christmas hello. Tell us if the colours read well on your screen, in light and dark, and if the hello shows once. The Seasonal looks switch in Settings turns them off.
 
 And the basics:
 • Voice mode, a few turns in a row
 • Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
 
-A read happens on your device: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
