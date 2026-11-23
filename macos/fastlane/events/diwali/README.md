@@ -1,6 +1,6 @@
 # "Diwali Lights": the Diwali event (in-app event, iPhone + iPad)
 
-The look: `diwali` (Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 local days): marigold gold at rest, diya-flame white speaking, rangoli magenta thinking, toran green listening. Greeting: "Happy Diwali! May your home be full of light." No villain costume, no jokes. en-GB's name carries "Deepavali", the South Indian (and Malaysian / Singaporean) name, because India's storefront reads en-GB here; there is no hi or en-IN locale in this spec (see below).
+The look: `diwali` (Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 local days): marigold gold at rest, diya-flame white speaking, rangoli magenta thinking, toran green listening. Greeting: "Happy Diwali! May your home be full of light." No villain costume, no jokes. en-GB's name carries "Deepavali", the South Indian (and Malaysian / Singaporean) name, because India's storefront reads en-GB here; `hi` joined 2026-11-23 (no en-IN: App Store Connect has no such locale).
 
 Diwali's date comes from a table in `Sources/M1K3Avatar/SeasonalLook.swift` (`diwaliDates`, 2026–2035, each year checked against two sources), not from a calendar: Foundation's Indian calendars can't name the evening Amavasya falls on. A test fails two years before the table runs out.
 
@@ -21,7 +21,7 @@ so no zone sees the card after the look is off. Deep link: `m1k3://event/diwali`
 **Next years** (Lakshmi Puja; re-date with `events.py update`, and check each against Halloween and Flight Club):
 2028 Oct 17, 2029 Nov 5 (inside Flight Club, which it wins), 2030 Oct 26 (inside Halloween).
 
-## Copy (`event.json`; en-US below, the other eleven locales in its `localizations` table)
+## Copy (`event.json`; en-US below, the other twelve locales (eleven plus `hi`) in its `localizations` table)
 
 | Field | Cap | Text |
 |---|---|---|
@@ -30,8 +30,12 @@ so no zone sees the card after the look is off. Deep link: `m1k3://event/diwali`
 | longDescription | 120 | For Diwali, the Phosphor Fox glows marigold gold like a diya and wishes your home full of light. All on your device. (116) |
 
 Counts are Python `len`. These are drafts by the model: every non-English locale is **native read owed**, ar-SA and
-ru before submission. India's own languages aren't in the 12-locale table: adding `hi` (and checking which
-locales the IN storefront indexes) is the biggest reach lever here, and it is Kev's call.
+ru before submission. **`hi` (Hindi, Devanagari) is machine-drafted, native read owed** (name 15, short 46, long 112):
+it is an event-only locale, beyond the iPhone listing's twelve, added for India's reach. It keeps the avatar's name as a
+transliteration (फॉस्फर फॉक्स) and says "सब कुछ आपके डिवाइस पर" for "All on your device". Which locales the IN storefront
+indexes for events is still unchecked, and ASC may refuse an event language the listing lacks: read the live result.
 
 Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.7 — the dates are two-source checked and the window is
 pinned by tests; the copy is a model draft, and the reach is a bet to measure. Prior: Unknown (new file).
+Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible" for reach) — `hi` added, machine-drafted,
+native read owed. No vi or zh-Hant: Diwali has no real audience there. Confidence 0.6: the Hindi is a model draft.

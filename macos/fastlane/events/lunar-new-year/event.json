@@ -9,7 +9,9 @@
   "eventStart": "2027-02-05T10:00:00Z",
   "eventEnd": "2027-02-07T10:00:00Z",
   "deepLink": "m1k3://event/lunar-new-year",
-  "looks": ["lunarnewyear"],
+  "looks": [
+    "lunarnewyear"
+  ],
   "copy": {
     "name": "Lunar New Year Glow",
     "shortDescription": "Lucky red and gold for the new year.",
@@ -75,6 +77,16 @@
       "name": "رأس السنة القمرية",
       "shortDescription": "أحمر وذهبي للحظ في العام الجديد.",
       "longDescription": "في رأس السنة القمرية، يتوهج Phosphor Fox بالأحمر والذهبي ويتمنى الحظ والصحة. كل ذلك على الجهاز."
+    },
+    "zh-Hant": {
+      "name": "歡慶農曆新年",
+      "shortDescription": "紅金好運，迎接新年。",
+      "longDescription": "農曆新年期間，磷光狐狸閃耀紅金雙色，祝你新年好運、身體健康。全部在裝置上運作。"
+    },
+    "vi": {
+      "name": "Tết Nguyên Đán rực rỡ",
+      "shortDescription": "Sắc đỏ và vàng may mắn đón năm mới.",
+      "longDescription": "Dịp Tết Nguyên Đán, Phosphor Fox rực lên sắc đỏ và vàng, chúc bạn may mắn và sức khỏe. Tất cả trên thiết bị của bạn."
     }
   }
 }

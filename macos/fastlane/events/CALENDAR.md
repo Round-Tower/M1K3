@@ -54,11 +54,14 @@ UTC+14. The 2026 Christmas dates assume 1.6 is live by Nov 25. If it isn't, move
 **Rules every event keeps:**
 - The copy promises only the look and the greeting. Ramadan and Eid wear no villain costume, and
   their lines carry no jokes.
-- Name ≤ 30, short ≤ 50, long ≤ 120 characters (Python `len`), in all 12 locales.
+- Name ≤ 30, short ≤ 50, long ≤ 120 characters (Python `len`), in all 12 store locales. Event-only reach locales
+  (beyond the iPhone listing; `EXTRA_EVENT_LOCALES` in `test_events.py` pins them): `hi` on Diwali; `zh-Hant` and `vi`
+  on Lunar New Year. There is no `en-IN` (ASC has no such locale).
 - ar-SA never addresses the reader as "you", so it stays gender-neutral. The fox keeps its local
   names (Phosphorfuchs, zorro fosforescente, …).
 - Every translation here is a model draft. ar-SA and ru need a native read before submission
-  (see the translation traps in the growth notes); the rest should have one.
+  (see the translation traps in the growth notes); the rest should have one. `hi`, `zh-Hant` and `vi` are
+  machine-drafted, native read owed.
 - Art: textless stills from the screengrab harness with `-seasonalLook <look>`, 1920×1080 card
   and 1080×1920 details, kept in gitignored `marketing/events/<folder>/`.
 - Apple shows up to 5 published events at once and holds up to 10 approved, so plan around that.
@@ -70,9 +73,13 @@ timing match (Apple reports no search terms); the other events' reach is a bet. 
 ones that earn it.
 Review: Kev + claude-opus-5-5, 2026-11-23 (Diwali + Lunar New Year) — two rows and the "main days first" note: both
 new looks collide with older ones (Halloween, Flight Club, Ramadan, Eid), so each feast's main days now win first.
-Lunar New Year 2027 is a two-day event because Ramadan begins on its third day. hi, zh-Hant and vi aren't in the
-12-locale table; adding them is Kev's call. Confidence 0.7.
+Lunar New Year 2027 is a two-day event because Ramadan begins on its third day. Confidence 0.7.
 
 Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible") — "Next year" now names
 `events.py next` / `check` and the specs' `looks` line instead of re-dating each spec by hand.
 Confidence 0.85.
+
+Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible") — `hi` (Diwali) and `zh-Hant` + `vi`
+(Lunar New Year) added as event-only locales, machine-drafted, native read owed; the spec test now pins them.
+Open: ASC may refuse an event language the app listing lacks, and no live `create` has tried; read it back.
+Confidence 0.6.

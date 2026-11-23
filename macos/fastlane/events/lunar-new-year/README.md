@@ -20,7 +20,7 @@ Event: 2027-02-05T10:00:00Z → 2027-02-07T10:00:00Z. It starts at 10:00Z, local
 Hawaii sees the card before the look is on. It ends by 10:00Z on the look's last day, local midnight in UTC+14,
 so no zone sees the card after the look is off. Deep link: `m1k3://event/lunar-new-year`.
 
-## Copy (`event.json`; en-US below, the other eleven locales in its `localizations` table)
+## Copy (`event.json`; en-US below, the other thirteen locales (eleven plus `zh-Hant` and `vi`) in its `localizations` table)
 
 | Field | Cap | Text |
 |---|---|---|
@@ -29,9 +29,14 @@ so no zone sees the card after the look is off. Deep link: `m1k3://event/lunar-n
 | longDescription | 120 | For Lunar New Year, the Phosphor Fox glows red and gold and wishes you luck and good health. All on your device. (112) |
 
 Counts are Python `len`. These are drafts by the model: every non-English locale is **native read owed**, ar-SA and
-ru before submission, and zh-Hans and ko first among the rest (they carry this event's reach). zh-Hant (Taiwan,
-Hong Kong) and vi aren't in the 12-locale table; adding them is the next reach lever, and Kev's call.
+ru before submission, and zh-Hans and ko first among the rest (they carry this event's reach). **`zh-Hant` (Taiwan, Hong
+Kong; 農曆新年, never 中國新年) and `vi` (Tết Nguyên Đán; "Phosphor Fox" kept as the name) are machine-drafted, native
+read owed**: event-only locales beyond the iPhone listing's twelve (zh-Hant: name 6, short 10, long 39; vi: name 21, short
+35, long 116). zh-Hant says 裝置 (Taiwan's word) where zh-Hans says 设备. ASC may refuse an event language the listing lacks:
+read the live result. Neither carries a zodiac animal.
 
 Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.7 — the window is read off Foundation's Chinese calendar and
 pinned by tests; the precedence against Ramadan is a judgement call, the copy is a model draft, and the reach is a bet
 to measure. Prior: Unknown (new file).
+Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible" for reach) — `zh-Hant` and `vi` added,
+machine-drafted, native read owed. Confidence 0.6: both are model drafts.
