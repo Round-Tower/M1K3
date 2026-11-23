@@ -19,6 +19,9 @@
 //  Not yet seen on a device. Confidence 0.7.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — iOS `allowsLinkPreview = false`; the seal's source is pinned by ArtifactViewSealScanTests;
 //  a stale comment about which languages reach the Preview tab corrected. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — Share sends a FILE of the artifact's own type (`SharedArtifactFile`:
+//  generated.html, .css, .js, .md, .txt) with plain text as the last representation; it sent a bare String, so an HTML
+//  page reached Kev's Mac as a text file. Confidence 0.8 (AirDrop to the Mac is verify on device).
 
 import M1K3Chat
 import M1K3Preview
@@ -121,9 +124,10 @@ struct ArtifactView: View {
             // byte-for-byte pasteable — corrupting it with trailing prose would
             // defeat the point of sharing code.
             ShareLink(
-                item: artifact.source,
+                item: SharedArtifactFile(artifact: artifact),
                 subject: Text(artifact.displayTitle),
-                message: Text("Shared from M1K3 · m1k3.app")
+                message: Text("Shared from M1K3 · m1k3.app"),
+                preview: SharePreview(artifact.filename)
             ) {
                 Image(systemName: "square.and.arrow.up")
             }
@@ -328,4 +332,26 @@ struct ArtifactDocument: FileDocument {
         title: "Preview held back"
     ))
     .frame(width: 760, height: 620)
+}
+
+/// A generated artifact shared as a FILE of its own type (`generated.html`, `.css`, `.js`, `.md`, `.txt`), so AirDrop
+/// to a Mac or Save to Files keeps it a page rather than a text snippet. Plain text stays as the last representation
+/// for apps that only take text (Messages, Notes); the bytes are the source, unchanged, either way.
+private struct SharedArtifactFile: Transferable {
+    let artifact: CodeArtifact
+
+    static var transferRepresentation: some TransferRepresentation {
+        file(.html, as: .html)
+        file(.css, as: CodeArtifact.Language.css.shareFileType)
+        file(.js, as: .javaScript)
+        file(.markdown, as: CodeArtifact.Language.markdown.shareFileType)
+        file(.code, as: .plainText)
+        ProxyRepresentation(exporting: \.artifact.source)
+    }
+
+    private static func file(_ language: CodeArtifact.Language, as type: UTType) -> some TransferRepresentation<Self> {
+        DataRepresentation(exportedContentType: type) { Data($0.artifact.source.utf8) }
+            .suggestedFileName { $0.artifact.filename }
+            .exportingCondition { $0.artifact.language == language }
+    }
 }

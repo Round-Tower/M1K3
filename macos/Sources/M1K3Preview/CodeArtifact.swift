@@ -90,6 +90,21 @@ public struct CodeArtifact: Equatable, Sendable {
             }
         }
 
+        /// The type a shared artifact carries as a FILE, matching `fileExtension`: an HTML page reaches a Mac or
+        /// another app as `generated.html`, not as a text snippet (Kev, 2026-11-23: "it share's back to my mac
+        /// as a text file - not HTML"). Distinct from `utType` (the exporter's), which files css and markdown loosely.
+        /// Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.85 (pure + tested; AirDrop to a Mac is verify on
+        /// device). Prior: Unknown (this file is unsigned).
+        public var shareFileType: UTType {
+            switch self {
+            case .html: .html
+            case .css: UTType(filenameExtension: "css") ?? .sourceCode
+            case .js: .javaScript
+            case .markdown: UTType(filenameExtension: "md") ?? .plainText
+            case .code: .plainText
+            }
+        }
+
         public init?(fileExtension ext: String) {
             switch ext.lowercased() {
             case "html", "htm": self = .html
