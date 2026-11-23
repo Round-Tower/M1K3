@@ -155,6 +155,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — a shared file also waits behind the Private Cloud
 //  consent sheet (it would have joined the send the sheet confirms), and staging sweeps Inbox leftovers a killed app
 //  left. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — the Inbox sweep spares fresh copies (a batch
+//  AirDrop), and a shared file also waits out a consented Private Cloud send still launching. Confidence 0.8.
 //
 
 import M1K3Avatar
@@ -181,6 +183,9 @@ struct ChatScreen: View {
     @Binding var screengrabPath: [ScreengrabRoute]
     /// Files shared to M1K3 from another app (RootView's `onOpenURL`), staged here and never sent (#893 C).
     @Binding var sharedFiles: [URL]
+    /// A consented Private Cloud send between the sheet closing and `isResponding`: a shared file waits it out, since
+    /// opening a new chat under it would leave the send aimed at the old conversation (#895 second pass).
+    @State private var privateCloudSending = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
@@ -357,7 +362,9 @@ struct ChatScreen: View {
             }
             // A shared file waits out a turn in flight, then lands in a new chat's composer.
             .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
-            .onChange(of: core.chat.isResponding || privateCloudPending != nil) { _, _ in receiveSharedFiles() }
+            .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
+                receiveSharedFiles()
+            }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
                 if Self.voiceAtLaunch {
@@ -1205,8 +1212,10 @@ struct ChatScreen: View {
         else { return }
         let words = draft
         clearDraft()
+        privateCloudSending = true
         Task {
             let sent = await core.sendPrivateCloud(consent, includeConversation: includeConversation)
+            privateCloudSending = false
             if !sent, draft.isEmpty { draft = words }
         }
     }
@@ -1299,7 +1308,7 @@ struct ChatScreen: View {
         switch SharedFileIntake.step(
             isResponding: core.chat.isResponding,
             hasMessages: !core.chat.messages.isEmpty,
-            consentPending: privateCloudPending != nil
+            consentPending: privateCloudPending != nil || privateCloudSending
         ) {
         case .wait:
             return
@@ -1315,9 +1324,14 @@ struct ChatScreen: View {
         // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
         // it goes, and so does anything a killed app left there that isn't still waiting to be staged.
         let inbox = URL.documentsDirectory.appending(path: "Inbox")
-        let listed = (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? []
+        let listed = (try? FileManager.default.contentsOfDirectory(
+            at: inbox, includingPropertiesForKeys: [.contentModificationDateKey]
+        )) ?? []
+        let aged = listed.map { url in
+            (url: url, modified: try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+        }
         let copies = urls.filter { SharedFileIntake.isSystemInboxCopy($0, documents: URL.documentsDirectory) }
-        for url in copies + SharedFileIntake.inboxLeftovers(listed, waiting: sharedFiles) {
+        for url in copies + SharedFileIntake.inboxLeftovers(aged, waiting: sharedFiles, now: .now) {
             try? FileManager.default.removeItem(at: url)
         }
     }

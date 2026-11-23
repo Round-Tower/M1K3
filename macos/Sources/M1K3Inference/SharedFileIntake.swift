@@ -15,6 +15,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — a file waits behind the Private Cloud consent
 //  sheet (it would have joined the send the sheet confirms); /private/var and /var are one place for the Inbox test;
 //  `inboxLeftovers` lets the shell sweep copies a killed app left behind. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — the sweep spares copies younger than
+//  `leftoverGrace`: a batch AirDrop lands every copy in Inbox before each URL arrives, and sweeping on the first
+//  would have deleted its siblings. Confidence 0.85 (pure + tested; a 3-file AirDrop is owed on the phone).
 //
 
 import Foundation
@@ -60,11 +63,26 @@ public enum SharedFileIntake {
         return path.count > inbox.count && Array(path.prefix(inbox.count)) == inbox
     }
 
-    /// Inbox items to sweep once staging is done: everything not still waiting to be staged. A file shared while
-    /// the app was then killed (mid-onboarding, say) leaves a copy no one will stage; this keeps nothing lingering.
-    public static func inboxLeftovers(_ contents: [URL], waiting: [URL]) -> [URL] {
+    /// How old an Inbox copy must be before the sweep may take it. A batch AirDrop copies every file into Inbox
+    /// before each one's URL reaches the app, so a fresh copy may still be on its way to `onOpenURL`.
+    public static let leftoverGrace: TimeInterval = 10 * 60
+
+    /// Inbox items to sweep once staging is done: not still waiting to be staged, and older than `leftoverGrace`.
+    /// A file shared while the app was then killed (mid-onboarding, say) leaves a copy no one will stage; this keeps
+    /// nothing lingering, and never takes a sibling still in flight. A copy whose date can't be read is kept.
+    public static func inboxLeftovers(
+        _ contents: [(url: URL, modified: Date?)],
+        waiting: [URL],
+        now: Date,
+        grace: TimeInterval = leftoverGrace
+    ) -> [URL] {
         let keep = Set(waiting.map(components))
-        return contents.filter { !keep.contains(components($0)) }
+        return contents.compactMap { item in
+            guard let modified = item.modified, now.timeIntervalSince(modified) > grace,
+                  !keep.contains(components(item.url))
+            else { return nil }
+            return item.url
+        }
     }
 
     /// Path components with `..` folded and iOS's `/private/var` read as `/var` (the system hands a file over

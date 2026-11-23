@@ -70,17 +70,31 @@ struct SharedFileIntakeTests {
         #expect(!SharedFileIntake.isSystemInboxCopy(documents.appending(path: "Inbox/../notes.json"), documents: documents))
     }
 
-    @Test("after staging, every Inbox item that isn't still waiting is a leftover to sweep (a kill mid-onboarding)")
+    @Test("after staging, an Inbox item that isn't waiting and is older than the grace is a leftover (a kill mid-onboarding)")
     func inboxLeftovers() {
         let inbox = URL(fileURLWithPath: "/var/mobile/X/Documents/Inbox")
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let old = now.addingTimeInterval(-(SharedFileIntake.leftoverGrace + 1))
         let stale = inbox.appending(path: "old.json")
         let waiting = inbox.appending(path: "waiting.txt")
-        let contents = [stale, waiting]
-        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waiting]) == [stale])
-        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: []) == contents)
+        let contents = [(url: stale, modified: old), (url: waiting, modified: old)]
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waiting], now: now) == [stale])
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [], now: now) == [stale, waiting])
         // Waiting under /private/var still matches its /var listing.
         let waitingPrivate = URL(fileURLWithPath: "/private/var/mobile/X/Documents/Inbox/waiting.txt")
-        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waitingPrivate]) == [stale])
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waitingPrivate], now: now) == [stale])
+    }
+
+    @Test("a fresh Inbox copy is never swept: a batch AirDrop copies every file before each one's URL arrives")
+    func inboxLeftoversSpareABatchInFlight() {
+        let inbox = URL(fileURLWithPath: "/var/mobile/X/Documents/Inbox")
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let b = inbox.appending(path: "b.txt")
+        let c = inbox.appending(path: "c.txt")
+        let contents = [(url: b, modified: now.addingTimeInterval(-2)), (url: c, modified: now)]
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [], now: now).isEmpty)
+        // An unreadable date is treated as fresh: never delete what can't be aged.
+        #expect(SharedFileIntake.inboxLeftovers([(url: b, modified: nil)], waiting: [], now: now).isEmpty)
     }
 
     // MARK: - What M1K3 registers
@@ -142,6 +156,7 @@ struct SharedFileIntakeScanTests {
         #expect(attach.lowerBound < remove.lowerBound, "read the file before deleting the copy")
         #expect(receive.contains("isSystemInboxCopy") && receive.contains("inboxLeftovers"))
         #expect(receive.contains("consentPending: privateCloudPending != nil"), "a file waits behind the consent sheet")
+        #expect(receive.contains("|| privateCloudSending"), "and behind a consented send still launching (a new chat would orphan it)")
     }
 
     @Test("the root catches a shared file before onboarding is done, so cold launch and first run keep it")
