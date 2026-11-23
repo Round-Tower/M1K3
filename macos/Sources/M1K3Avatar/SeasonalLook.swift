@@ -155,25 +155,25 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
             String(
                 localized: "Merry Christmas! I made the nice list this year. Mostly.",
                 bundle: .module,
-                comment: "Seasonal greeting shown 2 Dec - 7 Jan (Christmas and New Year). M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line of at most 70 characters."
+                comment: "Greeting shown 2 Dec - 7 Jan (Christmas, New Year). M1K3 is a playful villain on the user's side; family-safe, one line, at most 70 characters."
             )
         case .ramadan:
             String(
                 localized: "Ramadan Kareem. I'm here whenever you need me, day or night.",
                 bundle: .module,
-                comment: "Seasonal greeting shown during the month of Ramadan. Respectful and warm, NO villain play or jokes; 'Ramadan Kareem' is the customary greeting. One short line of at most 70 characters."
+                comment: "Greeting shown during Ramadan. Respectful and warm, NO villain play or jokes; 'Ramadan Kareem' is customary. One line, at most 70 characters."
             )
         case .eid:
             String(
                 localized: "Eid Mubarak! Wishing you and yours a joyful Eid.",
                 bundle: .module,
-                comment: "Seasonal greeting shown on the first three days of Eid al-Fitr. Warm and respectful, NO villain play; 'Eid Mubarak' is the customary greeting. One short line of at most 70 characters."
+                comment: "Greeting shown on the first three days of Eid al-Fitr. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. One line, at most 70 characters."
             )
         case .nowruz:
             String(
                 localized: "Happy Nowruz! A new spring, a fresh start.",
                 bundle: .module,
-                comment: "Seasonal greeting shown on the first seven days of the Persian new year (Nowruz, also Nauryz in Kazakhstan, Navruz in Uzbekistan). Warm and festive, family-safe, one short line of at most 70 characters; use the local name of the festival."
+                comment: "Greeting for the first 7 days of Nowruz (Nauryz in Kazakhstan, Navruz in Uzbekistan); use the local name. Warm, family-safe, at most 70 characters."
             )
         case .stPatricks:
             String(
