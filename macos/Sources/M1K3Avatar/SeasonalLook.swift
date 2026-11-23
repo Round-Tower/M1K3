@@ -62,6 +62,9 @@
 //  Halloween night, Diwali's five days, and Lunar New Year's Eve and Day go first; the rest of Lunar New Year yields to
 //  Ramadan and Eid, so the Ramadan event's "Through Ramadan" stays true. Confidence 0.75 (maths pinned in
 //  SeasonalCalendarTests; the precedence is a judgement call Kev may flip; the looks are verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: "Halloween wins...") — Halloween's whole season (Oct 24 – Nov 1) now
+//  comes before Diwali: Diwali 2027 and 2030 show Halloween throughout; other years keep all five Diwali days.
+//  Confidence 0.85 (pinned for 2026–2035).
 //
 
 import Foundation
@@ -119,13 +122,15 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
 
     /// The look in season on `date` in `calendar`'s time zone, else nil. `offline` gates Flight Club
     /// only. Each window is read on its OWN calendar in the caller's zone, never the caller's calendar
-    /// system. Order: first, a feast's main days keep their own look (Halloween night; Diwali's five
-    /// days, all of them feast days; Lunar New Year's Eve and Day). Then a short feast wins a long
-    /// season (the rest of Halloween, Eid, St Patrick's, Nowruz, then Ramadan, the rest of Lunar New
-    /// Year, Christmas, Flight Club; the moon-sighting days sit with Eid, under Lunar New Year's Day).
+    /// system. Order: Halloween's whole season first (Kev, 2026-11-23: "Halloween wins"); then a
+    /// feast's main days keep their own look (Diwali's five days, all of them feast days; Lunar New
+    /// Year's Eve and Day). Then a short feast wins a long season (Eid, St Patrick's, Nowruz, then
+    /// Ramadan, the rest of Lunar New Year, Christmas, Flight Club; the moon-sighting days sit with
+    /// Eid, under Lunar New Year's Day).
     ///
-    /// Why (2026–2031 all collide): Diwali 2027 sits wholly inside Halloween, so Halloween first would
-    /// leave Diwali no day at all; Halloween keeps Oct 31 itself. Lunar New Year (16 days) meets Ramadan
+    /// Why (2026–2031 all collide): Halloween's event is M1K3's biggest reach (10–18k impressions a
+    /// day), so it keeps Oct 24 – Nov 1 unbroken; Diwali 2027 and 2030 fall wholly inside it and get no
+    /// look those years (2026 and 2029 beat Flight Club; 2028 is clear). Lunar New Year (16 days) meets Ramadan
     /// or Eid every year from 2026: its Eve and Day win, its tail yields to the fast and to Eid, so the
     /// Ramadan event's "Through Ramadan" stays true and each feast keeps the days its people mark most.
     public static func active(on date: Date, calendar: Calendar, offline: Bool) -> SeasonalLook? {
@@ -134,10 +139,9 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
         let hijri = parts(of: date, on: .islamicUmmAlQura, in: zone)
         let persian = parts(of: date, on: .persian, in: zone)
         let lunar = lunarNewYearDay(on: date, in: zone)
-        if case (10, 31) = gregorian { return .halloween }
-        if diwaliDay(on: date, in: zone) != nil { return .diwali }
         if case (10, 24...) = gregorian { return .halloween }
         if case (11, 1) = gregorian { return .halloween }
+        if diwaliDay(on: date, in: zone) != nil { return .diwali }
         if case (10, 2 ... 4) = hijri { return .eid }
         if let lunar, lunar <= 1 { return .lunarNewYear }
         if case (9, 29 ... 30) = hijri { return .moonSighting }

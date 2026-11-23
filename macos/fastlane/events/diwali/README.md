@@ -4,17 +4,17 @@ The look: `diwali` (Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 local days): 
 
 Diwali's date comes from a table in `Sources/M1K3Avatar/SeasonalLook.swift` (`diwaliDates`, 2026–2035, each year checked against two sources), not from a calendar: Foundation's Indian calendars can't name the evening Amavasya falls on. A test fails two years before the table runs out.
 
-**2027 meets Halloween.** Diwali 2027 (Oct 29) sits inside Halloween (Oct 24 – Nov 1). In the app Diwali wins its days, but Halloween night keeps its own look, so the 2027 look runs **Oct 27 – Oct 30** (Bhai Dooj, Oct 31, is Halloween). A Halloween 2027 event that promises the pumpkin look would be wrong on Oct 27–30: say so in its copy, or give the Halloween event Oct 31 – Nov 1 only. Kev's call. (2030 is the same: Diwali Oct 24–28, Halloween Oct 29 – Nov 1.)
+**Halloween wins (Kev, 2026-11-23).** Diwali 2027 (Oct 29) and 2030 (Oct 26) sit wholly inside Halloween's season (Oct 24 – Nov 1), which keeps its look unbroken, because the Halloween event is M1K3's biggest reach. So there is **no Diwali look or event in 2027 or 2030**. This spec is dated for **2028 (Oct 15–19)**, the next clear year, by `./events.py next diwali --year 2028 --write`. 2026 and 2029 sit inside Flight Club, where Diwali wins.
 
 The "Seasonal looks" opt-out in Settings covers it, and nothing leaves the device. Force it for art or
 checks with `-seasonalLook diwali`. The calendar logic is in `Sources/M1K3Avatar/SeasonalLook.swift`,
 and why this event exists is in `../CALENDAR.md`.
 
 **Gate:** the build that carries this look (1.6 or later) must be live on the iOS App Store before the event
-publishes (2027-10-13T10:00:00Z). Read `itunes.apple.com/lookup?id=6780230835` first. If the look isn't
+publishes (2028-10-01T10:00:00Z). Read `itunes.apple.com/lookup?id=6780230835` first. If the look isn't
 live yet, move `publishStart` (and `eventStart` if needed): never publish ahead of the build.
 
-Event: 2027-10-27T10:00:00Z → 2027-10-30T10:00:00Z. It starts at 10:00Z, local midnight in UTC−10, so no zone east of
+Event: 2028-10-15T10:00:00Z → 2028-10-19T10:00:00Z. It starts at 10:00Z, local midnight in UTC−10, so no zone east of
 Hawaii sees the card before the look is on. It ends by 10:00Z on the look's last day, local midnight in UTC+14,
 so no zone sees the card after the look is off. Deep link: `m1k3://event/diwali`.
 

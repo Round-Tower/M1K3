@@ -234,9 +234,16 @@ struct SeasonalCalendarTests {
         for (year, month, day) in [(2026, 11, 8), (2027, 10, 29), (2028, 10, 17), (2029, 11, 5), (2030, 10, 26)] {
             let entry = try #require(SeasonalLook.diwaliDates[year], "\(year)")
             #expect(entry.month == month && entry.day == day, "\(year)")
-            #expect(try look(year, month, day) == .diwali, "\(year)")
-            #expect(try look(year, month, day, offline: true) == .diwali, "\(year) offline")
+            // Halloween's season wins (Kev, 2026-11-23): a Diwali inside Oct 24 – Nov 1 shows Halloween.
+            let expected: SeasonalLook = Self.inHalloween(month, day) ? .halloween : .diwali
+            #expect(try look(year, month, day) == expected, "\(year)")
+            #expect(try look(year, month, day, offline: true) == expected, "\(year) offline")
         }
+    }
+
+    /// Halloween's season, Oct 24 – Nov 1: the look that wins every day of it.
+    static func inHalloween(_ month: Int, _ day: Int) -> Bool {
+        (month == 10 && day >= 24) || (month == 11 && day == 1)
     }
 
     @Test("diwali runs Dhanteras (2 days before) through Bhai Dooj (2 days after): 2028 Oct 15–19")
@@ -279,17 +286,19 @@ struct SeasonalCalendarTests {
 
     // MARK: - Main days and overlaps (2026–2030)
 
-    @Test("diwali meets halloween in 2027 and 2030: diwali wins its days, but halloween night stays halloween")
+    @Test("halloween wins its whole season over diwali (Kev, 2026-11-23): 2027 and 2030 show halloween throughout")
     func diwaliMeetsHalloween() throws {
-        #expect(try look(2027, 10, 26) == .halloween)
-        #expect(try look(2027, 10, 27) == .diwali) // Dhanteras
-        #expect(try look(2027, 10, 30) == .diwali)
-        #expect(try look(2027, 10, 31) == .halloween) // Bhai Dooj falls on Halloween night
+        // Halloween's event drew 10–18k impressions a day; its look holds Oct 24 – Nov 1 unbroken. Diwali 2027
+        // (Oct 27–31) and 2030 (Oct 24–28) sit wholly inside it, so those years have no Diwali look or event.
+        for day in 24 ... 31 {
+            #expect(try look(2027, 10, day) == .halloween, "2027-10-\(day)")
+            #expect(try look(2030, 10, day) == .halloween, "2030-10-\(day)")
+        }
         #expect(try look(2027, 11, 1) == .halloween)
         #expect(try look(2030, 10, 23) == nil)
-        #expect(try look(2030, 10, 24) == .diwali) // Dhanteras; Halloween's first day
-        #expect(try look(2030, 10, 28) == .diwali)
-        #expect(try look(2030, 10, 29) == .halloween)
+        // A Diwali clear of Halloween keeps all five days.
+        #expect(try look(2028, 10, 15) == .diwali)
+        #expect(try look(2028, 10, 19) == .diwali)
     }
 
     @Test("diwali meets flight club in 2026 and 2029: diwali wins, online or off")
@@ -332,11 +341,12 @@ struct SeasonalCalendarTests {
         #expect(try look(2030, 2, 8) == .lunarNewYear)
     }
 
-    @Test("every main day keeps its own look, 2026–2035: Diwali, Lunar New Year's Eve and Day, Halloween night, Eid")
+    @Test("every main day keeps its own look, 2026–2035: Halloween's season, Diwali outside it, Lunar Eve and Day, Eid")
     func mainDaysKeepTheirLook() throws {
         let utc = try calendar("UTC")
         for (year, entry) in SeasonalLook.diwaliDates {
-            #expect(try look(year, entry.month, entry.day, offline: true) == .diwali, "\(year)")
+            let expected: SeasonalLook = Self.inHalloween(entry.month, entry.day) ? .halloween : .diwali
+            #expect(try look(year, entry.month, entry.day, offline: true) == expected, "\(year)")
         }
         var day = try date(2026, 1, 1, in: utc)
         var hijri = Calendar(identifier: .islamicUmmAlQura)
@@ -347,7 +357,7 @@ struct SeasonalCalendarTests {
                 #expect(resolved == .lunarNewYear, "\(day)")
             }
             let parts = utc.dateComponents([.month, .day], from: day)
-            if parts.month == 10, parts.day == 31 { #expect(resolved == .halloween, "\(day)") }
+            if Self.inHalloween(parts.month ?? 0, parts.day ?? 0) { #expect(resolved == .halloween, "\(day)") }
             let islamic = hijri.dateComponents([.month, .day], from: day)
             if islamic.month == 10, islamic.day == 2 { #expect(resolved == .eid, "\(day)") }
             day = day.addingTimeInterval(86400)
@@ -458,9 +468,10 @@ struct SeasonalCalendarTests {
     @Test("every day of a whole year resolves to at most one look, without crashing")
     func wholeYear() throws {
         let utc = try calendar("UTC")
-        var day = try date(2027, 1, 1, in: utc)
+        // 2028, not 2027: Diwali 2027 falls inside Halloween's season, which wins (Kev, 2026-11-23).
+        var day = try date(2028, 1, 1, in: utc)
         var seen = Set<SeasonalLook>()
-        for _ in 0 ..< 365 {
+        for _ in 0 ..< 366 {
             if let season = SeasonalLook.active(on: day, calendar: utc, offline: true) { seen.insert(season) }
             day = day.addingTimeInterval(86400)
         }

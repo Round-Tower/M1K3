@@ -23,14 +23,14 @@ every later event needs App Store Connect work only.
 | `ramadan` → `moonsighting` → `eid` | Umm al-Qura: Ramadan 1–28, Ramadan 29 – Shawwal 1, Shawwal 2–4 | `ramadan/` | 2027: Feb 8 10:00 → Mar 11 09:00 | Jan 25 | PK, DZ, IQ, EG, the Gulf; en-GB says "Ramzan" for PK/IN |
 | `stpatricks` | Mar 14 – 17 | `st-patricks/` | 2027: Mar 14 10:00 → Mar 17 10:00 | Mar 7 | US, IE, GB |
 | `nowruz` | Farvardin 1 – 7 | `nowruz/` | 2027: Mar 21 10:00 → Mar 27 10:00 | Mar 14 | KZ, UZ, KG (the name carries all three spellings) |
-| `diwali` | Lakshmi Puja ± 2 (dated table, 2026–2035) | `diwali/` | 2027: Oct 27 10:00 → Oct 30 10:00 | Oct 13 | IN (top-3 reach), and the diaspora; en-GB names Deepavali |
+| `diwali` | Lakshmi Puja ± 2 (dated table, 2026–2035) | `diwali/` | 2028: Oct 15 10:00 → Oct 19 10:00 (none in 2027 or 2030: Halloween wins) | Oct 1 | IN (top-3 reach), and the diaspora; en-GB names Deepavali |
 
-**Main days first:** the looks overlap more than they look. Diwali sits inside Halloween in 2027 and 2030 and inside
-Flight Club in 2026 and 2029; Lunar New Year meets Ramadan or Eid every year from 2026 to 2031. So the app's order
-starts with each feast's main days: Halloween night (Oct 31), Diwali's five days, Lunar New Year's Eve and Day. After
-that, a short feast wins a long season, as before, and the rest of Lunar New Year yields to Ramadan and Eid. Any
-event that runs across another look's days must say only what is true on all of them (a Halloween 2027 event can't
-promise the pumpkin on Oct 27–30, which are Diwali's).
+**Halloween first, then main days:** the looks overlap more than they look. Diwali sits inside Halloween in 2027 and
+2030 and inside Flight Club in 2026 and 2029; Lunar New Year meets Ramadan or Eid every year from 2026 to 2031.
+**Halloween wins its whole season, Oct 24 – Nov 1** (Kev, 2026-11-23: its event is our biggest reach), so Diwali 2027
+and 2030 get no look and no event. After that each feast's main days come first (Diwali's five days, Lunar New Year's
+Eve and Day), then a short feast wins a long season, and the rest of Lunar New Year yields to Ramadan and Eid. Any
+event that runs across another look's days must say only what is true on all of them.
 
 **Event times:** an event starts at 10:00Z, which is local midnight in UTC−10, so no zone east of Hawaii sees the
 card before the look is on. It ends by 10:00Z on the look's last day, local midnight in UTC+14, so no zone sees it
