@@ -89,6 +89,15 @@ struct ArtifactOpenPolicyTests {
         #expect(ArtifactOpenPolicy.autoOpen(from: []) == nil)
     }
 
+    @Test("the Code tab highlights as the artifact's own language")
+    func highlightLanguage() {
+        #expect(CodeArtifact(source: "x", language: .html).highlightLanguage == "html")
+        #expect(CodeArtifact(source: "x", language: .css).highlightLanguage == "css")
+        #expect(CodeArtifact(source: "x", language: .code, languageLabel: "swift").highlightLanguage == "swift")
+        #expect(CodeArtifact(source: "x", language: .markdown).highlightLanguage == nil)
+        #expect(CodeArtifact(source: "x", language: .code).highlightLanguage == nil)
+    }
+
     // MARK: - Where it shows
 
     @Test("regular width shows beside the chat, compact is a sheet")

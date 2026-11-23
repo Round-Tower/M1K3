@@ -40,6 +40,15 @@ public struct CodeArtifact: Equatable, Sendable {
         title ?? "Generated \((languageLabel ?? language.rawValue).uppercased())"
     }
 
+    /// The fence-style name the highlighter understands for the Code tab (nil: show plain).
+    public var highlightLanguage: String? {
+        switch language {
+        case .html, .css, .js: language.rawValue
+        case .markdown: nil
+        case .code: languageLabel
+        }
+    }
+
     public var filename: String {
         "\(title ?? "generated").\(language.fileExtension)"
     }
