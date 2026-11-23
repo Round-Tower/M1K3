@@ -134,6 +134,9 @@
     },
     "Ramadan Kareem. I'm here whenever you need me, day or night." : {
       "comment" : "Greeting shown during Ramadan. Respectful and warm, NO villain play or jokes; 'Ramadan Kareem' is customary. One line, at most 70 characters."
+    },
+    "Wishing you and yours peace and blessings." : {
+      "comment" : "Greeting for the last days of Ramadan and Eid's first day, when either may be true; must name neither. Respectful, NO villain play, at most 70 characters."
     }
   },
   "version" : "1.0"

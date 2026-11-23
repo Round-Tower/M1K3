@@ -6,8 +6,8 @@
   "locale": "en-US",
   "referenceName": "ramadan-eid-2027",
   "publishStart": "2027-01-25T10:00:00Z",
-  "eventStart": "2027-02-08T00:00:00Z",
-  "eventEnd": "2027-03-11T00:00:00Z",
+  "eventStart": "2027-02-08T10:00:00Z",
+  "eventEnd": "2027-03-11T09:00:00Z",
   "deepLink": "m1k3://event/ramadan",
   "copy": {
     "name": "Ramadan Lanterns",
@@ -21,7 +21,7 @@
       "longDescription": "Through Ramadan and Eid al-Fitr, the Phosphor Fox glows lantern gold and greets you: Ramadan Kareem, then Eid Mubarak."
     },
     "en-GB": {
-      "name": "Ramadan Lanterns",
+      "name": "Ramadan · Ramzan Lanterns",
       "shortDescription": "A lantern-gold glow and a warm hello.",
       "longDescription": "Through Ramadan and Eid al-Fitr, the Phosphor Fox glows lantern gold and greets you: Ramadan Kareem, then Eid Mubarak."
     },

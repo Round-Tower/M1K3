@@ -6,8 +6,8 @@
   "locale": "en-US",
   "referenceName": "nowruz-2027",
   "publishStart": "2027-03-14T10:00:00Z",
-  "eventStart": "2027-03-21T00:00:00Z",
-  "eventEnd": "2027-03-28T00:00:00Z",
+  "eventStart": "2027-03-21T10:00:00Z",
+  "eventEnd": "2027-03-27T10:00:00Z",
   "deepLink": "m1k3://event/nowruz",
   "copy": {
     "name": "Nowruz · Nauryz · Navruz",

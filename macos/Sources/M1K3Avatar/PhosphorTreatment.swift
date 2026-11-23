@@ -91,10 +91,12 @@ public extension AvatarActivity {
         case (.christmas, .listening): .christmasListening
         case (.christmas, .thinking), (.christmas, .generating): .christmasThinking
         case (.christmas, .speaking): .christmasSpeaking
-        case (.ramadan, .idle), (.ramadan, .error), (.eid, .idle), (.eid, .error): .lanternCalm
-        case (.ramadan, .listening), (.eid, .listening): .lanternListening
-        case (.ramadan, .thinking), (.ramadan, .generating), (.eid, .thinking), (.eid, .generating): .lanternThinking
-        case (.ramadan, .speaking), (.eid, .speaking): .lanternSpeaking
+        case (.ramadan, .idle), (.ramadan, .error), (.eid, .idle), (.eid, .error),
+             (.moonSighting, .idle), (.moonSighting, .error): .lanternCalm
+        case (.ramadan, .listening), (.eid, .listening), (.moonSighting, .listening): .lanternListening
+        case (.ramadan, .thinking), (.ramadan, .generating), (.eid, .thinking), (.eid, .generating),
+             (.moonSighting, .thinking), (.moonSighting, .generating): .lanternThinking
+        case (.ramadan, .speaking), (.eid, .speaking), (.moonSighting, .speaking): .lanternSpeaking
         case (.nowruz, .idle), (.nowruz, .error): .nowruzCalm
         case (.nowruz, .listening): .nowruzListening
         case (.nowruz, .thinking), (.nowruz, .generating): .nowruzThinking
@@ -149,7 +151,7 @@ public extension PhosphorTreatment {
 }
 
 public extension PhosphorTreatment {
-    // Ramadan and Eid share one palette: lantern light at rest, no costume.
+    // Ramadan, the moon-sighting days and Eid share one palette: lantern light at rest, no costume.
 
     /// LANTERN GOLD #FFC247 — the resting phosphor.
     static let lanternCalm = PhosphorTreatment(red: 1.0, green: 0.761, blue: 0.278, fresnelPower: 3.0)

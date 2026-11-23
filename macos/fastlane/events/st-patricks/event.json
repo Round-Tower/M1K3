@@ -6,8 +6,8 @@
   "locale": "en-US",
   "referenceName": "st-patricks-2027",
   "publishStart": "2027-03-07T10:00:00Z",
-  "eventStart": "2027-03-14T00:00:00Z",
-  "eventEnd": "2027-03-18T00:00:00Z",
+  "eventStart": "2027-03-14T10:00:00Z",
+  "eventEnd": "2027-03-17T10:00:00Z",
   "deepLink": "m1k3://event/st-patricks",
   "copy": {
     "name": "St Patrick's in the Lair",

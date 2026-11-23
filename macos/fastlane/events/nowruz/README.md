@@ -1,6 +1,7 @@
 # "Nowruz · Nauryz · Navruz": the Nowruz · Nauryz · Navruz event (in-app event, iPhone + iPad)
 
-The look: `nowruz` (Farvardin 1–7 of the Persian calendar): blossom pink at rest, spring sun speaking, sky thinking, sabzeh green listening. Greeting: "Happy Nowruz! A new spring, a fresh start."
+The look: `nowruz` (Farvardin 1–7 of the Persian calendar): blossom pink at rest, spring sun speaking, sky thinking, sabzeh green listening. Greeting: "Happy Nowruz! A new spring, a fresh start." The name carries all three spellings, because KZ and UZ index en-GB only.
+
 The "Seasonal looks" opt-out in Settings covers it, and nothing leaves the device. Force it for art or
 checks with `-seasonalLook nowruz`. The calendar logic is in `Sources/M1K3Avatar/SeasonalLook.swift`,
 and why this event exists is in `../CALENDAR.md`.
@@ -9,7 +10,9 @@ and why this event exists is in `../CALENDAR.md`.
 publishes (2027-03-14T10:00:00Z). Read `itunes.apple.com/lookup?id=6780230835` first. If the look isn't
 live yet, move `publishStart` (and `eventStart` if needed): never publish ahead of the build.
 
-Event dates: 2027-03-21T00:00:00Z → 2027-03-28T00:00:00Z. Deep link: `m1k3://event/nowruz`.
+Event: 2027-03-21T10:00:00Z → 2027-03-27T10:00:00Z. It starts at 10:00Z, local midnight in UTC−10, so no zone east of
+Hawaii sees the card before the look is on. It ends by 10:00Z on the look's last day, local midnight in UTC+14,
+so no zone sees the card after the look is off. Deep link: `m1k3://event/nowruz`.
 
 ## Copy (`event.json`; en-US below, the other eleven locales in its `localizations` table)
 

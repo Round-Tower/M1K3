@@ -56,25 +56,38 @@ struct SeasonalCalendarTests {
 
     // MARK: - Ramadan and Eid al-Fitr
 
-    @Test("ramadan 1447 runs 2026-02-18 to 03-19, then three days of Eid from 03-20")
+    @Test("ramadan 1447: fasting Feb 18 – Mar 17, the moon-sighting days Mar 18–20, then Eid Mar 21–23")
     func ramadan2026() throws {
         #expect(try look(2026, 2, 17) == nil)
         #expect(try look(2026, 2, 18) == .ramadan)
         #expect(try look(2026, 3, 1) == .ramadan)
-        #expect(try look(2026, 3, 19) == .ramadan)
-        #expect(try look(2026, 3, 20) == .eid)
-        #expect(try look(2026, 3, 22) == .eid)
-        #expect(try look(2026, 3, 23) != .eid)
+        // Mar 14–17 is St Patrick's (a short feast wins); Ramadan 28 is Mar 17.
+        #expect(try look(2026, 3, 18) == .moonSighting) // Ramadan 29
+        #expect(try look(2026, 3, 19) == .moonSighting) // Ramadan 30
+        #expect(try look(2026, 3, 20) == .moonSighting) // Shawwal 1: Saudi Eid, maybe still Ramadan in Pakistan
+        #expect(try look(2026, 3, 21) == .eid)
+        #expect(try look(2026, 3, 23) == .eid)
+        #expect(try look(2026, 3, 24) == .nowruz)
     }
 
-    @Test("ramadan 1448 moves eleven days earlier: 2027-02-08 to 03-08, Eid 03-09 to 03-11")
+    @Test("ramadan 1448 (29 days): fasting Feb 8 – Mar 7, moon sighting Mar 8–9, Eid Mar 10–12")
     func ramadan2027() throws {
         #expect(try look(2027, 2, 7) == nil)
         #expect(try look(2027, 2, 8) == .ramadan)
-        #expect(try look(2027, 3, 8) == .ramadan)
-        #expect(try look(2027, 3, 9) == .eid)
-        #expect(try look(2027, 3, 11) == .eid)
-        #expect(try look(2027, 3, 12) == nil)
+        #expect(try look(2027, 3, 7) == .ramadan)
+        #expect(try look(2027, 3, 8) == .moonSighting)
+        #expect(try look(2027, 3, 9) == .moonSighting)
+        #expect(try look(2027, 3, 10) == .eid)
+        #expect(try look(2027, 3, 12) == .eid)
+        #expect(try look(2027, 3, 13) == nil)
+    }
+
+    @Test("the moon-sighting line is true on the last fast day and on Eid alike: it names neither")
+    func moonSightingGreeting() throws {
+        let line = try #require(SeasonalLook.greeting(for: .moonSighting))
+        #expect(!line.contains("Eid") && !line.contains("Ramadan"))
+        #expect(AvatarActivity.idle.phosphorTreatment(season: .moonSighting)
+            == AvatarActivity.idle.phosphorTreatment(season: .ramadan))
     }
 
     @Test("ramadan is read off the Islamic calendar, whatever regional calendar the user runs")
@@ -109,12 +122,38 @@ struct SeasonalCalendarTests {
 
     @Test("overlaps: the short feast wins the long season, and Eid wins Nowruz (2026)")
     func precedence() throws {
-        // 2026: St Patrick's fell inside Ramadan, and Eid's first days met Nowruz.
+        // 2026: St Patrick's fell inside Ramadan, and Eid met Nowruz (Farvardin 1 = Mar 21).
         #expect(try look(2026, 3, 16) == .stPatricks)
-        #expect(try look(2026, 3, 18) == .ramadan)
         #expect(try look(2026, 3, 21) == .eid)
-        #expect(try look(2026, 3, 23) == .nowruz)
+        #expect(try look(2026, 3, 23) == .eid)
         #expect(try look(2026, 3, 27) == .nowruz)
+    }
+
+    @Test("every window is the user's local day: UTC+14 and UTC-12 disagree across St Patrick's last midnight")
+    func localDayEdges() throws {
+        let kiritimati = try calendar("Pacific/Kiritimati") // UTC+14
+        let bakerIsland = try calendar("Etc/GMT+12") // UTC-12
+        // Mar 18 00:30 in Kiritimati is Mar 16 22:30 at UTC-12.
+        let instant = try date(2027, 3, 18, 0, 30, in: kiritimati)
+        #expect(SeasonalLook.active(on: instant, calendar: kiritimati, offline: false) == nil)
+        #expect(SeasonalLook.active(on: instant, calendar: bakerIsland, offline: false) == .stPatricks)
+        let lastMinute = try date(2027, 3, 17, 23, 59, 59, in: kiritimati)
+        #expect(SeasonalLook.active(on: lastMinute, calendar: kiritimati, offline: false) == .stPatricks)
+    }
+
+    @Test("the per-minute memo computes once per key and recomputes when the key moves")
+    func memo() {
+        let memo = SeasonalLook.Memo()
+        var runs = 0
+        let key = SeasonalLook.Memo.Key(zone: "UTC", minute: 100, enabled: true, offline: false, override: nil)
+        #expect(memo.value(for: key) { runs += 1; return .christmas } == .christmas)
+        #expect(memo.value(for: key) { runs += 1; return nil } == .christmas)
+        #expect(runs == 1)
+        let next = SeasonalLook.Memo.Key(zone: "UTC", minute: 101, enabled: true, offline: false, override: nil)
+        #expect(memo.value(for: next) { runs += 1; return nil } == nil)
+        let offline = SeasonalLook.Memo.Key(zone: "UTC", minute: 101, enabled: true, offline: true, override: nil)
+        #expect(memo.value(for: offline) { runs += 1; return .flightClub } == .flightClub)
+        #expect(runs == 3)
     }
 
     // MARK: - Every look
