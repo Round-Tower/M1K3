@@ -19,6 +19,10 @@
 //  the leftover sweep moves to the app going to the background. A batch AirDrop lands every copy before each URL
 //  arrives and a copy keeps its source's mtime, so the age gate tried first could still take a sibling. Confidence
 //  0.85 (pure + tested; a 3-file AirDrop is owed on the phone).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#893 C, the Mac half) — `admit`: the Mac's held queue for Finder's
+//  Open With, a drop on the Dock icon and `open -a M1K3` (files only, in order, each once). The Mac registers the
+//  same `registeredTypeIdentifiers`; `step` is shared. Confidence 0.85 (pure + tested; Open With verified by launch
+//  on the Debug build, the Dock-icon drop not yet).
 //
 
 import Foundation
@@ -54,6 +58,19 @@ public enum SharedFileIntake {
     public static func step(isResponding: Bool, hasMessages: Bool, consentPending: Bool) -> Step {
         if isResponding || consentPending { return .wait }
         return hasMessages ? .newChatThenStage : .stageHere
+    }
+
+    /// The Mac's held queue: the files among `incoming` (Launch Services' Open With, a drop on the Dock icon,
+    /// `open -a M1K3 file`), appended in order to those already `held`, each once, however its path is spelled.
+    /// Anything that isn't a file (a web URL, an `m1k3://` link) is dropped: the Mac registers no URL scheme.
+    public static func admit(_ incoming: [URL], holding held: [URL]) -> [URL] {
+        var seen = Set(held.map(components))
+        var queue = held
+        for url in incoming {
+            guard case let .file(file) = classify(url), seen.insert(components(file)).inserted else { continue }
+            queue.append(file)
+        }
+        return queue
     }
 
     /// iOS copies a file opened in another app into `Documents/Inbox` (the plist opts out of opening in place).
