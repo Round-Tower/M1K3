@@ -202,6 +202,8 @@ struct ChatScreen: View {
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @State private var brainFailureDraft: SnagDraft?
     @State private var showSettings = false
+    /// The window's width, for where an opened page shows (ArtifactPresentation).
+    @State private var windowWidth: CGFloat = 0
     /// On screen, not covered by a pushed screen (Settings). The face is built only then:
     /// one built under Settings never got a drawable, failed 60 frames a second, and stayed
     /// black when the chat came back (Kev's phone, 2026-11-02).
@@ -245,14 +247,16 @@ struct ChatScreen: View {
 
     /// A regular-width window (iPad) shows the opened code beside the chat; a compact one (iPhone) as a sheet.
     private var artifactPresentation: ArtifactPresentation {
-        ArtifactPresentation.style(isRegularWidth: horizontalSizeClass == .regular)
+        ArtifactPresentation.style(isRegularWidth: horizontalSizeClass == .regular, width: Double(windowWidth))
     }
 
-    /// The sheet's binding: only in a compact window, so a regular one never shows both.
+    /// The sheet's binding: only where the column does not fit, so a wide window never shows both. A page opened
+    /// from voice mode (or the look camera), which cover this screen, waits for the cover to close and then
+    /// presents: a sheet raised under a full-screen cover would never show, or show late.
     private var artifactSheet: Binding<CodeArtifact?> {
         Binding(
-            get: { artifactPresentation == .sheet ? core.artifact : nil },
-            set: { core.artifact = $0 }
+            get: { artifactPresentation == .sheet && core.voiceLoop == nil && !showLook ? core.artifact : nil },
+            set: { if $0 == nil { core.closeArtifact() } }
         )
     }
 
@@ -273,6 +277,7 @@ struct ChatScreen: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: core.artifact?.id)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { windowWidth = $0 }
         .environment(\.openCodeBlock) { language, code in
             core.openCodeBlock(language: language, code: code)
         }

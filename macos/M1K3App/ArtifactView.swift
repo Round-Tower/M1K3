@@ -17,6 +17,8 @@
 //  WKWebView is one `makeSealedWebView` shared by an NSViewRepresentable and a UIViewRepresentable; the seal itself
 //  is unchanged, ArtifactSandboxPolicy untouched), and an optional `onClose` adds a Done button for the phone sheet.
 //  Not yet seen on a device. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — iOS `allowsLinkPreview = false`; the seal's source is pinned by ArtifactViewSealScanTests;
+//  a stale comment about which languages reach the Preview tab corrected. Confidence 0.75.
 
 import M1K3Chat
 import M1K3Preview
@@ -65,8 +67,9 @@ struct ArtifactView: View {
             Divider().opacity(0.4)
             switch selectedTab {
             case .preview:
-                // Markdown renders to HTML (previewHTML); html/css/js preview their
-                // own source. The Code tab always shows the raw `source`.
+                // Only html and markdown reach this tab (isRenderable): markdown renders to
+                // HTML (previewHTML), html previews its own source. The Code tab always
+                // shows the raw `source`.
                 ArtifactPreviewWebView(source: artifact.previewHTML)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .code:
@@ -163,6 +166,10 @@ private func makeSealedWebView(source: String, navigationGuard: ArtifactNavigati
     config.defaultWebpagePreferences.allowsContentJavaScript = false
     let webView = WKWebView(frame: .zero, configuration: config)
     webView.navigationDelegate = navigationGuard
+    #if os(iOS)
+        // No long-press link preview: it would fetch the link's page outside the content rule list.
+        webView.allowsLinkPreview = false
+    #endif
 
     WKContentRuleListStore.default().compileContentRuleList(
         forIdentifier: ArtifactSandboxPolicy.contentRuleListIdentifier,

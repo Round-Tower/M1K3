@@ -186,8 +186,9 @@
 //  `thinkAside` (a think was announced), so the pose matches the quiet; other turns keep the 600 ms advance.
 //  Verify-by-launch. Confidence 0.75.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: `surfaceCodeArtifact` opens the first RENDERABLE
-//  artifact (ArtifactOpenPolicy), not `.first`; `surfaceLastAnswerArtifact` lets the voice route open it too;
+//  artifact (ArtifactOpenPolicy), not `.first`; `surfaceLandedAnswerArtifact` lets the voice route open it too;
 //  `openCodeBlock` serves the Open button. Verify-by-launch owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — the voice route opens only the answer its own send produced (LandedAnswer).
 
 import AppKit
 import Foundation
@@ -1676,13 +1677,14 @@ final class AppEnvironment {
         chat.stripArtifactTagsFromLastMessage()
     }
 
-    /// A voice turn's answer has landed: open the page it made, like a typed turn does. A stopped or
-    /// failed answer opens nothing (a truncated block is no artifact).
-    func surfaceLastAnswerArtifact() {
-        guard let answer = chat.messages.last, answer.role == .assistant,
-              answer.interrupted != true
-        else { return }
-        if case .failed = answer.status { return }
+    /// A voice turn's answer has landed: open the page it made, like a typed turn does. Only the answer THIS
+    /// send produced counts (`previousLastID` is the transcript's last message before it): a send that returned
+    /// at once (a barge-in superseded it) leaves the previous answer, or one still streaming, as `messages.last`,
+    /// and that must neither re-open a closed page nor open a truncated one.
+    func surfaceLandedAnswerArtifact(after previousLastID: UUID?) {
+        guard let answer = LandedAnswer.completed(
+            in: chat.messages, after: previousLastID, isResponding: chat.isResponding
+        ) else { return }
         surfaceCodeArtifact(from: answer.text)
     }
 
