@@ -9,6 +9,7 @@
   "eventStart": "2026-12-02T10:00:00Z",
   "eventEnd": "2027-01-02T09:00:00Z",
   "deepLink": "m1k3://event/christmas",
+  "looks": ["christmas"],
   "copy": {
     "name": "Christmas in the Lair",
     "shortDescription": "M1K3 dresses up for the holidays.",
