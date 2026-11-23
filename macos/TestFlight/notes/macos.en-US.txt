@@ -2,6 +2,8 @@ Thanks for testing M1K3 1.6.0 on the Mac.
 
 New in 1.6, please try:
 • Seasonal looks: from 2 December to 7 January, the Phosphor Fox glows candy red and gold and says a Christmas hello. Tell us if the colours read well, in light and dark, in the chat and in voice mode. The Seasonal looks switch in Settings turns them off.
+• Code beside the chat: ask for a small web page. It should open beside the chat. Click Open on any code block to see that one. Share or export a page: it should save as an .html file.
+• Open With M1K3: right-click a text, code or JSON file in Finder, then Open With ▸ M1K3, or drop it on M1K3 in the Dock. It should land in the box, ready to send, and never send by itself. Try it with M1K3's window closed, too.
 
 And the basics:
 • Voice mode, a few turns in a row
