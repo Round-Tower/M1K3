@@ -19,6 +19,7 @@
 //  change, so a closed or replaced page never lingers in the prompt — and a
 //  late arrival is checked against the page still on screen (`setPageContext`),
 //  so a slow page's capture can't land on top of the page that replaced it.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — `closeArtifactIfShowing` (a conversation change closes a generated page). Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -120,6 +121,14 @@ final class ReviewModel {
         if present {
             isPresented = true
         }
+    }
+
+    /// Close the panel only if it is showing a generated artifact: a new chat, a switch or a delete leaves
+    /// no stale page beside the wrong transcript, and a link or file the user opened is theirs to close.
+    func closeArtifactIfShowing() {
+        guard case .artifact = target else { return }
+        clear()
+        isPresented = false
     }
 
     /// Reset to the empty resting state.

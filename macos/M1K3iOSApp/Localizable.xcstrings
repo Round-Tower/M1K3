@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Open" : {
+      "shouldTranslate" : true
+    },
+    "Open code block" : {
+      "shouldTranslate" : true
+    },
+    "Open beside the chat" : {
+      "shouldTranslate" : true
+    },
+    "Close preview" : {
+      "shouldTranslate" : true
+    },
     "" : {
 
     },

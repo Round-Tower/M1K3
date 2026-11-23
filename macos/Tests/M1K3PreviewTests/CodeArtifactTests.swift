@@ -92,4 +92,21 @@ struct CodeArtifactTests {
         let artifact = CodeArtifact(source: source, language: .html)
         #expect(artifact.exportData == source.data(using: .utf8))
     }
+
+    // MARK: - Share as a file (Kev, 2026-11-23: "it share's back to my mac as a text file - not HTML")
+
+    @Test("a shared artifact is a file of its own type: an HTML page arrives as .html, not as text")
+    func shareFileType() throws {
+        #expect(CodeArtifact.Language.html.shareFileType == .html)
+        #expect(CodeArtifact.Language.js.shareFileType == .javaScript)
+        #expect(try CodeArtifact.Language.css.shareFileType == #require(UTType(filenameExtension: "css")))
+        #expect(try CodeArtifact.Language.markdown.shareFileType == #require(UTType(filenameExtension: "md")))
+        #expect(CodeArtifact.Language.code.shareFileType == .plainText)
+        // Every share type agrees with the extension the file is named with.
+        for language in [CodeArtifact.Language.html, .css, .js, .markdown, .code] {
+            let named = try #require(UTType(filenameExtension: language.fileExtension), "\(language)")
+            #expect(named.conforms(to: language.shareFileType), "\(language): \(named.identifier)")
+        }
+        #expect(CodeArtifact(source: "<p>hi</p>", language: .html).filename == "generated.html")
+    }
 }

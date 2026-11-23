@@ -61,6 +61,7 @@
 //  LocalizedStringResource, so a literal preview line reaches the shell's catalog (the String
 //  init renders it verbatim, single under the pseudo-language pass). Runtime text keeps the
 //  String init. English unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — `streaming` reaches CodeBlockView, which shows a streaming block plain. Confidence 0.8.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -158,7 +159,7 @@ struct ReadingText: View {
                     .foregroundStyle(.readableSecondary)
             }
         case let .codeBlock(language, code):
-            CodeBlockView(code: code, language: language)
+            CodeBlockView(code: code, language: language, streaming: streaming)
         case .thematicBreak:
             Divider()
         case let .table(header, rows):

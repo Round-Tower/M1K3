@@ -74,6 +74,8 @@
 # on-device recognition ("your voice stays on this Mac/device. It is never sent to a server."). On iOS 27 the system puts
 # its own "Speech data … sent to Apple" line above ours, and the old "Nothing is sent to Apple" read as a contradiction.
 # Kev's pick of three. True by construction: SpeechAnalyzer is on-device. InfoPlist.xcstrings moved with it.
+# Review: Kev + claude-opus-5-5, 2026-11-23 — MobileShell compiles M1K3App/ArtifactView.swift (the sealed artifact view)
+# so the phone shows opened code in a sheet and the iPad beside the chat (1.6). Confidence 0.8.
 
 name: M1K3
 
@@ -173,6 +175,8 @@ targetTemplates:
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/CodeBlockView.swift
+      # The sealed artifact view (preview + highlighted code + export) the Open button shows in a sheet / side column.
+      - path: M1K3App/ArtifactView.swift
       # "Remember this photo" under a sent image (caption memory): pure SwiftUI over
       # M1K3Chat's PhotoMemory, one file for both shells.
       - path: M1K3App/RememberPhotoButton.swift

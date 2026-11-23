@@ -102,6 +102,7 @@
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
 //  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the streaming turn begins the answer latch
 //  before anything awaits again; a page command re-begins it with the interface's language. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — a landed voice turn opens its page (`surfaceLandedAnswerArtifact`, AppCore+Artifact; only the answer its own send produced). Device try owed. Confidence 0.7.
 
 import AVFoundation
 import Foundation
@@ -316,8 +317,10 @@ extension AppCore {
             let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
+            let lastBeforeSend = chat.messages.last?.id
             await chat.send(prepared.question)
             if let token { Self.voiceTurnClause.clear(token) }
+            surfaceLandedAnswerArtifact(after: lastBeforeSend)
         }
         return VoiceLoopController.Dependencies(
             startListening: { [weak self] in

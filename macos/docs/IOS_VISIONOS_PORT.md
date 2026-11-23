@@ -833,3 +833,14 @@ word; the screensaver's phosphor on ink). And the phone gets the Mac's long-turn
 turn lands, is stopped or loses its grace while the app is away; a tap opens the chat (`m1k3://chat`). The permission is
 asked once, right after a long answer finishes in the foreground (the phone has no notification setting). Confidence 0.7
 (the look, the font load and the banner are verify-on-device)._
+
+_Review: Kev + claude-opus-5-5, 2026-11-23 (1.6, code beside the chat): `ArtifactView.swift` is in the MobileShell template
+(its sealed WKWebView is one `makeSealedWebView` behind an NSViewRepresentable and a UIViewRepresentable; the seal is
+`ArtifactSandboxPolicy`, untouched, JavaScript off, link preview off on iOS). Every code card's Open button
+(`openCodeBlock` environment) fills `AppCore.artifactScope`; `ChatScreen` shows it as a sheet on iPhone and in a
+narrow iPad window, and as a 380 pt column beside the chat from 900 pt wide up (`ArtifactPresentation.style`, pure; a
+half-width Split View is still `.regular` and stays a sheet). A page belongs to its conversation (`ScopedArtifact`):
+a new chat, a switch or a delete hides it. An answer that makes a page opens it from a typed or spoken turn, only if
+THIS send produced it (`LandedAnswer`). A page opened from voice mode or the look camera presents when that cover closes.
+Verify-on-device: the sheet and the column on an iPad, the cover hand-off, the seal loading on iOS and visionOS.
+Confidence 0.7._

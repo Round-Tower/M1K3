@@ -217,6 +217,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-22 — the age band reaches this responder, as on the Mac: under 16 the palette
 //  and the privacy facts have no web, and minors get the age clause. The review notes promised both; this shell read
 //  neither. Confidence 0.8 (IOSAgeWiringScanTests; device try owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: `artifact` (what ChatScreen shows) and the
+//  landed-answer hook after a typed send (AppCore+Artifact). Device try owed. Confidence 0.7.
 
 import AVFoundation
 #if os(iOS)
@@ -314,6 +316,9 @@ final class AppCore {
     /// The live voice-first loop — non-nil while the mode is active (drives the
     /// full-screen VoiceScreen cover). Internal-set: AppCore+Voice owns entry/exit.
     var voiceLoop: VoiceLoopController?
+    /// The code the chat opened beside itself, with the conversation it was opened in (a sheet or a side column —
+    /// ChatScreen decides). Read it through `artifact`. AppCore+Artifact.
+    var artifactScope: ScopedArtifact?
     /// Word-highlight state for the karaoke line in voice mode — the Mac's
     /// SpeechHighlight, cherry-picked verbatim; fed by AVSpeechProvider's live
     /// word ranges (AppCore+Voice.wireSpeechCallbacks).
@@ -1576,8 +1581,10 @@ final class AppCore {
         avatar.setActivity(.thinking)
         beginAutoSpeakSession() // before the send: it pins this turn's answer (AppCore+AutoSpeak)
         let activity = beginTurnActivity(.answer)
+        let lastBeforeSend = chat.messages.last?.id
         await chat.send(text, images: images)
         settleTypedTurn()
+        surfaceLandedAnswerArtifact(after: lastBeforeSend)
         endTurnActivity(activity)
     }
 
