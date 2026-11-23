@@ -79,6 +79,10 @@
 # Files and Share → Open in. Pinned against SharedFileIntake by SharedFileIntakeScanTests. Confidence 0.8 (verify on device).
 # Review: Kev + claude-opus-5-5, 2026-11-23 — MobileShell compiles M1K3App/ArtifactView.swift (the sealed artifact view)
 # so the phone shows opened code in a sheet and the iPad beside the chat (1.6). Confidence 0.8.
+# Review: Kev + claude-opus-5-5, 2026-11-23 — Open With on the Mac (#893 C, the Mac half): the M1K3 target registers the same
+# document types (Viewer, Alternate), so Finder's Open With, a drop on the Dock icon and `open -a M1K3` reach
+# AppDelegate.application(_:open:). One plist serves both Mac lanes (Developer ID and MAS differ only in entitlements).
+# Pinned per target by SharedFileIntakeScanTests. Confidence 0.8 (verified by launch on the Debug build).
 
 name: M1K3
 
@@ -457,6 +461,22 @@ targets:
         # per-submission encryption prompt in App Store Connect and prevents an
         # accidental mis-answer. Flip to true only if non-exempt crypto is ever added.
         ITSAppUsesNonExemptEncryption: false
+        # Open With on the Mac (#893 C): Finder's Open With, a drop on the Dock icon and `open -a M1K3 file` hand the
+        # ＋ picker's own file types to AppDelegate.application(_:open:) (SharedFileIntake.registeredTypeIdentifiers;
+        # SharedFileIntakeScanTests pins this list against it). The file is staged in the composer and never sent.
+        # Viewer at Alternate rank: M1K3 is offered, never anyone's default app for a type.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Text and code
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.plain-text
+              - public.text
+              - public.source-code
+              - public.json
+              - public.yaml
+              - public.xml
+              - public.html
 
   # The iOS shipping shell — the shared adaptive app (2026-07-06). Grew out of the
   # on-device derisk harness into the real, tabbed app (Chat / Memories / Documents

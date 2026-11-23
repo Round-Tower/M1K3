@@ -158,6 +158,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — staging deletes only its own Inbox copies (a batch
 //  AirDrop's siblings are still on their way; RootView sweeps leftovers on background), and a shared file also
 //  waits out a consented Private Cloud send still launching. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (1.6 follow-up: B meets C) — a shared .html/.md also opens beside the
+//  chat (read before the Inbox copy goes; 2 MB cap, asked by size before the read; UTF-8 else Latin-1). Confidence
+//  0.75 (device try owed).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
 //  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
 //  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
@@ -1363,12 +1366,33 @@ struct ChatScreen: View {
         let urls = sharedFiles
         sharedFiles = []
         attach(urls)
+        // A page (html, markdown) also opens beside the chat, read now: iOS's copy goes below.
+        if let page = urls.lazy.compactMap(Self.sharedPageText).first {
+            core.openSharedPage(filename: page.filename, text: page.text)
+        }
         // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
         // it goes. Only these: a batch's siblings may still be on their way (RootView sweeps leftovers on background).
         for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
             try? FileManager.default.removeItem(at: url)
         }
     }
+
+    /// A shared file's name and text when it could be a page (the policy decides), capped like the composer's read.
+    private static func sharedPageText(_ url: URL) -> (filename: String, text: String)? {
+        guard CodeArtifact.Language(fileExtension: url.pathExtension)?.isRenderable == true else { return nil }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        // The size is asked first: a huge page is never read on the main actor just to be refused.
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= sharedPageByteCap,
+              let data = try? Data(contentsOf: url)
+        else { return nil }
+        // Older pages are often Latin-1 / Windows-1252; Latin-1 decodes any bytes, so such a page still opens.
+        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else { return nil }
+        return (url.lastPathComponent, text)
+    }
+
+    /// The largest shared page opened beside the chat; a bigger one still stages in the composer, truncated.
+    private static let sharedPageByteCap = 2_000_000
 
     private static let attachmentStore = AppCore.attachmentStore
 }

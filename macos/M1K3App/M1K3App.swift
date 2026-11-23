@@ -26,6 +26,10 @@
 //  before the environment builds and cleared on a clean quit; a standing mark reaches the environment once.
 //  Confidence unchanged.
 //  Review: Kev + claude-opus-5.5, 2026-11-05 — Debug-only HUD demo launch (`-hudDemo`): shows the HUD and skips the brain warm-up (NotchHUDDemo.swift). Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — Open With on the Mac (#893 C): `application(_:open:)` hands Finder's
+//  Open With, a Dock-icon drop and `open -a M1K3 file` to the delegate's SharedFileInbox (above the onboarding gate,
+//  so a cold launch or first run holds the file), ContentView stages it, and the menu-bar label summons a closed
+//  window (SharedFileSummons). Never sent. Confidence 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Avatar
@@ -99,6 +103,8 @@ struct M1K3App: App {
                     if hasChosenBrain {
                         ContentView()
                             .environment(env)
+                            // Files opened in M1K3 (Open With, the Dock icon), held until the chat stages them.
+                            .environment(appDelegate.sharedFiles)
                             .environment(\.photoMemory, env.photoMemory)
                             // Settings ▸ General's launch-at-login row lives in this window now.
                             .environment(launchAtLogin)
@@ -229,6 +235,8 @@ struct M1K3App: App {
                 .trackWindowVisibility()
         } label: {
             MenuBarLabel(env: appDelegate.environment, glyphStyle: .pixelM)
+                // Always mounted, so a file opened while the main window is closed can summon it.
+                .modifier(SharedFileSummons(inbox: appDelegate.sharedFiles))
         }
         .menuBarExtraStyle(.window)
     }
@@ -248,6 +256,9 @@ struct M1K3App: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published private(set) var environment: AppEnvironment?
     @Published private(set) var startupError: String?
+    /// Files opened in M1K3 (Finder's Open With, a drop on the Dock icon, `open -a M1K3 file`), held here, above
+    /// the onboarding gate and outside the window, until ContentView stages them. Never sent (#893 C).
+    let sharedFiles = SharedFileInbox()
     /// The main window's last occlusion report. The window mounts (and reports)
     /// before `environment` exists, and the probe only reports CHANGES — so the
     /// value is kept here and replayed into the environment once it is built,
@@ -298,6 +309,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private static let launchLog = Logger(subsystem: "app.m1k3", category: "launch")
+
+    /// Launch Services hands opened files here: at a cold launch (before `applicationDidFinishLaunching`), and
+    /// while running. Held, then staged by the chat; the delegate never stages or sends.
+    func application(_: NSApplication, open urls: [URL]) {
+        Self.launchLog.notice("open: \(urls.count, privacy: .public) URL(s) handed over")
+        // Only a file brings M1K3 forward: a web link or an unregistered scheme is ignored, quietly.
+        if sharedFiles.receive(urls) { NSApp.activate() }
+    }
 
     /// First line of every session: which build emitted the lines that follow.
     /// Without it a `log stream` window or a user's Console capture has no anchor

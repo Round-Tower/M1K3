@@ -9,6 +9,10 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (pure decisions + coarse scans; the share sheet,
 //  AirDrop and cold launch are verify-on-device). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#893 C, the Mac half) — `admit` (the Mac's held queue: files only,
+//  each once) and Mac scans: the M1K3 target registers the same types (Viewer, Alternate), the delegate holds what
+//  arrives above the onboarding gate, and ContentView stages through the paperclip's `attach` and never sends. The
+//  one-block plist count is now a per-target read. Confidence 0.8 (pure + scans; the shell is verified by launch).
 //
 
 import Foundation
@@ -83,6 +87,30 @@ struct SharedFileIntakeTests {
         #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waitingPrivate]) == [stale])
     }
 
+    // MARK: - The Mac's held queue
+
+    @Test("the Mac holds the files that arrived, in order, after those already held; links and web URLs are dropped")
+    func admitKeepsFilesInOrder() throws {
+        let a = URL(fileURLWithPath: "/Users/x/Desktop/a.json")
+        let b = URL(fileURLWithPath: "/Users/x/Desktop/b.txt")
+        let c = URL(fileURLWithPath: "/Users/x/c.yaml")
+        let web = try #require(URL(string: "https://m1k3.app"))
+        let link = try #require(URL(string: "m1k3://event/christmas"))
+        #expect(SharedFileIntake.admit([b, web, link, c], holding: [a]) == [a, b, c])
+        #expect(SharedFileIntake.admit([web, link], holding: [a]) == [a])
+        #expect(SharedFileIntake.admit([], holding: []).isEmpty)
+    }
+
+    @Test("a waiting file is held once: a second Open With before it stages, or a path spelled two ways, adds nothing")
+    func admitHoldsEachFileOnce() {
+        let a = URL(fileURLWithPath: "/Users/x/Desktop/a.json")
+        let sameA = URL(fileURLWithPath: "/Users/x/Desktop/sub/../a.json")
+        let b = URL(fileURLWithPath: "/Users/x/Desktop/b.txt")
+        #expect(SharedFileIntake.admit([a], holding: [a]) == [a])
+        #expect(SharedFileIntake.admit([sameA, b, b], holding: [a]) == [a, b])
+        #expect(SharedFileIntake.admit([b, a, b], holding: []) == [b, a])
+    }
+
     // MARK: - What M1K3 registers
 
     @Test("the registered document types are exactly the ＋ picker's file types, and never PDF (a decision still owed)")
@@ -94,7 +122,8 @@ struct SharedFileIntakeTests {
     }
 }
 
-/// Source scans for the iPhone shell (RootView / ChatScreen have no pure seam) and the plist in project.yml.
+/// Source scans for the iPhone shell (RootView / ChatScreen have no pure seam), the Mac shell (the app delegate,
+/// SharedFileInbox, ContentView) and both plists in project.yml.
 struct SharedFileIntakeScanTests {
     private static func source(_ relative: String) throws -> String {
         // …/macos/Tests/M1K3InferenceTests/<this file>
@@ -156,6 +185,17 @@ struct SharedFileIntakeScanTests {
         #expect(code.contains("phase == .background"), "by then every URL of a batch has arrived")
     }
 
+    @Test("a shared page also opens beside the chat, read from the file before iOS's copy is deleted")
+    func sharedPageOpensBeforeTheCopyGoes() throws {
+        let code = try Self.flat("M1K3iOSApp/ChatScreen.swift")
+        let receive = try Self.body(of: "private func receiveSharedFiles()", in: code)
+        let open = try #require(receive.range(of: "core.openSharedPage("))
+        let remove = try #require(receive.range(of: "removeItem"))
+        #expect(open.lowerBound < remove.lowerBound, "the page is read from the file, so it must open before the delete")
+        let core = try Self.flat("M1K3iOSApp/AppCore+Artifact.swift")
+        #expect(core.contains("ArtifactOpenPolicy.sharedPage("), "the shell asks the pure policy which files are pages")
+    }
+
     @Test("the root catches a shared file before onboarding is done, so cold launch and first run keep it")
     func rootCatchesDuringOnboarding() throws {
         let code = try Self.flat("M1K3iOSApp/RootView.swift")
@@ -167,18 +207,90 @@ struct SharedFileIntakeScanTests {
         #expect(code.contains("SharedFileIntake.classify("))
     }
 
+    /// One target's section of project.yml's `targets:` map: from `  <name>:` to the next two-space key.
+    private static func target(_ name: String, in yml: String) throws -> Substring {
+        let targets = try #require(yml.range(of: "\ntargets:\n"), "project.yml has no targets map")
+        // From the targets line's own newline: the first target's `\n  <name>:\n` starts there.
+        let rest = yml[yml.index(before: targets.upperBound)...]
+        let head = try #require(rest.range(of: "\n  \(name):\n"), "no \(name) target")
+        let body = rest[head.upperBound...]
+        let next = body.firstRange(of: /\n  [A-Za-z][A-Za-z0-9_-]*:\n/)?.lowerBound ?? body.endIndex
+        let schemes = body.range(of: "\nschemes:\n")?.lowerBound ?? body.endIndex
+        return body[..<min(next, schemes)]
+    }
+
+    /// The UTIs a target's document-types block lists, in order.
+    private static func documentTypes(in target: Substring) throws -> [String] {
+        let start = try #require(target.range(of: "CFBundleDocumentTypes:"), "this target registers no document types")
+        var declared: [String] = []
+        let lines = target[start.upperBound...].split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        for line in lines {
+            if line.hasPrefix("- public.") {
+                declared.append(String(line.dropFirst(2)))
+            } else if !declared.isEmpty, !line.hasPrefix("- ") {
+                break
+            }
+        }
+        return declared
+    }
+
     @Test("the iPhone plist registers exactly SharedFileIntake's types, as copies (not open in place)")
     func plistMatchesTypes() throws {
+        let ios = try Self.target("M1K3iOS", in: Self.source("project.yml"))
+        #expect(try Self.documentTypes(in: ios) == SharedFileIntake.registeredTypeIdentifiers)
+        #expect(ios.contains("LSSupportsOpeningDocumentsInPlace: false"),
+                "copies, not in place: the file is staged and the copy deleted")
+        #expect(ios.contains("CFBundleTypeRole: Viewer") && ios.contains("LSHandlerRank: Alternate"))
+    }
+
+    // MARK: - The Mac half (Finder Open With, a drop on the Dock icon, `open -a M1K3 file`)
+
+    @Test("the Mac plist registers the same types as a Viewer at Alternate rank: never anyone's default editor")
+    func macPlistMatchesTypes() throws {
         let yml = try Self.source("project.yml")
-        let start = try #require(yml.range(of: "CFBundleDocumentTypes:"), "the iOS target registers no document types")
-        let block = yml[start.upperBound...]
-        let end = try #require(block.range(of: "LSSupportsOpeningDocumentsInPlace: false"),
-                               "copies, not in place: the file is staged and the copy deleted")
-        let declared = block[..<end.lowerBound].split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0.hasPrefix("- public.") }
-            .map { String($0.dropFirst(2)) }
-        #expect(declared == SharedFileIntake.registeredTypeIdentifiers)
-        #expect(yml.components(separatedBy: "CFBundleDocumentTypes:").count == 2, "only the iPhone target registers types (slice 1)")
+        let mac = try Self.target("M1K3", in: yml)
+        #expect(try Self.documentTypes(in: mac) == SharedFileIntake.registeredTypeIdentifiers)
+        #expect(mac.contains("CFBundleTypeRole: Viewer"), "M1K3 reads a file; it never edits one")
+        #expect(mac.contains("LSHandlerRank: Alternate"), "M1K3 must never become the default app for a type")
+        for owner in ["CFBundleTypeRole: Editor", "LSHandlerRank: Owner", "LSHandlerRank: Default"] {
+            #expect(!mac.contains(owner), "found \(owner)")
+        }
+        // Two blocks in the file: the Mac app and the iPhone app (the visionOS shell takes none yet).
+        #expect(yml.components(separatedBy: "CFBundleDocumentTypes:").count == 3)
+    }
+
+    @Test("the Mac delegate holds what Launch Services hands over above the onboarding gate, and brings M1K3 forward")
+    func macDelegateHoldsAndSummons() throws {
+        let code = try Self.flat("M1K3App/M1K3App.swift")
+        let open = try Self.body(of: "func application(_: NSApplication, open urls: [URL])", in: code)
+        #expect(open.contains("if sharedFiles.receive(urls) { NSApp.activate() }"), "only a file brings M1K3 forward")
+        for forbidden in ["send(", ".send", "sendTurn", "submit(", "attach("] {
+            #expect(!open.contains(forbidden), "the delegate only holds: found \(forbidden)")
+        }
+        // The delegate owns the inbox (it outlives the window and onboarding), and ContentView reads it.
+        #expect(code.contains("let sharedFiles = SharedFileInbox()"))
+        #expect(code.contains("ContentView() .environment(env) .environment(appDelegate.sharedFiles)"))
+        // A closed window (menu-bar only) is summoned by the always-mounted status-bar label.
+        #expect(code.contains(".modifier(SharedFileSummons(inbox: appDelegate.sharedFiles))"))
+        let inbox = try Self.flat("M1K3App/SharedFileInbox.swift")
+        #expect(inbox.contains("SharedFileIntake.admit("))
+        #expect(inbox.contains("openWindow(id: M1K3App.mainWindowID)"))
+    }
+
+    @Test("the Mac stages an opened file through the paperclip's attach, waits out a turn or voice, and never sends")
+    func macStagesThroughAttachNeverSends() throws {
+        let code = try Self.flat("M1K3App/ContentView.swift")
+        let receive = try Self.body(of: "private func receiveSharedFiles()", in: code)
+        #expect(receive.contains("SharedFileIntake.step("))
+        #expect(receive.contains("isResponding: env.chat.isResponding || env.isVoiceModeActive"),
+                "a file waits out a turn and a voice session (a new chat under either would orphan it)")
+        #expect(receive.contains("consentPending: privateCloudPending != nil || privateCloudSending"))
+        #expect(receive.contains("env.chat.startNewConversation()"))
+        #expect(receive.contains("attach(urls)"), "an opened file takes the same route (and rules) as the paperclip")
+        for forbidden in ["send(", ".send", "sendTurn", "submit(", "ingest("] {
+            #expect(!receive.contains(forbidden), "the intake must never send: found \(forbidden)")
+        }
+        #expect(code.contains(".onChange(of: sharedFiles.files, initial: true)"),
+                "a file held through onboarding or a cold launch is staged when the chat first appears")
     }
 }
