@@ -14,7 +14,7 @@
 //  `NetworkPathWatch.shared.isOffline`, so this file stays pure and the gate is unit-tested.
 //
 //  Launch argument: `M1K3 -seasonalLook <look>` (halloween, flightclub, christmas, ramadan, eid, nowruz,
-//  stpatricks) forces the look on (flightclub
+//  stpatricks, lunarnewyear, diwali) forces the look on (flightclub
 //  regardless of date AND network), `-seasonalLook none` forces it off (screenshots, store art,
 //  verification). Read from the ARGUMENT domain only, like `GenerationActivity.isEnabled`: on
 //  macOS 27 `defaults write` never reaches the sandboxed app, and a persisted key must never force
@@ -55,6 +55,18 @@
 //  Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#891 bot nit) — the `.eid` catalog comment said "the first three days"; it
 //  now names Shawwal 2-4. The first 2026-11-23 block's "Shawwal 1–3" is superseded by the fold block above. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible"; India is a top-3 reach country, and
+//  zh-Hans / ko / vi users matter) — Lunar New Year (Chinese calendar: the Eve through the Lantern Festival, day 15; the
+//  ordinary first month only, never a leap one) and Diwali (Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 days, from a
+//  dated table, `diwaliDates`, because no Foundation calendar names the day: see the table). Both DO overlap other looks
+//  in 2026–2030 (Diwali meets Halloween in 2027 and 2030 and Flight Club in 2026 and 2029; Lunar New Year meets Ramadan
+//  or Eid every year from 2026 to 2031), so the order grows a first rule: a feast's MAIN days keep their own look.
+//  Halloween night, Diwali's five days, and Lunar New Year's Eve and Day go first; the rest of Lunar New Year yields to
+//  Ramadan and Eid, so the Ramadan event's "Through Ramadan" stays true. Confidence 0.75 (maths pinned in
+//  SeasonalCalendarTests; the precedence is a judgement call Kev may flip; the looks are verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: "Halloween wins...") — Halloween's whole season (Oct 24 – Nov 1) now
+//  comes before Diwali: Diwali 2027 and 2030 show Halloween throughout; other years keep all five Diwali days.
+//  Confidence 0.85 (pinned for 2026–2035).
 //
 
 import Foundation
@@ -76,6 +88,10 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
     case nowruz
     /// St Patrick's — Mar 14–17, the Dublin festival days.
     case stPatricks = "stpatricks"
+    /// Lunar New Year (Spring Festival, Seollal, Tết) — the Eve through the Lantern Festival, Chinese calendar.
+    case lunarNewYear = "lunarnewyear"
+    /// Diwali / Deepavali — Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 days (`diwaliDates`).
+    case diwali
 
     /// Launch-argument key: `-seasonalLook <look> | none` (a look's raw value, any case).
     public static let overrideKey = "seasonalLook"
@@ -108,20 +124,34 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
 
     /// The look in season on `date` in `calendar`'s time zone, else nil. `offline` gates Flight Club
     /// only. Each window is read on its OWN calendar in the caller's zone, never the caller's calendar
-    /// system. Order: a short feast wins a long season (Halloween, Eid, St Patrick's, Nowruz, then
-    /// Ramadan, Christmas, Flight Club; the moon-sighting days sit with Eid).
+    /// system. Order: Halloween's whole season first (Kev, 2026-11-23: "Halloween wins"); then a
+    /// feast's main days keep their own look (Diwali's five days, all of them feast days; Lunar New
+    /// Year's Eve and Day). Then a short feast wins a long season (Eid, St Patrick's, Nowruz, then
+    /// Ramadan, the rest of Lunar New Year, Christmas, Flight Club; the moon-sighting days sit with
+    /// Eid, under Lunar New Year's Day).
+    ///
+    /// Why (2026–2031 all collide): Halloween's event is M1K3's biggest reach (10–18k impressions a
+    /// day), so it keeps Oct 24 – Nov 1 unbroken; Diwali 2027 and 2030 fall wholly inside it and get no
+    /// look those years (2026 and 2029 beat Flight Club; 2028 is clear). Lunar New Year (16 days) meets Ramadan
+    /// or Eid every year from 2026: its Eve and Day win, its tail yields to the fast and to Eid, so the
+    /// Ramadan event's "Through Ramadan" stays true and each feast keeps the days its people mark most.
     public static func active(on date: Date, calendar: Calendar, offline: Bool) -> SeasonalLook? {
-        let gregorian = parts(of: date, on: .gregorian, in: calendar.timeZone)
-        let hijri = parts(of: date, on: .islamicUmmAlQura, in: calendar.timeZone)
-        let persian = parts(of: date, on: .persian, in: calendar.timeZone)
+        let zone = calendar.timeZone
+        let gregorian = parts(of: date, on: .gregorian, in: zone)
+        let hijri = parts(of: date, on: .islamicUmmAlQura, in: zone)
+        let persian = parts(of: date, on: .persian, in: zone)
+        let lunar = lunarNewYearDay(on: date, in: zone)
         if case (10, 24...) = gregorian { return .halloween }
         if case (11, 1) = gregorian { return .halloween }
+        if diwaliDay(on: date, in: zone) != nil { return .diwali }
         if case (10, 2 ... 4) = hijri { return .eid }
+        if let lunar, lunar <= 1 { return .lunarNewYear }
         if case (9, 29 ... 30) = hijri { return .moonSighting }
         if case (10, 1) = hijri { return .moonSighting }
         if case (3, 14 ... 17) = gregorian { return .stPatricks }
         if case (1, 1 ... 7) = persian { return .nowruz }
         if case (9, 1 ... 28) = hijri { return .ramadan }
+        if lunar != nil { return .lunarNewYear }
         if case (12, 2...) = gregorian { return .christmas }
         if case (1, 1 ... 7) = gregorian { return .christmas }
         if case (11, 3...) = gregorian { return offline ? .flightClub : nil }
@@ -135,6 +165,57 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
         calendar.timeZone = zone
         let parts = calendar.dateComponents([.month, .day], from: date)
         return (parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// Lunar New Year on `date`'s local day: 0 on New Year's Eve, 1–15 from New Year's Day through the
+    /// Lantern Festival, else nil. Only the ORDINARY first month opens the year: a leap month repeats a
+    /// month's number (2033's leap 11th runs into January 2034), so `isLeapMonth` must be false.
+    static func lunarNewYearDay(on date: Date, in zone: TimeZone) -> Int? {
+        var chinese = Calendar(identifier: .chinese)
+        chinese.timeZone = zone
+        let today = chinese.dateComponents([.month, .day, .isLeapMonth], from: date)
+        if today.month == 1, today.isLeapMonth == false, let day = today.day, day <= 15 { return day }
+        // The Eve is the twelfth month's last day, its 29th or 30th: ask the calendar whether tomorrow is New Year.
+        guard today.month == 12, (today.day ?? 0) >= 29,
+              let tomorrow = chinese.date(byAdding: .day, value: 1, to: date) else { return nil }
+        let next = chinese.dateComponents([.month, .day, .isLeapMonth], from: tomorrow)
+        return next.month == 1 && next.day == 1 && next.isLeapMonth == false ? 0 : nil
+    }
+
+    /// Lakshmi Puja, Diwali's main day, by Gregorian year: the date India keeps (Amavasya at dusk, New Delhi).
+    ///
+    /// A table, not a calendar: Foundation's Indian lunisolar calendars (`.gujarati`, `.vikram`, … macOS 15+)
+    /// number a day by the tithi at SUNRISE, but Diwali is the evening Amavasya holds, so it lands on Ashvin 29
+    /// in some years and Ashvin 30 in others (2026: 12/29, 2027: 12/30 on `.gujarati` in Asia/Kolkata), and
+    /// the Gujarati new year is not always the next day (2026: Diwali Nov 8, Bestu Varas Nov 10). Probed
+    /// 2026-11-23: no calendar rule reproduced all five of 2026–2030, and the answer moved with the time zone.
+    ///
+    /// Sources, checked 2026-11-23: drikpanchang.com/diwali/diwali-puja-calendar.html?year=N (2026–2031) and
+    /// timeanddate.com/holidays/india/diwali (2026–2031); for 2032–2035, testbook.com/articles/
+    /// diwali-dates-for-next-20-years and calendardate.com/diwali_N.htm (that site's own 2029 page is
+    /// inconsistent; drikpanchang and timeanddate agree on Nov 5). SeasonalCalendarTests fails two years
+    /// before the table runs out: extend it from two sources.
+    static let diwaliDates: [Int: (month: Int, day: Int)] = [
+        2026: (11, 8), 2027: (10, 29), 2028: (10, 17), 2029: (11, 5), 2030: (10, 26),
+        2031: (11, 14), 2032: (11, 2), 2033: (10, 22), 2034: (11, 10), 2035: (10, 30),
+    ]
+
+    /// Days from Lakshmi Puja on `date`'s local day, -2 (Dhanteras) through 2 (Bhai Dooj), else nil.
+    /// Dhanteras falls 1–2 days before and Bhai Dooj 2–3 after (2026: Nov 6 and Nov 11), so the window is
+    /// the five days centred on the main day.
+    static func diwaliDay(on date: Date, in zone: TimeZone) -> Int? {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = zone
+        let today = gregorian.dateComponents([.year, .month, .day], from: date)
+        guard let year = today.year, let puja = diwaliDates[year] else { return nil }
+        // Whole days between two civil dates, counted at UTC noon so no daylight-saving hour can shave one off.
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        guard let day = utc.date(from: DateComponents(year: year, month: today.month, day: today.day, hour: 12)),
+              let main = utc.date(from: DateComponents(year: year, month: puja.month, day: puja.day, hour: 12)),
+              let offset = utc.dateComponents([.day], from: main, to: day).day,
+              (-2 ... 2).contains(offset) else { return nil }
+        return offset
     }
 
     /// The look to wear: a launch override wins (regardless of date and network), then the user's
@@ -199,6 +280,18 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
                 bundle: .module,
                 comment: "Seasonal greeting shown 14-17 March. M1K3 is made in Ireland (true: Round Tower, Ireland). Playful and family-safe, one short line of at most 70 characters."
             )
+        case .lunarNewYear:
+            String(
+                localized: "Happy Lunar New Year! Wishing you luck and good health.",
+                bundle: .module,
+                comment: "Greeting from Lunar New Year's Eve through the Lantern Festival (Spring Festival, Seollal, Tết). Say Lunar New Year or the local name, NEVER 'Chinese New Year'; name no zodiac animal. Warm, plain, NO villain play, at most 70 characters."
+            )
+        case .diwali:
+            String(
+                localized: "Happy Diwali! May your home be full of light.",
+                bundle: .module,
+                comment: "Greeting for the five days of Diwali (Deepavali in South India, Malaysia and Singapore), Dhanteras to Bhai Dooj. Warm, plain, NO villain play, at most 70 characters."
+            )
         case nil:
             nil
         }
@@ -224,7 +317,7 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
     private static let memo = Memo()
 
     /// The last answer, keyed by everything it depends on. A window only moves at a local midnight,
-    /// so a minute bucket is exact to the minute and spares the three calendars on every frame.
+    /// so a minute bucket is exact to the minute and spares the five calendars on every frame.
     final class Memo: Sendable {
         struct Key: Hashable {
             let zone: String
