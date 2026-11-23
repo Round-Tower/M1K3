@@ -11,6 +11,8 @@
 //  token — never a crash, never a guess at a language M1K3 doesn't know.
 //
 //  Signed: Kev + claude-sonnet-5, 2026-07-22, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — html/css now route to the dedicated scanners in
+//  CodeSyntaxHighlighter+Markup.swift (the panel's Code tab and the Open button need them). Confidence 0.8.
 
 import Foundation
 
@@ -28,6 +30,11 @@ public enum CodeSyntaxHighlighter {
     /// "py", "ts"; case-insensitive, aliases resolved). `nil`/unrecognized
     /// language → one `.plain` token holding the whole string unchanged.
     public static func tokenize(_ code: String, language: String?) -> [CodeToken] {
+        switch MarkupLanguage(language) {
+        case .html?: return tokenizeHTML(code)
+        case .css?: return tokenizeCSS(code)
+        case nil: break
+        }
         guard let rules = rules(for: language) else {
             return code.isEmpty ? [] : [CodeToken(kind: .plain, text: code)]
         }
@@ -107,22 +114,21 @@ public enum CodeSyntaxHighlighter {
     /// falling back to one plain character. Adjacent same-kind tokens merge
     /// (so a run of plain punctuation/whitespace stays one token).
     private static func scan(_ code: String, rules: LanguageRules) -> [CodeToken] {
-        var tokens: [CodeToken] = []
+        var out = TokenBuilder()
         let chars = Array(code)
         var i = 0
         let n = chars.count
+        // Needles as Character arrays, once: `matches` runs at every position.
+        let lineComment = rules.lineComment.map { Array($0) }
+        let blockOpen = rules.blockComment.map { Array($0.open) }
+        let blockClose = rules.blockComment.map { Array($0.close) }
+        let triples = rules.tripleQuotes.map { Array($0) }
 
         func append(_ kind: CodeTokenKind, _ text: String) {
-            guard !text.isEmpty else { return }
-            if let last = tokens.last, last.kind == kind {
-                tokens[tokens.count - 1] = CodeToken(kind: kind, text: last.text + text)
-            } else {
-                tokens.append(CodeToken(kind: kind, text: text))
-            }
+            out.append(kind, text)
         }
 
-        func matches(_ needle: String, at index: Int) -> Bool {
-            let needleChars = Array(needle)
+        func matches(_ needleChars: [Character], at index: Int) -> Bool {
             guard index + needleChars.count <= n else { return false }
             for (offset, character) in needleChars.enumerated() where chars[index + offset] != character {
                 return false
@@ -133,7 +139,7 @@ public enum CodeSyntaxHighlighter {
         while i < n {
             let c = chars[i]
 
-            if let lineComment = rules.lineComment, matches(lineComment, at: i) {
+            if let lineComment, matches(lineComment, at: i) {
                 var j = i
                 while j < n, chars[j] != "\n" {
                     j += 1
@@ -142,17 +148,17 @@ public enum CodeSyntaxHighlighter {
                 i = j
                 continue
             }
-            if let block = rules.blockComment, matches(block.open, at: i) {
-                var j = i + block.open.count
-                while j < n, !matches(block.close, at: j) {
+            if let blockOpen, let blockClose, matches(blockOpen, at: i) {
+                var j = i + blockOpen.count
+                while j < n, !matches(blockClose, at: j) {
                     j += 1
                 }
-                j = min(j + block.close.count, n)
+                j = min(j + blockClose.count, n)
                 append(.comment, String(chars[i ..< j]))
                 i = j
                 continue
             }
-            if let triple = rules.tripleQuotes.first(where: { matches($0, at: i) }) {
+            if let triple = triples.first(where: { matches($0, at: i) }) {
                 var j = i + triple.count
                 while j < n, !matches(triple, at: j) {
                     j += 1
@@ -200,7 +206,7 @@ public enum CodeSyntaxHighlighter {
             append(.plain, String(c))
             i += 1
         }
-        return tokens
+        return out.finish()
     }
 
     private static let swiftKeywords: Set<String> = [

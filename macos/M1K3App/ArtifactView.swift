@@ -12,16 +12,36 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6, code opens beside the chat: the Code tab paints with the
+//  syntax highlighter (HTML and CSS rules now exist), the file compiles into the iOS/visionOS shell too (the sealed
+//  WKWebView is one `makeSealedWebView` shared by an NSViewRepresentable and a UIViewRepresentable; the seal itself
+//  is unchanged, ArtifactSandboxPolicy untouched), and an optional `onClose` adds a Done button for the phone sheet.
+//  Not yet seen on a device. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — iOS `allowsLinkPreview = false`; the seal's source is pinned by ArtifactViewSealScanTests;
+//  a stale comment about which languages reach the Preview tab corrected. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — Share sends a FILE of the artifact's own type (`SharedArtifactFile`:
+//  generated.html, .css, .js, .md, .txt) with plain text as the last representation; it sent a bare String, so an HTML
+//  page reached Kev's Mac as a text file. Confidence 0.8 (AirDrop to the Mac is verify on device).
 
-import AppKit
+import M1K3Chat
 import M1K3Preview
 import os
 import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
 
+/// The sheet and the iPad side column key off the artifact's creation time, like the Mac panel's `.id`.
+extension CodeArtifact: @retroactive Identifiable {
+    public var id: Date {
+        createdAt
+    }
+}
+
 struct ArtifactView: View {
     let artifact: CodeArtifact
+    /// Set where the view is a sheet or a side column the user dismisses (iOS); nil on the Mac panel,
+    /// which has its own close button in ReviewPanel.
+    var onClose: (() -> Void)?
 
     enum Tab: String, CaseIterable {
         case preview = "Preview"
@@ -31,8 +51,9 @@ struct ArtifactView: View {
     @State private var selectedTab: Tab
     @State private var showExporter = false
 
-    init(artifact: CodeArtifact) {
+    init(artifact: CodeArtifact, onClose: (() -> Void)? = nil) {
         self.artifact = artifact
+        self.onClose = onClose
         // Code (python, swift, css, js…) opens straight to the source; only html and
         // markdown have a meaningful live Preview.
         _selectedTab = State(initialValue: artifact.language.isRenderable ? .preview : .code)
@@ -49,8 +70,9 @@ struct ArtifactView: View {
             Divider().opacity(0.4)
             switch selectedTab {
             case .preview:
-                // Markdown renders to HTML (previewHTML); html/css/js preview their
-                // own source. The Code tab always shows the raw `source`.
+                // Only html and markdown reach this tab (isRenderable): markdown renders to
+                // HTML (previewHTML), html previews its own source. The Code tab always
+                // shows the raw `source`.
                 ArtifactPreviewWebView(source: artifact.previewHTML)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .code:
@@ -68,6 +90,12 @@ struct ArtifactView: View {
 
     private var toolbar: some View {
         HStack(spacing: 12) {
+            if let onClose {
+                Button(action: onClose) {
+                    Text("Done")
+                }
+                .accessibilityLabel("Close preview")
+            }
             if tabs.count > 1 {
                 Picker("", selection: $selectedTab) {
                     ForEach(tabs, id: \.self) { tab in
@@ -96,9 +124,10 @@ struct ArtifactView: View {
             // byte-for-byte pasteable — corrupting it with trailing prose would
             // defeat the point of sharing code.
             ShareLink(
-                item: artifact.source,
+                item: SharedArtifactFile(artifact: artifact),
                 subject: Text(artifact.displayTitle),
-                message: Text("Shared from M1K3 · m1k3.app")
+                message: Text("Shared from M1K3 · m1k3.app"),
+                preview: SharePreview(artifact.filename)
             ) {
                 Image(systemName: "square.and.arrow.up")
             }
@@ -111,11 +140,13 @@ struct ArtifactView: View {
 
     private var codeView: some View {
         ScrollView {
-            Text(artifact.source)
-                .font(.system(.body, design: .monospaced))
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
+            Text(CodeHighlighting.attributed(
+                artifact.source, language: artifact.highlightLanguage, font: .system(.body, design: .monospaced)
+            ))
+            .font(.system(.body, design: .monospaced))
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
         }
         .background(.background.opacity(0.5))
     }
@@ -123,73 +154,97 @@ struct ArtifactView: View {
 
 // MARK: - WKWebView for artifact preview
 
-private struct ArtifactPreviewWebView: NSViewRepresentable {
-    let source: String
+private let artifactPreviewLogger = Logger(subsystem: "app.m1k3", category: "artifact-preview")
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
+/// The sealed preview web view, shared by the Mac and mobile representables.
+/// The preview renders UNTRUSTED, model-generated HTML. JavaScript is off outright:
+/// with no script there is no fetch/WebSocket/XHR egress, the amplifier that makes
+/// every other gap exploitable. A code PREVIEW does not need scripts to render HTML/CSS.
+/// Sub-resource loads (images, scripts, stylesheets, fetch/XHR) are blocked by the
+/// content rule list; navigation by the delegate. Both decisions live in the tested
+/// ArtifactSandboxPolicy.
+@MainActor
+private func makeSealedWebView(source: String, navigationGuard: ArtifactNavigationGuard) -> WKWebView {
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = .nonPersistent()
+    config.defaultWebpagePreferences.allowsContentJavaScript = false
+    let webView = WKWebView(frame: .zero, configuration: config)
+    webView.navigationDelegate = navigationGuard
+    #if os(iOS)
+        // No long-press link preview: it would fetch the link's page outside the content rule list.
+        webView.allowsLinkPreview = false
+    #endif
 
-    func makeNSView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
-        // The preview renders UNTRUSTED, model-generated HTML. Disable JavaScript
-        // outright: with no script there is no fetch/WebSocket/XHR egress, which is
-        // the amplifier that makes every other gap exploitable. A code PREVIEW does
-        // not need to execute scripts to render its HTML/CSS.
-        config.defaultWebpagePreferences.allowsContentJavaScript = false
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator
-
-        // Block ALL sub-resource loads (images, scripts, stylesheets, fetch/XHR).
-        // The navigation delegate handles navigation-level requests synchronously;
-        // the content rule list seals the sub-resource gap. The rule decisions live
-        // in the tested ArtifactSandboxPolicy.
-        let source = self.source
-        WKContentRuleListStore.default().compileContentRuleList(
-            forIdentifier: ArtifactSandboxPolicy.contentRuleListIdentifier,
-            encodedContentRuleList: ArtifactSandboxPolicy.contentRuleListJSON
-        ) { list, error in
-            Task { @MainActor in
-                if let list {
-                    webView.configuration.userContentController.add(list)
-                    webView.loadHTMLString(source, baseURL: nil)
-                    // Breadcrumb on the SUCCESS path too. Without it, an empty
-                    // `artifact-preview` log is ambiguous: it means either "the seal
-                    // never failed" or "no artifact was ever previewed", and those
-                    // demand opposite next moves. `.notice` because `.info`/`.debug`
-                    // do not persist in OSLogStore.
-                    Self.logger.notice("artifact preview sealed and loaded (\(source.count, privacy: .public) bytes)")
-                } else {
-                    // Fail CLOSED: if the seal won't compile, do NOT load the content with
-                    // only the navigation delegate (which does not see sub-resource loads).
-                    // Show an honest placeholder instead of a silently un-sealed preview.
-                    Self.logger.error(
-                        "\(ArtifactFallback.diagnosticCode, privacy: .public) artifact preview seal failed to compile; refusing to load unsealed content: \(String(describing: error), privacy: .public)"
-                    )
-                    webView.loadHTMLString(ArtifactFallback.sealFailureHTML, baseURL: nil)
-                }
+    WKContentRuleListStore.default().compileContentRuleList(
+        forIdentifier: ArtifactSandboxPolicy.contentRuleListIdentifier,
+        encodedContentRuleList: ArtifactSandboxPolicy.contentRuleListJSON
+    ) { list, error in
+        Task { @MainActor in
+            if let list {
+                webView.configuration.userContentController.add(list)
+                webView.loadHTMLString(source, baseURL: nil)
+                // Breadcrumb on the SUCCESS path too. Without it, an empty
+                // `artifact-preview` log is ambiguous: it means either "the seal
+                // never failed" or "no artifact was ever previewed", and those
+                // demand opposite next moves. `.notice` because `.info`/`.debug`
+                // do not persist in OSLogStore.
+                artifactPreviewLogger.notice("artifact preview sealed and loaded (\(source.count, privacy: .public) bytes)")
+            } else {
+                // Fail CLOSED: if the seal won't compile, do NOT load the content with
+                // only the navigation delegate (which does not see sub-resource loads).
+                // Show an honest placeholder instead of a silently un-sealed preview.
+                artifactPreviewLogger.error(
+                    "\(ArtifactFallback.diagnosticCode, privacy: .public) artifact preview seal failed to compile; refusing to load unsealed content: \(String(describing: error), privacy: .public)"
+                )
+                webView.loadHTMLString(ArtifactFallback.sealFailureHTML, baseURL: nil)
             }
         }
-
-        return webView
     }
+    return webView
+}
 
-    private static let logger = Logger(subsystem: "app.m1k3", category: "artifact-preview")
-
-    func updateNSView(_: WKWebView, context _: Context) {
-        // source is immutable (let); identity is managed by .id(artifact.createdAt) in the parent.
-    }
-
-    final class Coordinator: NSObject, WKNavigationDelegate {
-        func webView(_: WKWebView, decidePolicyFor action: WKNavigationAction,
-                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void)
-        {
-            let allowed = ArtifactSandboxPolicy.allowsNavigation(scheme: action.request.url?.scheme)
-            decisionHandler(allowed ? .allow : .cancel)
-        }
+final class ArtifactNavigationGuard: NSObject, WKNavigationDelegate {
+    func webView(_: WKWebView, decidePolicyFor action: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void)
+    {
+        let allowed = ArtifactSandboxPolicy.allowsNavigation(scheme: action.request.url?.scheme)
+        decisionHandler(allowed ? .allow : .cancel)
     }
 }
+
+#if canImport(AppKit)
+    private struct ArtifactPreviewWebView: NSViewRepresentable {
+        let source: String
+
+        func makeCoordinator() -> ArtifactNavigationGuard {
+            ArtifactNavigationGuard()
+        }
+
+        func makeNSView(context: Context) -> WKWebView {
+            makeSealedWebView(source: source, navigationGuard: context.coordinator)
+        }
+
+        func updateNSView(_: WKWebView, context _: Context) {
+            // source is immutable (let); identity is managed by .id(artifact.createdAt) in the parent.
+        }
+    }
+#else
+    private struct ArtifactPreviewWebView: UIViewRepresentable {
+        let source: String
+
+        func makeCoordinator() -> ArtifactNavigationGuard {
+            ArtifactNavigationGuard()
+        }
+
+        func makeUIView(context: Context) -> WKWebView {
+            makeSealedWebView(source: source, navigationGuard: context.coordinator)
+        }
+
+        func updateUIView(_: WKWebView, context _: Context) {
+            // source is immutable (let); identity is managed by .id(artifact.id) in the parent.
+        }
+    }
+#endif
 
 // MARK: - FileDocument for export
 
@@ -277,4 +332,26 @@ struct ArtifactDocument: FileDocument {
         title: "Preview held back"
     ))
     .frame(width: 760, height: 620)
+}
+
+/// A generated artifact shared as a FILE of its own type (`generated.html`, `.css`, `.js`, `.md`, `.txt`), so AirDrop
+/// to a Mac or Save to Files keeps it a page rather than a text snippet. Plain text stays as the last representation
+/// for apps that only take text (Messages, Notes); the bytes are the source, unchanged, either way.
+private struct SharedArtifactFile: Transferable {
+    let artifact: CodeArtifact
+
+    static var transferRepresentation: some TransferRepresentation {
+        file(.html, as: .html)
+        file(.css, as: CodeArtifact.Language.css.shareFileType)
+        file(.js, as: .javaScript)
+        file(.markdown, as: CodeArtifact.Language.markdown.shareFileType)
+        file(.code, as: .plainText)
+        ProxyRepresentation(exporting: \.artifact.source)
+    }
+
+    private static func file(_ language: CodeArtifact.Language, as type: UTType) -> some TransferRepresentation<Self> {
+        DataRepresentation(exportedContentType: type) { Data($0.artifact.source.utf8) }
+            .suggestedFileName { $0.artifact.filename }
+            .exportingCondition { $0.artifact.language == language }
+    }
 }

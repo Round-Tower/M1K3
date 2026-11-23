@@ -157,6 +157,9 @@
 //  left. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — the Inbox sweep spares fresh copies (a batch
 //  AirDrop), and a shared file also waits out a consented Private Cloud send still launching. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
+//  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
+//  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
 //
 
 import M1K3Avatar
@@ -164,6 +167,7 @@ import M1K3Chat
 import M1K3Diagnostics
 import M1K3Inference
 import M1K3LanguageModel
+import M1K3Preview
 import M1K3Screengrab
 import PhotosUI
 import StoreKit
@@ -212,6 +216,8 @@ struct ChatScreen: View {
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @State private var brainFailureDraft: SnagDraft?
     @State private var showSettings = false
+    /// The window's width, for where an opened page shows (ArtifactPresentation).
+    @State private var windowWidth: CGFloat = 0
     /// On screen, not covered by a pushed screen (Settings). The face is built only then:
     /// one built under Settings never got a drawable, failed 60 frames a second, and stayed
     /// black when the chat came back (Kev's phone, 2026-11-02).
@@ -253,11 +259,41 @@ struct ChatScreen: View {
         inputFocused || !draft.isEmpty || !pendingAttachments.isEmpty || !pendingFiles.isEmpty
     }
 
+    /// A regular-width window (iPad) shows the opened code beside the chat; a compact one (iPhone) as a sheet.
+    private var artifactPresentation: ArtifactPresentation {
+        ArtifactPresentation.style(isRegularWidth: horizontalSizeClass == .regular, width: Double(windowWidth))
+    }
+
+    /// The sheet's binding: only where the column does not fit, so a wide window never shows both. A page opened
+    /// from voice mode (or the look camera), which cover this screen, waits for the cover to close and then
+    /// presents: a sheet raised under a full-screen cover would never show, or show late.
+    private var artifactSheet: Binding<CodeArtifact?> {
+        Binding(
+            get: { artifactPresentation == .sheet && core.voiceLoop == nil && !showLook ? core.artifact : nil },
+            set: { if $0 == nil { core.closeArtifact() } }
+        )
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            hero
-            transcript
-            inputBar
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                hero
+                transcript
+                inputBar
+            }
+            if artifactPresentation == .besideChat, let artifact = core.artifact {
+                Divider()
+                ArtifactView(artifact: artifact, onClose: { core.closeArtifact() })
+                    .id(artifact.id)
+                    .frame(width: 380)
+                    .background(.regularMaterial)
+                    .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: core.artifact?.id)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { windowWidth = $0 }
+        .environment(\.openCodeBlock) { language, code in
+            core.openCodeBlock(language: language, code: code)
         }
         .background(backdrop)
         // No navigation title — the wordmark lives in the empty-state hero; once
@@ -384,6 +420,11 @@ struct ChatScreen: View {
                 case .memories: MemoriesScreen()
                 case .pairing: BrainPairingScreen()
                 }
+            }
+            .sheet(item: artifactSheet) { artifact in
+                ArtifactView(artifact: artifact, onClose: { core.closeArtifact() })
+                    .id(artifact.id)
+                    .presentationDetents([.large])
             }
             .sheet(item: $noteTarget) { target in
                 AnswerNoteSheet(

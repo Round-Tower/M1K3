@@ -40,6 +40,15 @@ public struct CodeArtifact: Equatable, Sendable {
         title ?? "Generated \((languageLabel ?? language.rawValue).uppercased())"
     }
 
+    /// The fence-style name the highlighter understands for the Code tab (nil: show plain).
+    public var highlightLanguage: String? {
+        switch language {
+        case .html, .css, .js: language.rawValue
+        case .markdown: nil
+        case .code: languageLabel
+        }
+    }
+
     public var filename: String {
         "\(title ?? "generated").\(language.fileExtension)"
     }
@@ -78,6 +87,21 @@ public struct CodeArtifact: Equatable, Sendable {
             case .js: .javaScript
             case .markdown: .plainText
             case .code: .sourceCode
+            }
+        }
+
+        /// The type a shared artifact carries as a FILE, matching `fileExtension`: an HTML page reaches a Mac or
+        /// another app as `generated.html`, not as a text snippet (Kev, 2026-11-23: "it share's back to my mac
+        /// as a text file - not HTML"). Distinct from `utType` (the exporter's), which files css and markdown loosely.
+        /// Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.85 (pure + tested; AirDrop to a Mac is verify on
+        /// device). Prior: Unknown (this file is unsigned).
+        public var shareFileType: UTType {
+            switch self {
+            case .html: .html
+            case .css: UTType(filenameExtension: "css") ?? .sourceCode
+            case .js: .javaScript
+            case .markdown: UTType(filenameExtension: "md") ?? .plainText
+            case .code: .plainText
             }
         }
 

@@ -83,6 +83,7 @@
 //  ahead of the think's quiet (only when the voice-thinking toggle let the turn think). Verify-by-ear. Confidence 0.7.
 //  Review: Kev + claude-opus-5-5, 2026-11-20 — the line is said only after `ThinkAside.spokenDelay` (6 s) of real quiet
 //  (Kev took the steer); a think that answers sooner is never announced aloud. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — a landed voice turn opens its page like a typed one (`surfaceLandedAnswerArtifact`). Verify-by-launch. Confidence 0.75.
 
 import AppKit
 import AVFoundation
@@ -490,8 +491,10 @@ extension AppEnvironment {
             let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
+            let lastBeforeSend = chat.messages.last?.id
             await chat.send(prepared.question)
             if let token { Self.voiceTurnClause.clear(token) }
+            surfaceLandedAnswerArtifact(after: lastBeforeSend)
         }
         // Spoken barge-in (#640), only behind the Mac voice-processing opt-in: the watch
         // opens the mic while M1K3 speaks, and only where VPIO will run (never a Bluetooth
