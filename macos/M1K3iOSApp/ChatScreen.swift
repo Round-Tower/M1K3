@@ -152,6 +152,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — share to M1K3 (#893 C): `sharedFiles` from RootView land through
 //  `receiveSharedFiles()` → `attach(urls)`, the ＋ picker's path, in a new chat when this one has messages, waiting
 //  out a turn in flight; never sent; iOS's Inbox copy is deleted once staged. Confidence 0.8 (verify on the phone).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — a shared file also waits behind the Private Cloud
+//  consent sheet (it would have joined the send the sheet confirms), and staging sweeps Inbox leftovers a killed app
+//  left. Confidence 0.8.
 //
 
 import M1K3Avatar
@@ -354,7 +357,7 @@ struct ChatScreen: View {
             }
             // A shared file waits out a turn in flight, then lands in a new chat's composer.
             .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
-            .onChange(of: core.chat.isResponding) { _, _ in receiveSharedFiles() }
+            .onChange(of: core.chat.isResponding || privateCloudPending != nil) { _, _ in receiveSharedFiles() }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
                 if Self.voiceAtLaunch {
@@ -1293,7 +1296,11 @@ struct ChatScreen: View {
     /// has messages. Never sent: the person reads what landed and sends it themselves (#893 C).
     private func receiveSharedFiles() {
         guard !sharedFiles.isEmpty else { return }
-        switch SharedFileIntake.step(isResponding: core.chat.isResponding, hasMessages: !core.chat.messages.isEmpty) {
+        switch SharedFileIntake.step(
+            isResponding: core.chat.isResponding,
+            hasMessages: !core.chat.messages.isEmpty,
+            consentPending: privateCloudPending != nil
+        ) {
         case .wait:
             return
         case .newChatThenStage:
@@ -1305,8 +1312,12 @@ struct ChatScreen: View {
         let urls = sharedFiles
         sharedFiles = []
         attach(urls)
-        // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images).
-        for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
+        // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
+        // it goes, and so does anything a killed app left there that isn't still waiting to be staged.
+        let inbox = URL.documentsDirectory.appending(path: "Inbox")
+        let listed = (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? []
+        let copies = urls.filter { SharedFileIntake.isSystemInboxCopy($0, documents: URL.documentsDirectory) }
+        for url in copies + SharedFileIntake.inboxLeftovers(listed, waiting: sharedFiles) {
             try? FileManager.default.removeItem(at: url)
         }
     }

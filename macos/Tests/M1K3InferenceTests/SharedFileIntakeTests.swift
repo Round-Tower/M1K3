@@ -36,20 +36,20 @@ struct SharedFileIntakeTests {
 
     @Test("an empty chat takes the file now; a chat with messages starts a new one first")
     func stepByTranscript() {
-        #expect(SharedFileIntake.step(isResponding: false, hasMessages: false) == .stageHere)
-        #expect(SharedFileIntake.step(isResponding: false, hasMessages: true) == .newChatThenStage)
+        #expect(SharedFileIntake.step(isResponding: false, hasMessages: false, consentPending: false) == .stageHere)
+        #expect(SharedFileIntake.step(isResponding: false, hasMessages: true, consentPending: false) == .newChatThenStage)
     }
 
     @Test("while a turn is answering, the file waits: a new chat can't start mid-turn, and it must not join that turn")
     func waitsMidTurn() {
-        #expect(SharedFileIntake.step(isResponding: true, hasMessages: true) == .wait)
-        #expect(SharedFileIntake.step(isResponding: true, hasMessages: false) == .wait)
+        #expect(SharedFileIntake.step(isResponding: true, hasMessages: true, consentPending: false) == .wait)
+        #expect(SharedFileIntake.step(isResponding: true, hasMessages: false, consentPending: false) == .wait)
     }
 
-    @Test("there is no step that sends: a shared file is only ever staged")
-    func neverSends() {
-        let every = [true, false].flatMap { r in [true, false].map { m in SharedFileIntake.step(isResponding: r, hasMessages: m) } }
-        #expect(Set(every) == [.wait, .stageHere, .newChatThenStage])
+    @Test("while the Private Cloud consent sheet is open, the file waits: it must not join the send the sheet confirms")
+    func waitsBehindConsent() {
+        #expect(SharedFileIntake.step(isResponding: false, hasMessages: false, consentPending: true) == .wait)
+        #expect(SharedFileIntake.step(isResponding: false, hasMessages: true, consentPending: true) == .wait)
     }
 
     // MARK: - Copies we may delete
@@ -63,8 +63,24 @@ struct SharedFileIntakeTests {
         #expect(!SharedFileIntake.isSystemInboxCopy(documents.appending(path: "Inboxes/notes.json"), documents: documents))
         #expect(!SharedFileIntake.isSystemInboxCopy(URL(fileURLWithPath: "/private/var/mobile/Library/Mobile Documents/notes.json"),
                                                     documents: documents))
+        // iOS hands the file over under /private/var while URL.documentsDirectory says /var: the same place.
+        let privateVar = URL(fileURLWithPath: "/private/var/mobile/Containers/Data/Application/X/Documents/Inbox/notes.json")
+        #expect(SharedFileIntake.isSystemInboxCopy(privateVar, documents: documents))
         // A path that climbs out of the inbox is not in it.
         #expect(!SharedFileIntake.isSystemInboxCopy(documents.appending(path: "Inbox/../notes.json"), documents: documents))
+    }
+
+    @Test("after staging, every Inbox item that isn't still waiting is a leftover to sweep (a kill mid-onboarding)")
+    func inboxLeftovers() {
+        let inbox = URL(fileURLWithPath: "/var/mobile/X/Documents/Inbox")
+        let stale = inbox.appending(path: "old.json")
+        let waiting = inbox.appending(path: "waiting.txt")
+        let contents = [stale, waiting]
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waiting]) == [stale])
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: []) == contents)
+        // Waiting under /private/var still matches its /var listing.
+        let waitingPrivate = URL(fileURLWithPath: "/private/var/mobile/X/Documents/Inbox/waiting.txt")
+        #expect(SharedFileIntake.inboxLeftovers(contents, waiting: [waitingPrivate]) == [stale])
     }
 
     // MARK: - What M1K3 registers
@@ -120,14 +136,21 @@ struct SharedFileIntakeScanTests {
         for forbidden in ["send(", ".send", "sendTurn", "submit("] {
             #expect(!receive.contains(forbidden), "the intake must never send: found \(forbidden)")
         }
+        // The copy is deleted only after it is read, and only if it is iOS's Inbox copy.
+        let attach = try #require(receive.range(of: "attach(urls)"))
+        let remove = try #require(receive.range(of: "removeItem"))
+        #expect(attach.lowerBound < remove.lowerBound, "read the file before deleting the copy")
+        #expect(receive.contains("isSystemInboxCopy") && receive.contains("inboxLeftovers"))
+        #expect(receive.contains("consentPending: privateCloudPending != nil"), "a file waits behind the consent sheet")
     }
 
     @Test("the root catches a shared file before onboarding is done, so cold launch and first run keep it")
     func rootCatchesDuringOnboarding() throws {
         let code = try Self.flat("M1K3iOSApp/RootView.swift")
-        let onboarding = try #require(code.range(of: "OnboardingScreen"))
+        // The handler follows the Group's closing braces (the end of the onboarding branch), not a view inside it.
         let handler = try #require(code.range(of: ".onOpenURL"))
-        #expect(handler.lowerBound > onboarding.lowerBound, "onOpenURL must sit on the root Group, not inside the onboarded branch")
+        let before = code[..<handler.lowerBound].trimmingCharacters(in: .whitespaces)
+        #expect(before.hasSuffix(".transition(.opacity) } }"), "onOpenURL must sit on the root Group, after both branches")
         #expect(code.components(separatedBy: ".onOpenURL").count == 2, "one URL handler at the root")
         #expect(code.contains("SharedFileIntake.classify("))
     }
@@ -136,7 +159,7 @@ struct SharedFileIntakeScanTests {
     func plistMatchesTypes() throws {
         let yml = try Self.source("project.yml")
         let start = try #require(yml.range(of: "CFBundleDocumentTypes:"), "the iOS target registers no document types")
-        let block = yml[start.upperBound...].prefix { _ in true }
+        let block = yml[start.upperBound...]
         let end = try #require(block.range(of: "LSSupportsOpeningDocumentsInPlace: false"),
                                "copies, not in place: the file is staged and the copy deleted")
         let declared = block[..<end.lowerBound].split(separator: "\n")

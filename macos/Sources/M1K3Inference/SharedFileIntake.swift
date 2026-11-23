@@ -12,6 +12,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (pure + tested; the share sheet, AirDrop and cold
 //  launch are verify-on-device). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — a file waits behind the Private Cloud consent
+//  sheet (it would have joined the send the sheet confirms); /private/var and /var are one place for the Inbox test;
+//  `inboxLeftovers` lets the shell sweep copies a killed app left behind. Confidence 0.8.
 //
 
 import Foundation
@@ -30,7 +33,8 @@ public enum SharedFileIntake {
 
     /// When the chat can take a shared file. There is deliberately no step that sends.
     public enum Step: Equatable, Hashable, Sendable {
-        /// A turn is answering: a new chat can't start mid-turn, and the file must not join that turn.
+        /// A turn is answering, or the Private Cloud consent sheet is open: a new chat can't start mid-turn, and
+        /// the file must not join that turn or the send the sheet is about to confirm.
         case wait
         /// The chat is empty: stage it here.
         case stageHere
@@ -43,17 +47,34 @@ public enum SharedFileIntake {
         return url.isFileURL ? .file(url) : .ignore
     }
 
-    public static func step(isResponding: Bool, hasMessages: Bool) -> Step {
-        if isResponding { return .wait }
+    public static func step(isResponding: Bool, hasMessages: Bool, consentPending: Bool) -> Step {
+        if isResponding || consentPending { return .wait }
         return hasMessages ? .newChatThenStage : .stageHere
     }
 
     /// iOS copies a file opened in another app into `Documents/Inbox` (the plist opts out of opening in place).
     /// Once its text or image is staged, that copy is ours to delete: nothing of the user's lingers there.
     public static func isSystemInboxCopy(_ url: URL, documents: URL) -> Bool {
-        let inbox = documents.appending(path: "Inbox").standardizedFileURL.pathComponents
-        let path = url.standardizedFileURL.pathComponents
+        let inbox = components(documents.appending(path: "Inbox"))
+        let path = components(url)
         return path.count > inbox.count && Array(path.prefix(inbox.count)) == inbox
+    }
+
+    /// Inbox items to sweep once staging is done: everything not still waiting to be staged. A file shared while
+    /// the app was then killed (mid-onboarding, say) leaves a copy no one will stage; this keeps nothing lingering.
+    public static func inboxLeftovers(_ contents: [URL], waiting: [URL]) -> [URL] {
+        let keep = Set(waiting.map(components))
+        return contents.filter { !keep.contains(components($0)) }
+    }
+
+    /// Path components with `..` folded and iOS's `/private/var` read as `/var` (the system hands a file over
+    /// under one, `URL.documentsDirectory` names the other), without touching the disk.
+    private static func components(_ url: URL) -> [String] {
+        let parts = url.standardizedFileURL.pathComponents
+        if parts.count > 2, parts[0] == "/", parts[1] == "private", parts[2] == "var" {
+            return ["/"] + parts.dropFirst(2)
+        }
+        return parts
     }
 
     /// The UTIs the iPhone plist registers under CFBundleDocumentTypes: the ＋ picker's file types. Images and
