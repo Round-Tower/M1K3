@@ -1,0 +1,79 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "christmas-2026",
+  "publishStart": "2026-11-25T10:00:00Z",
+  "eventStart": "2026-12-02T10:00:00Z",
+  "eventEnd": "2027-01-02T10:00:00Z",
+  "deepLink": "m1k3://event/christmas",
+  "copy": {
+    "name": "Christmas in the Lair",
+    "shortDescription": "M1K3 dresses up for the holidays.",
+    "longDescription": "From Dec 2 to Jan 7, the Phosphor Fox glows candy red and gold and greets you with a festive hello. All on-device."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Christmas in the Lair",
+      "shortDescription": "M1K3 dresses up for the holidays.",
+      "longDescription": "From Dec 2 to Jan 7, the Phosphor Fox glows candy red and gold and greets you with a festive hello. All on-device."
+    },
+    "en-GB": {
+      "name": "Christmas & New Year Lair",
+      "shortDescription": "M1K3 dresses up for the holidays.",
+      "longDescription": "From 2 Dec to 7 Jan, the Phosphor Fox glows candy red and gold and greets you with a festive hello. All on-device."
+    },
+    "de-DE": {
+      "name": "Weihnachten im Versteck",
+      "shortDescription": "M1K3 macht sich festlich.",
+      "longDescription": "Vom 2.12. bis 7.1. leuchtet der Phosphorfuchs zuckerstangenrot und gold und grüßt dich festlich. Alles auf dem Gerät."
+    },
+    "es-ES": {
+      "name": "Navidad en la guarida",
+      "shortDescription": "M1K3 se viste de fiesta.",
+      "longDescription": "Del 2 dic. al 7 ene., el zorro fosforescente brilla en rojo y oro y te saluda con espíritu navideño. Todo en tu equipo."
+    },
+    "es-MX": {
+      "name": "Navidad en la guarida",
+      "shortDescription": "M1K3 se viste de fiesta.",
+      "longDescription": "Del 2 dic. al 7 ene., el zorro fosforescente brilla en rojo y oro y te saluda con espíritu navideño. Todo en tu equipo."
+    },
+    "fr-FR": {
+      "name": "Noël dans le repaire",
+      "shortDescription": "M1K3 s'habille pour les fêtes.",
+      "longDescription": "Du 2 déc. au 7 janv., le renard phosphorescent brille de rouge et d'or et vous salue en fête. Tout sur l'appareil."
+    },
+    "ja": {
+      "name": "隠れ家のクリスマス",
+      "shortDescription": "M1K3がホリデー仕様に。",
+      "longDescription": "12月2日〜1月7日、燐光のキツネが赤と金に輝き、季節のあいさつをします。すべてデバイス上で。"
+    },
+    "ko": {
+      "name": "은신처의 크리스마스",
+      "shortDescription": "M1K3가 연말 옷을 입었어요.",
+      "longDescription": "12월 2일부터 1월 7일까지 인광 여우가 빨강과 금빛으로 빛나며 연말 인사를 건네요. 모두 기기 안에서."
+    },
+    "pt-BR": {
+      "name": "Natal no Covil",
+      "shortDescription": "M1K3 se veste para as festas.",
+      "longDescription": "De 2/12 a 7/1, a raposa fosforescente brilha em vermelho e dourado e te saúda com clima de festa. Tudo no aparelho."
+    },
+    "zh-Hans": {
+      "name": "巢穴里的圣诞节",
+      "shortDescription": "M1K3 换上节日装扮。",
+      "longDescription": "12月2日至1月7日，磷光狐狸闪耀红金两色，向你送上节日问候。全部在设备上运行。"
+    },
+    "ru": {
+      "name": "Новый год и Рождество",
+      "shortDescription": "M1K3 наряжается к праздникам.",
+      "longDescription": "Со 2 декабря по 7 января Фосфорный лис светится красным и золотым и поздравляет тебя с праздниками. Всё на устройстве."
+    },
+    "ar-SA": {
+      "name": "عيد الميلاد ورأس السنة",
+      "shortDescription": "M1K3 يتزيّن للأعياد.",
+      "longDescription": "من 2 ديسمبر إلى 7 يناير، يتوهج Phosphor Fox بالأحمر والذهبي ويلقي تحية العيد. كل ذلك على الجهاز."
+    }
+  }
+}

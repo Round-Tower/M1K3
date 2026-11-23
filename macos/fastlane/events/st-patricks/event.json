@@ -1,0 +1,79 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "st-patricks-2027",
+  "publishStart": "2027-03-07T10:00:00Z",
+  "eventStart": "2027-03-14T00:00:00Z",
+  "eventEnd": "2027-03-18T00:00:00Z",
+  "deepLink": "m1k3://event/st-patricks",
+  "copy": {
+    "name": "St Patrick's in the Lair",
+    "shortDescription": "Shamrock green from an AI made in Ireland.",
+    "longDescription": "From Mar 14 to 17, the Phosphor Fox glows shamrock green and gold and wishes you a happy St Patrick's Day. Irish-made."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "St Patrick's in the Lair",
+      "shortDescription": "Shamrock green from an AI made in Ireland.",
+      "longDescription": "From Mar 14 to 17, the Phosphor Fox glows shamrock green and gold and wishes you a happy St Patrick's Day. Irish-made."
+    },
+    "en-GB": {
+      "name": "St Patrick's in the Lair",
+      "shortDescription": "Shamrock green from an AI made in Ireland.",
+      "longDescription": "From 14 to 17 Mar, the Phosphor Fox glows shamrock green and gold and wishes you a happy St Patrick's Day. Irish-made."
+    },
+    "de-DE": {
+      "name": "St. Patrick's im Versteck",
+      "shortDescription": "Kleeblattgrün von einer KI aus Irland.",
+      "longDescription": "Vom 14. bis 17.3. leuchtet der Phosphorfuchs kleeblattgrün und gold und wünscht einen frohen St. Patrick's Day."
+    },
+    "es-ES": {
+      "name": "San Patricio en la guarida",
+      "shortDescription": "Verde trébol de una IA hecha en Irlanda.",
+      "longDescription": "Del 14 al 17 mar., el zorro fosforescente brilla verde trébol y oro y te desea un feliz Día de San Patricio."
+    },
+    "es-MX": {
+      "name": "San Patricio en la guarida",
+      "shortDescription": "Verde trébol de una IA hecha en Irlanda.",
+      "longDescription": "Del 14 al 17 mar., el zorro fosforescente brilla verde trébol y oro y te desea un feliz Día de San Patricio."
+    },
+    "fr-FR": {
+      "name": "Saint-Patrick au repaire",
+      "shortDescription": "Vert trèfle, par une IA née en Irlande.",
+      "longDescription": "Du 14 au 17 mars, le renard phosphorescent brille vert trèfle et or et vous souhaite une joyeuse Saint-Patrick."
+    },
+    "ja": {
+      "name": "隠れ家の聖パトリック",
+      "shortDescription": "アイルランド生まれのAIから、シャムロックの緑を。",
+      "longDescription": "3月14日〜17日、燐光のキツネがシャムロックの緑と金に輝き、聖パトリックの祝日を祝います。"
+    },
+    "ko": {
+      "name": "은신처의 성 패트릭",
+      "shortDescription": "아일랜드에서 온 AI의 클로버 초록.",
+      "longDescription": "3월 14일부터 17일까지 인광 여우가 클로버 초록과 금빛으로 빛나며 즐거운 성 패트릭의 날을 기원해요."
+    },
+    "pt-BR": {
+      "name": "São Patrício no Covil",
+      "shortDescription": "Verde trevo de uma IA feita na Irlanda.",
+      "longDescription": "De 14 a 17/3, a raposa fosforescente brilha verde trevo e dourado e deseja um feliz Dia de São Patrício."
+    },
+    "zh-Hans": {
+      "name": "巢穴里的圣帕特里克节",
+      "shortDescription": "来自爱尔兰 AI 的三叶草绿。",
+      "longDescription": "3月14日至17日，磷光狐狸闪耀三叶草绿与金色，祝你圣帕特里克节快乐。"
+    },
+    "ru": {
+      "name": "День святого Патрика",
+      "shortDescription": "Зелень клевера от ИИ из Ирландии.",
+      "longDescription": "С 14 по 17 марта Фосфорный лис светится зеленью клевера и золотом и поздравляет с Днём святого Патрика."
+    },
+    "ar-SA": {
+      "name": "عيد القديس باتريك",
+      "shortDescription": "أخضر النفل من ذكاء اصطناعي صُنع في أيرلندا.",
+      "longDescription": "من 14 إلى 17 مارس، يتوهج Phosphor Fox بأخضر النفل والذهبي ويلقي تهنئة عيد القديس باتريك."
+    }
+  }
+}

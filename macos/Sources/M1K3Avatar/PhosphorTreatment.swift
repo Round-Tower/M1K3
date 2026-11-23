@@ -24,6 +24,11 @@
 //  not flight, on the Simulator. Night-flight lighting instead: taxiway blue rest, strobe white thinking (tightest rim),
 //  beacon amber speaking, nav green listening. Tests pin the values and keep the rest well apart from the default
 //  thinking blue. Confidence 0.75 (looked at on the Simulator; device Airplane Mode still owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — the seasonal calendar's palettes: Christmas (candy red / gold / frost /
+//  pine), Ramadan + Eid (lantern gold / warm white / moonlit indigo / tile turquoise, one palette), Nowruz (blossom /
+//  sun / sky / sabzeh green), St Patrick's (shamrock / gold / white / tricolour orange). Every state of every look
+//  clears the site Fox's 0.45 luminance floor and has four distinct states (SeasonalCalendarTests). Confidence 0.7
+//  (hues chosen on paper, not yet looked at; verify-by-launch with `-seasonalLook <look>`).
 
 import simd
 
@@ -82,6 +87,22 @@ public extension AvatarActivity {
         case (.flightClub, .listening): .flightListening
         case (.flightClub, .thinking), (.flightClub, .generating): .flightThinking
         case (.flightClub, .speaking): .flightSpeaking
+        case (.christmas, .idle), (.christmas, .error): .christmasCalm
+        case (.christmas, .listening): .christmasListening
+        case (.christmas, .thinking), (.christmas, .generating): .christmasThinking
+        case (.christmas, .speaking): .christmasSpeaking
+        case (.ramadan, .idle), (.ramadan, .error), (.eid, .idle), (.eid, .error): .lanternCalm
+        case (.ramadan, .listening), (.eid, .listening): .lanternListening
+        case (.ramadan, .thinking), (.ramadan, .generating), (.eid, .thinking), (.eid, .generating): .lanternThinking
+        case (.ramadan, .speaking), (.eid, .speaking): .lanternSpeaking
+        case (.nowruz, .idle), (.nowruz, .error): .nowruzCalm
+        case (.nowruz, .listening): .nowruzListening
+        case (.nowruz, .thinking), (.nowruz, .generating): .nowruzThinking
+        case (.nowruz, .speaking): .nowruzSpeaking
+        case (.stPatricks, .idle), (.stPatricks, .error): .shamrockCalm
+        case (.stPatricks, .listening): .shamrockListening
+        case (.stPatricks, .thinking), (.stPatricks, .generating): .shamrockThinking
+        case (.stPatricks, .speaking): .shamrockSpeaking
         }
     }
 }
@@ -111,4 +132,57 @@ public extension PhosphorTreatment {
     static let flightThinking = PhosphorTreatment(red: 0.957, green: 0.973, blue: 1.0, fresnelPower: 4.0)
     /// NAV GREEN #39FF7A — listening, the starboard navigation light.
     static let flightListening = PhosphorTreatment(red: 0.224, green: 1.0, blue: 0.478, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Christmas / New Year: candy-cane red at rest (a deep holly red falls under the lattice floor), gold
+    // speaking, frost thinking (the tightest rim, like Flight Club's strobe), pine listening.
+
+    /// CANDY RED #FF5C66 — the resting phosphor.
+    static let christmasCalm = PhosphorTreatment(red: 1.0, green: 0.361, blue: 0.40, fresnelPower: 3.0)
+    /// TINSEL GOLD #FFD15C — speaking.
+    static let christmasSpeaking = PhosphorTreatment(red: 1.0, green: 0.820, blue: 0.361, fresnelPower: 2.2)
+    /// FROST #DEEBFF — thinking.
+    static let christmasThinking = PhosphorTreatment(red: 0.871, green: 0.922, blue: 1.0, fresnelPower: 4.0)
+    /// PINE #1FB05A — listening.
+    static let christmasListening = PhosphorTreatment(red: 0.122, green: 0.690, blue: 0.353, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Ramadan and Eid share one palette: lantern light at rest, no costume.
+
+    /// LANTERN GOLD #FFC247 — the resting phosphor.
+    static let lanternCalm = PhosphorTreatment(red: 1.0, green: 0.761, blue: 0.278, fresnelPower: 3.0)
+    /// WARM WHITE #FFF1D6 — speaking.
+    static let lanternSpeaking = PhosphorTreatment(red: 1.0, green: 0.945, blue: 0.839, fresnelPower: 2.2)
+    /// MOONLIT INDIGO #807AFF — thinking.
+    static let lanternThinking = PhosphorTreatment(red: 0.502, green: 0.478, blue: 1.0, fresnelPower: 3.4)
+    /// TILE TURQUOISE #2EC4B6 — listening.
+    static let lanternListening = PhosphorTreatment(red: 0.180, green: 0.769, blue: 0.714, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Nowruz: spring. Blossom at rest, so it never reads as the default green.
+
+    /// BLOSSOM #FF7DB5 — the resting phosphor.
+    static let nowruzCalm = PhosphorTreatment(red: 1.0, green: 0.490, blue: 0.710, fresnelPower: 3.0)
+    /// SPRING SUN #FFD84D — speaking.
+    static let nowruzSpeaking = PhosphorTreatment(red: 1.0, green: 0.847, blue: 0.302, fresnelPower: 2.2)
+    /// SKY #4FD1E8 — thinking.
+    static let nowruzThinking = PhosphorTreatment(red: 0.310, green: 0.820, blue: 0.910, fresnelPower: 3.4)
+    /// SABZEH GREEN #7BD84A — listening, the sprouted wheat on the table.
+    static let nowruzListening = PhosphorTreatment(red: 0.482, green: 0.847, blue: 0.290, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // St Patrick's: shamrock at rest, and the tricolour's white and orange for thinking and listening.
+
+    /// SHAMROCK #19C25B — the resting phosphor, deeper than the default mint.
+    static let shamrockCalm = PhosphorTreatment(red: 0.098, green: 0.761, blue: 0.357, fresnelPower: 3.0)
+    /// GOLD #FFC93C — speaking, the pot at the end of it.
+    static let shamrockSpeaking = PhosphorTreatment(red: 1.0, green: 0.788, blue: 0.235, fresnelPower: 2.2)
+    /// WHITE #F2FFF5 — thinking.
+    static let shamrockThinking = PhosphorTreatment(red: 0.949, green: 1.0, blue: 0.961, fresnelPower: 4.0)
+    /// TRICOLOUR ORANGE #FF8C2B — listening.
+    static let shamrockListening = PhosphorTreatment(red: 1.0, green: 0.549, blue: 0.169, fresnelPower: 2.6)
 }

@@ -12,6 +12,9 @@
 //  Confidence 0.85 (pure maths; the on-screen look is verify-by-launch, and real Airplane Mode on device).
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — the `wearing` pins read the Phosphor Fox: a season costumes it alone.
 //  Confidence unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — the seasonal calendar: Dec 2 is now Christmas's first day, so the two
+//  "after Flight Club" pins read "Flight Club is over" (not "no look"); "christmas" is a real override word now, so the
+//  unknown-word pin uses "easter". The new looks are pinned in SeasonalCalendarTests. Confidence unchanged.
 //
 
 import Foundation
@@ -116,7 +119,7 @@ struct SeasonalLookTests {
         #expect(SeasonalLook.Override(argument: "halloween") == .halloween)
         #expect(SeasonalLook.Override(argument: "none") == SeasonalLook.Override.off)
         #expect(SeasonalLook.Override(argument: "Halloween") == .halloween)
-        #expect(SeasonalLook.Override(argument: "christmas") == nil)
+        #expect(SeasonalLook.Override(argument: "easter") == nil)
         #expect(SeasonalLook.Override(argument: nil) == nil)
 
         // A value that persisted in the app's defaults must never force a look in a shipped build.
@@ -161,7 +164,7 @@ struct SeasonalLookTests {
         #expect(try SeasonalLook.active(on: date(2026, 11, 15, 12, 0, in: utc), calendar: utc, offline: true) == .flightClub)
         #expect(try SeasonalLook.active(on: date(2026, 11, 30, 23, 59, 59, in: utc), calendar: utc, offline: true) == .flightClub)
         #expect(try SeasonalLook.active(on: date(2026, 12, 1, 23, 59, 59, in: utc), calendar: utc, offline: true) == .flightClub)
-        #expect(try SeasonalLook.active(on: date(2026, 12, 2, 0, 0, in: utc), calendar: utc, offline: true) == nil)
+        #expect(try SeasonalLook.active(on: date(2026, 12, 2, 0, 0, in: utc), calendar: utc, offline: true) == .christmas) // Flight Club is over; Christmas starts (SeasonalCalendarTests)
     }
 
     @Test("online, flight club never shows, in the window or out of it")
@@ -218,7 +221,7 @@ struct SeasonalLookTests {
             regional.timeZone = utc.timeZone
             #expect(SeasonalLook.active(on: inside, calendar: regional, offline: true) == .flightClub, "\(identifier)")
             #expect(SeasonalLook.active(on: edge, calendar: regional, offline: true) == .flightClub, "\(identifier)")
-            #expect(SeasonalLook.active(on: outside, calendar: regional, offline: true) == nil, "\(identifier)")
+            #expect(SeasonalLook.active(on: outside, calendar: regional, offline: true) != .flightClub, "\(identifier)")
         }
     }
 
