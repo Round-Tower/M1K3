@@ -53,6 +53,9 @@
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3LiveActivityTests" BuildableName = "M1K3LiveActivityTests" BlueprintName = "M1K3LiveActivityTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3ShareInboxTests" BuildableName = "M1K3ShareInboxTests" BlueprintName = "M1K3ShareInboxTests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
+         <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3ScreensaverCoreTests" BuildableName = "M1K3ScreensaverCoreTests" BlueprintName = "M1K3ScreensaverCoreTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
