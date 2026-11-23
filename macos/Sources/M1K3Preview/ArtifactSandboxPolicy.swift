@@ -20,6 +20,9 @@
 //  (Extracted from inline literals in ArtifactView.swift after a security review
 //   flagged the seal as untested + fail-open; the rule-list string itself is the
 //   PR author's, now pinned by ArtifactSandboxPolicyTests.)
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (challenger on sealed interactive pages) — a top-level `data:`
+//  navigation is refused (a fresh document with no CSP), and the CSP now leads every document instead of being
+//  spliced into a `<head>` the page could hide or precede (ArtifactFormatter.injectCSPMeta). Confidence 0.85.
 
 import Foundation
 
@@ -39,8 +42,9 @@ public enum ArtifactSandboxPolicy {
     /// Schemes a top-level navigation may use inside the hermetic preview. A nil
     /// scheme (relative URL / in-page anchor) maps to the empty scheme and is
     /// allowed; everything network- or file-bound is cancelled.
+    /// Not `data:`: a clicked data: link is a fresh document that carries no CSP of ours (challenger, 2026-11-23).
     public static func allowsNavigation(scheme: String?) -> Bool {
-        ["about", "", "data"].contains(scheme ?? "")
+        ["about", ""].contains((scheme ?? "").lowercased())
     }
 
     /// CSP that closes the WebSocket/fetch/XHR/EventSource egress a content rule

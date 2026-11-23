@@ -96,15 +96,14 @@ struct ArtifactHouseStyleTests {
         #expect(!ArtifactHouseStyle.css.contains("h1 + p"))
     }
 
-    @Test("a <header> element is not a <head> — injectors must not bury the CSP in body content")
+    @Test("a <header> element is not a <head>: the house sheet never lands in body content")
     func headerIsNotHead() {
-        // Boundary catch (#44, pre-existing in injectCSPMeta and inherited by
-        // injectHouseStyle): range(of: "<head") also matches "<header". A
-        // document with a <header> but NO real <head> must come back UNCHANGED
-        // from both injectors — a CSP meta inside <body> is silently inert.
+        // Boundary catch (#44): range(of: "<head") also matches "<header". With no real <head> the house sheet
+        // anchors after the CSP, which now always leads the document (so it is never buried in the body).
         let doc = "<!DOCTYPE html>\n<html>\n<body>\n<header>title</header>\n<p>x</p>\n</body>\n</html>"
-        #expect(ArtifactFormatter.injectCSPMeta(doc) == doc)
-        #expect(ArtifactFormatter.injectHouseStyle(doc) == doc)
+        #expect(ArtifactFormatter.injectHouseStyle(doc) == doc, "no <head> and no CSP yet: nowhere safe for the sheet")
+        let sealed = ArtifactFormatter.injectCSPMeta(doc)
+        #expect(sealed.hasPrefix("<!DOCTYPE html>\n" + ArtifactSandboxPolicy.cspMetaTag))
     }
 
     @Test("a real <head> still receives both injections — including the '<head >' whitespace form")
