@@ -263,8 +263,7 @@ struct SharedFileIntakeScanTests {
     func macDelegateHoldsAndSummons() throws {
         let code = try Self.flat("M1K3App/M1K3App.swift")
         let open = try Self.body(of: "func application(_: NSApplication, open urls: [URL])", in: code)
-        #expect(open.contains("sharedFiles.receive(urls)"))
-        #expect(open.contains("NSApp.activate()"))
+        #expect(open.contains("if sharedFiles.receive(urls) { NSApp.activate() }"), "only a file brings M1K3 forward")
         for forbidden in ["send(", ".send", "sendTurn", "submit(", "attach("] {
             #expect(!open.contains(forbidden), "the delegate only holds: found \(forbidden)")
         }

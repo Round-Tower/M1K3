@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (thin glue over SharedFileIntake; the Finder, Dock
 //  and closed-window paths are launch checks). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review) — `receive` says whether a file came, so a web link
+//  no longer brings M1K3 forward. Confidence 0.8.
 //
 
 import AppKit
@@ -28,11 +30,14 @@ final class SharedFileInbox {
     /// the file was already held (a second Open With still brings M1K3 forward).
     private(set) var arrivals = 0
 
-    func receive(_ urls: [URL]) {
+    /// Whether the arrival carried a file (the delegate brings the app forward only then).
+    @discardableResult
+    func receive(_ urls: [URL]) -> Bool {
         // Nothing to stage (a web URL, an m1k3:// link the Mac doesn't register): nothing held, nothing summoned.
-        guard !SharedFileIntake.admit(urls, holding: []).isEmpty else { return }
+        guard !SharedFileIntake.admit(urls, holding: []).isEmpty else { return false }
         files = SharedFileIntake.admit(urls, holding: files)
         arrivals += 1
+        return true
     }
 
     /// Everything waiting, handed over once: the inbox is empty after.

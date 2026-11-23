@@ -314,8 +314,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     /// while running. Held, then staged by the chat; the delegate never stages or sends.
     func application(_: NSApplication, open urls: [URL]) {
         Self.launchLog.notice("open: \(urls.count, privacy: .public) URL(s) handed over")
-        sharedFiles.receive(urls)
-        NSApp.activate()
+        // Only a file brings M1K3 forward: a web link or an unregistered scheme is ignored, quietly.
+        if sharedFiles.receive(urls) { NSApp.activate() }
     }
 
     /// First line of every session: which build emitted the lines that follow.
