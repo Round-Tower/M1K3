@@ -53,6 +53,8 @@
 //  now `.moonSighting`: the lantern look with a line true on both days. Ramadan's greeting runs days 1–28 and Eid's
 //  Shawwal 2–4. `now` memoises per (zone, minute, inputs): it is read ~30 Hz and built three calendars a call.
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#891 bot nit) — the `.eid` catalog comment said "the first three days"; it
+//  now names Shawwal 2-4. The first 2026-11-23 block's "Shawwal 1–3" is superseded by the fold block above. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible"; India is a top-3 reach country, and
 //  zh-Hans / ko / vi users matter) — Lunar New Year (Chinese calendar: the Eve through the Lantern Festival, day 15; the
 //  ordinary first month only, never a leap one) and Diwali (Dhanteras through Bhai Dooj: Lakshmi Puja ± 2 days, from a
@@ -258,7 +260,7 @@ public enum SeasonalLook: String, Sendable, CaseIterable {
             String(
                 localized: "Eid Mubarak! Wishing you and yours a joyful Eid.",
                 bundle: .module,
-                comment: "Greeting shown on the first three days of Eid al-Fitr. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. One line, at most 70 characters."
+                comment: "Greeting shown Shawwal 2-4, when Eid al-Fitr has begun everywhere. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. At most 70 characters."
             )
         case .moonSighting:
             String(

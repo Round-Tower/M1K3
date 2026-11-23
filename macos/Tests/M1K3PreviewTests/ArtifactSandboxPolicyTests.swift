@@ -58,8 +58,10 @@ struct ArtifactSandboxPolicyTests {
     @Test("inert/in-page navigation schemes are allowed")
     func allowsInertSchemes() {
         #expect(ArtifactSandboxPolicy.allowsNavigation(scheme: "about"))
-        #expect(ArtifactSandboxPolicy.allowsNavigation(scheme: "data"))
         #expect(ArtifactSandboxPolicy.allowsNavigation(scheme: ""))
+        // A clicked data: link is a fresh document with no CSP of ours (challenger, 2026-11-23): refused.
+        #expect(!ArtifactSandboxPolicy.allowsNavigation(scheme: "data"))
+        #expect(!ArtifactSandboxPolicy.allowsNavigation(scheme: "DATA"))
         // A nil scheme (relative / in-page anchor) is treated as the empty scheme → allowed.
         #expect(ArtifactSandboxPolicy.allowsNavigation(scheme: nil))
     }
@@ -90,5 +92,47 @@ struct ArtifactSandboxPolicyTests {
         let tag = ArtifactSandboxPolicy.cspMetaTag
         #expect(tag.contains("http-equiv=\"Content-Security-Policy\""))
         #expect(tag.contains(ArtifactSandboxPolicy.contentSecurityPolicy))
+    }
+}
+
+/// Pages that try to keep our CSP from applying: the policy must lead every document, after a leading doctype only,
+/// whatever the page holds (challenger on 2026-11-23: no <head>, a <head> in a comment, a script before the head, and
+/// the policy's own text in the body each skipped or delayed the old splice).
+struct ArtifactCSPLeadsTests {
+    static let hostile = [
+        "<!doctype html><html><body><p>x</p></body></html>",
+        "<!DOCTYPE html>\n<html><!-- <head> --><body><script>steal()</script></body></html>",
+        "<!DOCTYPE html>\n<html><script>steal()</script><head></head><body></body></html>",
+        "<p>\(ArtifactSandboxPolicy.contentSecurityPolicy)</p>",
+        "<!DOCTYPE html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src *\"></head></html>",
+        "<script>steal()</script><h1>Hi</h1>",
+        "   <!doctype html>\n<html><head></head><body>x</body></html>",
+    ]
+
+    /// The document with its leading doctype (and any whitespace) removed.
+    static func afterDoctype(_ html: String) -> Substring {
+        var rest = Substring(html).drop { $0.isWhitespace }
+        if rest.lowercased().hasPrefix("<!doctype"), let close = rest.firstIndex(of: ">") {
+            rest = rest[rest.index(after: close)...].drop { $0.isWhitespace }
+        }
+        return rest
+    }
+
+    @Test("our CSP is the first element of every injected document, whatever the page holds")
+    func cspLeadsInjected() {
+        for page in Self.hostile {
+            let out = ArtifactFormatter.injectCSPMeta(page)
+            #expect(Self.afterDoctype(out).hasPrefix(ArtifactSandboxPolicy.cspMetaTag), "not first in: \(page)")
+        }
+    }
+
+    @Test("our CSP leads every formatted page too, and injecting twice adds it once")
+    func cspLeadsFormattedAndIdempotent() {
+        for page in Self.hostile {
+            let out = ArtifactFormatter.formatHTML(page)
+            #expect(Self.afterDoctype(out).hasPrefix(ArtifactSandboxPolicy.cspMetaTag), "not first in: \(page)")
+            let twice = ArtifactFormatter.injectCSPMeta(ArtifactFormatter.injectCSPMeta(page))
+            #expect(twice.components(separatedBy: ArtifactSandboxPolicy.cspMetaTag).count == 2, "twice in: \(page)")
+        }
     }
 }

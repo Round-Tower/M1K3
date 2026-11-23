@@ -22,6 +22,9 @@
 //  downward drag on the answer puts the keyboard down. Confidence 0.6 until it is back in his hand.
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — `.scrollDismissesKeyboard` is guarded off visionOS: the visionOS 27 SDK
+//  (Xcode 27.2) marks it unavailable, so the visionOS shell stopped building locally (CI's Xcode 26 still passed).
+//  Confidence 0.9.
 //
 
 import M1K3Chat
@@ -147,7 +150,10 @@ struct LookScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
+            #if !os(visionOS)
+            // Unavailable in the visionOS 27 SDK (Xcode 27.2): the visionOS shell failed to build here while CI's Xcode 26 passed.
             .scrollDismissesKeyboard(.interactively)
+            #endif
             .frame(maxHeight: 220)
             .fixedSize(horizontal: false, vertical: true)
             .padding(14)

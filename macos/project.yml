@@ -74,6 +74,9 @@
 # on-device recognition ("your voice stays on this Mac/device. It is never sent to a server."). On iOS 27 the system puts
 # its own "Speech data … sent to Apple" line above ours, and the old "Nothing is sent to Apple" read as a contradiction.
 # Kev's pick of three. True by construction: SpeechAnalyzer is on-device. InfoPlist.xcstrings moved with it.
+# Review: Kev + claude-opus-5-5, 2026-11-23 — share to M1K3 (#893 C): the iPhone plist registers CFBundleDocumentTypes for the
+# ＋ picker's file types (Alternate rank, Viewer) with LSSupportsOpeningDocumentsInPlace false, so M1K3 appears for AirDrop,
+# Files and Share → Open in. Pinned against SharedFileIntake by SharedFileIntakeScanTests. Confidence 0.8 (verify on device).
 # Review: Kev + claude-opus-5-5, 2026-11-23 — MobileShell compiles M1K3App/ArtifactView.swift (the sealed artifact view)
 # so the phone shows opened code in a sheet and the iPad beside the chat (1.6). Confidence 0.8.
 
@@ -596,6 +599,23 @@ targets:
           - CFBundleURLName: app.m1k3
             CFBundleURLSchemes:
               - m1k3
+        # Share to M1K3 (#893 C, 1.6): M1K3 appears for AirDrop, Files and Share → Open in for the ＋ picker's own file
+        # types (SharedFileIntake.registeredTypeIdentifiers; SharedFileIntakeScanTests pins this list against it). The
+        # file is staged in a new chat's composer and never sent. Copies, not in place: iOS hands over a copy in
+        # Documents/Inbox, which is deleted once staged. No images or PDFs yet (PDFs go through Documents today).
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Text and code
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.plain-text
+              - public.text
+              - public.source-code
+              - public.json
+              - public.yaml
+              - public.xml
+              - public.html
+        LSSupportsOpeningDocumentsInPlace: false
 
   # The Live Activity (Lock Screen + Dynamic Island) for a long answer or file read on the iPhone: "M1K3 is
   # thinking… / reading… / answering…" then "Answer ready" (2026-11-16). A WidgetKit app extension embedded in
