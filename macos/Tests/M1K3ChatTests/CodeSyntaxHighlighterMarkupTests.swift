@@ -79,4 +79,24 @@ struct CodeSyntaxHighlighterMarkupTests {
             #expect(joined == source)
         }
     }
+
+    @Test("a ~200 KB page tokenizes in linear time and still reassembles exactly")
+    func largeHTMLInput() {
+        let row = "<div class=\"row\" id='r1'><p>Some text &amp; more</p><!-- c --></div>\n"
+        let source = String(repeating: row, count: 200_000 / row.count)
+        let started = ContinuousClock.now
+        let tokens = CodeSyntaxHighlighter.tokenize(source, language: "html")
+        let elapsed = ContinuousClock.now - started
+        #expect(tokens.map(\.text).joined() == source)
+        // Generous on purpose (the wall-clock rule): this catches a quadratic rebuild, not a slow runner.
+        #expect(elapsed < .seconds(60))
+    }
+
+    @Test("a ~200 KB single plain run and a long css sheet do not blow up either")
+    func largePlainAndCSS() {
+        let plain = String(repeating: "x", count: 200_000)
+        #expect(CodeSyntaxHighlighter.tokenize(plain, language: "swift").map(\.text).joined() == plain)
+        let css = String(repeating: "a.b > c { margin: 0 4px; color: #fff }\n", count: 5000)
+        #expect(CodeSyntaxHighlighter.tokenize(css, language: "css").map(\.text).joined() == css)
+    }
 }

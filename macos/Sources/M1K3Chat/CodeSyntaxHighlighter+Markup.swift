@@ -27,33 +27,15 @@ extension CodeSyntaxHighlighter {
         }
     }
 
-    private struct Builder {
-        var tokens: [CodeToken] = []
+    private static let htmlCommentOpen = Array("<!--")
+    private static let htmlCommentClose = Array("-->")
+    private static let cssCommentOpen = Array("/*")
+    private static let cssCommentClose = Array("*/")
+    private static let important = Array("!important")
 
-        mutating func append(_ kind: CodeTokenKind, _ text: String) {
-            guard !text.isEmpty else { return }
-            if let last = tokens.last, last.kind == kind {
-                tokens[tokens.count - 1] = CodeToken(kind: kind, text: last.text + text)
-            } else {
-                tokens.append(CodeToken(kind: kind, text: text))
-            }
-        }
-
-        /// An embedded language's tokens, kept apart from the tag that opened them
-        /// (the first token never merges into the previous one).
-        mutating func append(contentsOf more: [CodeToken]) {
-            guard let first = more.first else { return }
-            tokens.append(first)
-            for token in more.dropFirst() {
-                append(token.kind, token.text)
-            }
-        }
-    }
-
-    private static func has(_ needle: String, in chars: [Character], at index: Int, ignoringCase: Bool = false) -> Bool {
-        let needleChars = Array(needle)
-        guard index >= 0, index + needleChars.count <= chars.count else { return false }
-        for (offset, character) in needleChars.enumerated() {
+    private static func has(_ needle: [Character], in chars: [Character], at index: Int, ignoringCase: Bool = false) -> Bool {
+        guard index >= 0, index + needle.count <= chars.count else { return false }
+        for (offset, character) in needle.enumerated() {
             let actual = chars[index + offset]
             if ignoringCase ? actual.lowercased() != character.lowercased() : actual != character {
                 return false
@@ -69,16 +51,16 @@ extension CodeSyntaxHighlighter {
     // MARK: HTML
 
     static func tokenizeHTML(_ code: String) -> [CodeToken] {
-        var out = Builder()
+        var out = TokenBuilder()
         let chars = Array(code)
         let n = chars.count
         var i = 0
 
         while i < n {
             let c = chars[i]
-            if has("<!--", in: chars, at: i) {
+            if has(htmlCommentOpen, in: chars, at: i) {
                 var j = i + 4
-                while j < n, !has("-->", in: chars, at: j) {
+                while j < n, !has(htmlCommentClose, in: chars, at: j) {
                     j += 1
                 }
                 j = min(j + 3, n)
@@ -135,7 +117,8 @@ extension CodeSyntaxHighlighter {
             // <style> / <script> bodies read as CSS / JavaScript until their close tag.
             if !isClosing, name == "style" || name == "script", j <= n {
                 var k = j
-                while k < n, !has("</\(name)", in: chars, at: k, ignoringCase: true) {
+                let closeTag = Array("</\(name)")
+                while k < n, !has(closeTag, in: chars, at: k, ignoringCase: true) {
                     k += 1
                 }
                 let body = String(chars[j ..< k])
@@ -146,13 +129,13 @@ extension CodeSyntaxHighlighter {
                 i = k
             }
         }
-        return out.tokens
+        return out.finish()
     }
 
     // MARK: CSS
 
     static func tokenizeCSS(_ code: String) -> [CodeToken] {
-        var out = Builder()
+        var out = TokenBuilder()
         let chars = Array(code)
         let n = chars.count
         var i = 0
@@ -173,9 +156,9 @@ extension CodeSyntaxHighlighter {
 
         while i < n {
             let c = chars[i]
-            if has("/*", in: chars, at: i) {
+            if has(cssCommentOpen, in: chars, at: i) {
                 var j = i + 2
-                while j < n, !has("*/", in: chars, at: j) {
+                while j < n, !has(cssCommentClose, in: chars, at: j) {
                     j += 1
                 }
                 j = min(j + 2, n)
@@ -204,7 +187,7 @@ extension CodeSyntaxHighlighter {
                 }
                 out.append(.keyword, String(chars[i ..< j]))
                 i = j
-            } else if c == "!", has("!important", in: chars, at: i) {
+            } else if c == "!", has(important, in: chars, at: i) {
                 out.append(.keyword, "!important")
                 i += 10
             } else if c == "#", depth > 0, i + 1 < n, chars[i + 1].isHexDigit {
@@ -241,6 +224,47 @@ extension CodeSyntaxHighlighter {
                 i += 1
             }
         }
-        return out.tokens
+        return out.finish()
+    }
+}
+
+/// Accumulates tokens without the quadratic string rebuild of merging per character: a run of one
+/// kind grows in a pending buffer and is flushed when the kind changes.
+struct TokenBuilder {
+    private var tokens: [CodeToken] = []
+    private var pendingKind: CodeTokenKind?
+    private var pendingText = ""
+
+    mutating func append(_ kind: CodeTokenKind, _ text: String) {
+        guard !text.isEmpty else { return }
+        if kind == pendingKind {
+            pendingText += text
+        } else {
+            flush()
+            pendingKind = kind
+            pendingText = text
+        }
+    }
+
+    /// An embedded language's tokens, kept apart from the tag that opened them
+    /// (the first token never merges into the previous one).
+    mutating func append(contentsOf more: [CodeToken]) {
+        flush()
+        for token in more {
+            append(token.kind, token.text)
+        }
+    }
+
+    private mutating func flush() {
+        if let kind = pendingKind {
+            tokens.append(CodeToken(kind: kind, text: pendingText))
+        }
+        pendingKind = nil
+        pendingText = ""
+    }
+
+    mutating func finish() -> [CodeToken] {
+        flush()
+        return tokens
     }
 }
