@@ -11,6 +11,8 @@
 //  token — never a crash, never a guess at a language M1K3 doesn't know.
 //
 //  Signed: Kev + claude-sonnet-5, 2026-07-22, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — html/css now route to the dedicated scanners in
+//  CodeSyntaxHighlighter+Markup.swift (the panel's Code tab and the Open button need them). Confidence 0.8.
 
 import Foundation
 
@@ -28,6 +30,11 @@ public enum CodeSyntaxHighlighter {
     /// "py", "ts"; case-insensitive, aliases resolved). `nil`/unrecognized
     /// language → one `.plain` token holding the whole string unchanged.
     public static func tokenize(_ code: String, language: String?) -> [CodeToken] {
+        switch MarkupLanguage(language) {
+        case .html?: return tokenizeHTML(code)
+        case .css?: return tokenizeCSS(code)
+        case nil: break
+        }
         guard let rules = rules(for: language) else {
             return code.isEmpty ? [] : [CodeToken(kind: .plain, text: code)]
         }

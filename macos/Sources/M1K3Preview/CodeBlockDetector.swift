@@ -95,6 +95,14 @@ public enum CodeBlockDetector {
         return blocks
     }
 
+    /// One fenced block as an artifact: the language its tag names, or sniffed from the
+    /// source when untagged; nil when untagged and unrecognisable.
+    public static func artifact(tag: String, source: String) -> CodeArtifact? {
+        guard let language = resolveLanguage(tag: tag, source: source) else { return nil }
+        let label = (language == .code && !tag.isEmpty) ? tag : nil
+        return CodeArtifact(source: source, language: language, languageLabel: label)
+    }
+
     private static func resolveLanguage(tag: String, source: String) -> CodeArtifact.Language? {
         if !tag.isEmpty {
             switch tag {
