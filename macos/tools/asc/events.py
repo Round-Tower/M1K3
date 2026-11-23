@@ -108,7 +108,8 @@ Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible"; R
   Confidence 0.85: the pure half and the CLI are pinned against fakes, the helper by one darwin test.
 Review: Kev + claude-opus-5-5, 2026-11-23 (merged with Diwali + Lunar New Year) — `check` skips the two specs
   1.5 served (`SERVED_BY_1_5`): Diwali 2026 sits inside Flight Club 2026 under 1.6's order, but no one runs 1.6
-  before it's over. Replaces the UTC+13 carve-out. Confidence 0.8.
+  before it's over. Replaces the UTC+13 carve-out. `next` notes a look another look cuts in two (it
+  takes the first piece). Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -375,6 +376,20 @@ def next_run(days: Mapping[date, str], lo: date, hi: date, looks: Collection[str
             return first, last
     when = f" starting in {year}" if year else ""
     raise SystemExit(f"no whole {'/'.join(sorted(looks))} run{when} between {lo} and {hi}")
+
+
+SPLIT_GAP = timedelta(days=7)
+
+
+def split_note(days: Mapping[date, str], lo: date, hi: date, looks: Collection[str],
+               first: date, last: date) -> str | None:
+    """A note when another look cuts this one in two (Diwali inside Halloween 2027): `next` takes the first
+    piece, which may be far shorter than the event the copy describes. None when the run is whole."""
+    for a, b in look_runs(days, lo, hi, looks):
+        if last < a <= last + SPLIT_GAP:
+            return (f"another look holds the days between: the app wears it again {a} → {b}. This event covers "
+                    f"the first piece only ({first} → {last}); check the copy, or move the look order")
+    return None
 
 
 def event_window(first: date, last: date) -> tuple[datetime, datetime]:
@@ -765,6 +780,8 @@ def next_events(names: list[str], *, year: int | None, write: bool) -> int:
         text = path.read_text()
         new_text = rewrite_dates(text, next_fields(spec, first, last))
         print(f"== {name}: the app wears {'/'.join(spec['looks'])} {first} → {last}")
+        if split := split_note(days, *ranges[path], spec["looks"], first, last):
+            print(f"  note: {split}")
         sys.stdout.writelines(difflib.unified_diff(text.splitlines(keepends=True), new_text.splitlines(keepends=True),
                                                    f"{name}/event.json", f"{name}/event.json (next)", n=0))
         new_spec = json.loads(new_text)

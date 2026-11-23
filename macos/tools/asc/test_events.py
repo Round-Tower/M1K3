@@ -9,9 +9,10 @@ import types
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 import asc
 import events
-import pytest
 
 
 def _spec() -> dict:
@@ -650,6 +651,20 @@ def test_next_run_takes_the_first_run_or_the_first_in_the_year() -> None:
     assert events.next_run(days, lo, hi, {"ramadan"}, year=2030) == (D("2030-01-05"), D("2030-02-06"))
     with pytest.raises(SystemExit, match="no whole stpatricks run"):
         events.next_run(days, lo, hi, {"stpatricks"})
+
+
+def test_split_note_names_a_look_another_look_cuts_in_two() -> None:
+    # Halloween 2027: Diwali's five days sit inside it, so the app's Halloween is two pieces.
+    days = _days(("2027-10-24", "2027-10-26", "halloween"), ("2027-10-27", "2027-10-30", "diwali"),
+                 ("2027-10-31", "2027-11-01", "halloween"))
+    lo, hi = D("2027-10-01"), D("2027-11-30")
+    first, last = events.next_run(days, lo, hi, {"halloween"})
+    note = events.split_note(days, lo, hi, {"halloween"}, first, last)
+    assert note is not None and "2027-10-31" in note and "first piece" in note
+    # A whole run, or the next year's run far away, is no split.
+    whole = _days(("2028-10-24", "2028-11-01", "halloween"), ("2029-10-24", "2029-11-01", "halloween"))
+    assert events.split_note(whole, D("2028-10-01"), D("2029-11-30"), {"halloween"},
+                             D("2028-10-24"), D("2028-11-01")) is None
 
 
 def test_event_window_starts_at_10z_and_ends_by_10z_on_the_last_day_or_an_hour_short_of_31_days() -> None:

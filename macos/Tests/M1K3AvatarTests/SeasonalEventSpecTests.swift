@@ -73,7 +73,9 @@ struct SeasonalEventSpecTests {
     @Test("the yearly event specs name their looks")
     func yearlySpecsNameTheirLooks() throws {
         let yearly = try Set(Self.specs().filter { $0.spec.looks != nil }.map(\.name))
-        #expect(yearly.isSuperset(of: ["christmas", "flight-club", "halloween", "nowruz", "ramadan", "st-patricks"]))
+        #expect(yearly.isSuperset(of: [
+            "christmas", "diwali", "flight-club", "halloween", "lunar-new-year", "nowruz", "ramadan", "st-patricks",
+        ]))
     }
 
     @Test("every yearly event is live only while the app wears one of its looks, from UTC-10 to UTC+14")
