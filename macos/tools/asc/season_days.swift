@@ -18,6 +18,8 @@
 //  darwin test against the published 2028 dates; it breaks loudly, not silently, if SeasonalLook.swift
 //  starts using a type from another file: add that file to events.py's SEASON_SOURCES).
 //  Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-commit SwiftLint) — a long guard wrapped, and the JSON goes to
+//  stdout as Data instead of through String(decoding:). Output unchanged. Confidence 0.9.
 //
 
 import Foundation
@@ -46,7 +48,9 @@ enum SeasonDays {
         }
         var days: [String: String] = [:]
         for offset in 0 ..< count {
-            guard let day = utc.date(byAdding: .day, value: offset, to: first) else { fail("no day \(offset) after \(args[1])") }
+            guard let day = utc.date(byAdding: .day, value: offset, to: first) else {
+                fail("no day \(offset) after \(args[1])")
+            }
             if let look = SeasonalLook.active(on: day, calendar: utc, offline: true) {
                 days[stamp(day, on: utc)] = look.rawValue
             }
@@ -54,7 +58,7 @@ enum SeasonDays {
         let body: [String: Any] = ["looks": SeasonalLook.allCases.map(\.rawValue), "days": days]
         do {
             let data = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
-            print(String(decoding: data, as: UTF8.self))
+            FileHandle.standardOutput.write(data + Data("\n".utf8))
         } catch {
             fail("json: \(error)")
         }
