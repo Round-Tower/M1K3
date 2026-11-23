@@ -30,6 +30,9 @@
         }
       }
     },
+    "Eid Mubarak! Wishing you and yours a joyful Eid." : {
+      "comment" : "Greeting shown on the first three days of Eid al-Fitr. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. One line, at most 70 characters."
+    },
     "Happy Halloween! I carved the pumpkin; you bring the questions." : {
       "comment" : "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line.",
       "localizations" : {
@@ -58,6 +61,15 @@
           }
         }
       }
+    },
+    "Happy Nowruz! A new spring, a fresh start." : {
+      "comment" : "Greeting for the first 7 days of Nowruz (Nauryz in Kazakhstan, Navruz in Uzbekistan); use the local name. Warm, family-safe, at most 70 characters."
+    },
+    "Happy St Patrick's Day from an AI made in Ireland!" : {
+      "comment" : "Seasonal greeting shown 14-17 March. M1K3 is made in Ireland (true: Round Tower, Ireland). Playful and family-safe, one short line of at most 70 characters."
+    },
+    "Merry Christmas! I made the nice list this year. Mostly." : {
+      "comment" : "Greeting shown 2 Dec - 7 Jan (Christmas, New Year). M1K3 is a playful villain on the user's side; family-safe, one line, at most 70 characters."
     },
     "Off (textured)" : {
       "comment" : "Companion skin picker: no shader, the creature keeps its own painted textures.",
@@ -119,6 +131,12 @@
           }
         }
       }
+    },
+    "Ramadan Kareem. I'm here whenever you need me, day or night." : {
+      "comment" : "Greeting shown during Ramadan. Respectful and warm, NO villain play or jokes; 'Ramadan Kareem' is customary. One line, at most 70 characters."
+    },
+    "Wishing you and yours peace and blessings." : {
+      "comment" : "Greeting for the last days of Ramadan and Eid's first day, when either may be true; must name neither. Respectful, NO villain play, at most 70 characters."
     }
   },
   "version" : "1.0"

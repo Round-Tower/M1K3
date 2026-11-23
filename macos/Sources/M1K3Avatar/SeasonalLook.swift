@@ -13,7 +13,8 @@
 //  keeps working. The network signal is an INPUT (`offline:`), never read here: the shells pass
 //  `NetworkPathWatch.shared.isOffline`, so this file stays pure and the gate is unit-tested.
 //
-//  Launch argument: `M1K3 -seasonalLook halloween | flightclub` forces the look on (flightclub
+//  Launch argument: `M1K3 -seasonalLook <look>` (halloween, flightclub, christmas, ramadan, eid, nowruz,
+//  stpatricks) forces the look on (flightclub
 //  regardless of date AND network), `-seasonalLook none` forces it off (screenshots, store art,
 //  verification). Read from the ARGUMENT domain only, like `GenerationActivity.isEnabled`: on
 //  macOS 27 `defaults write` never reaches the sandboxed app, and a persisted key must never force
@@ -37,29 +38,62 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the costume lines resolve from M1K3Avatar's catalog
 //  (`bundle: .module`); they are card copy, never chat history. English unchanged.
 //
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: "do them as often as possible and capitalize on the reach") — the
+//  seasonal calendar: Christmas / New Year (Dec 2 – Jan 7, the day after Flight Club through Orthodox Christmas),
+//  Ramadan (Umm al-Qura month 9) and Eid al-Fitr (Shawwal 1–3), Nowruz (Farvardin 1–7), St Patrick's (Mar 14–17).
+//  The Halloween event drew 10–18k search impressions a day in PK / KZ / DZ / IN / IQ / UZ, so the calendar follows
+//  those storefronts' feasts. Ramadan, Eid and Nowruz read their own calendars (no date table to rot); the user's
+//  regional calendar is never used for any window. Overlaps: Halloween, Eid, St Patrick's, Nowruz, Ramadan,
+//  Christmas, Flight Club — a short feast wins a long season, Eid wins Nowruz (2026). `Override` is now `.look(_)` or
+//  `.off`, so a new look needs no new override case. Umm al-Qura is Saudi Arabia's reckoning: a country that sights
+//  the moon can begin a day either side. Ramadan and Eid wear no villain costume: lantern gold and quiet lines.
+//  Confidence 0.8 (maths pinned in SeasonalCalendarTests; the looks are verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — Pakistan and India sight the moon a day or two
+//  after Umm al-Qura, so "Eid Mubarak" on Saudi Shawwal 1 lands on their last fast day. Ramadan 29–30 and Shawwal 1 are
+//  now `.moonSighting`: the lantern look with a line true on both days. Ramadan's greeting runs days 1–28 and Eid's
+//  Shawwal 2–4. `now` memoises per (zone, minute, inputs): it is read ~30 Hz and built three calendars a call.
+//  Confidence 0.8.
+//
 
 import Foundation
+import Synchronization
 
-public enum SeasonalLook: String, Sendable {
+public enum SeasonalLook: String, Sendable, CaseIterable {
     case halloween
     /// Offline AI Flight Club — Nov 3 – Dec 1, only while offline.
     case flightClub = "flightclub"
+    /// Christmas and New Year — Dec 2 – Jan 7 (through Orthodox Christmas).
+    case christmas
+    /// Ramadan — days 1–28 of the ninth month of the Umm al-Qura calendar.
+    case ramadan
+    /// The moon-sighting days — Ramadan 29–30 and Shawwal 1, when Eid may or may not have begun where the user is.
+    case moonSighting = "moonsighting"
+    /// Eid al-Fitr — Shawwal 2–4 (a day late for Saudi Arabia, on time for moon-sighting countries).
+    case eid
+    /// Nowruz / Nauryz — Farvardin 1–7 of the Persian calendar.
+    case nowruz
+    /// St Patrick's — Mar 14–17, the Dublin festival days.
+    case stPatricks = "stpatricks"
 
-    /// Launch-argument key: `-seasonalLook halloween | flightclub | none`.
+    /// Launch-argument key: `-seasonalLook <look> | none` (a look's raw value, any case).
     public static let overrideKey = "seasonalLook"
 
     /// A forced answer from the launch argument.
-    public enum Override: Sendable, Equatable {
-        case halloween
-        case flightClub
+    public enum Override: Sendable, Hashable {
+        case look(SeasonalLook)
         case off
 
+        public static let halloween = Override.look(.halloween)
+        public static let flightClub = Override.look(.flightClub)
+
         public init?(argument: String?) {
-            switch argument?.lowercased() {
-            case "halloween": self = .halloween
-            case "flightclub": self = .flightClub
-            case "none": self = .off
-            default: return nil
+            guard let word = argument?.lowercased() else { return nil }
+            if word == "none" {
+                self = .off
+            } else if let season = SeasonalLook(rawValue: word) {
+                self = .look(season)
+            } else {
+                return nil
             }
         }
 
@@ -71,26 +105,41 @@ public enum SeasonalLook: String, Sendable {
     }
 
     /// The look in season on `date` in `calendar`'s time zone, else nil. `offline` gates Flight Club
-    /// only; Halloween is date-only and is checked first (the windows never overlap anyway).
+    /// only. Each window is read on its OWN calendar in the caller's zone, never the caller's calendar
+    /// system. Order: a short feast wins a long season (Halloween, Eid, St Patrick's, Nowruz, then
+    /// Ramadan, Christmas, Flight Club; the moon-sighting days sit with Eid).
     public static func active(on date: Date, calendar: Calendar, offline: Bool) -> SeasonalLook? {
-        // Halloween is a Gregorian date. Keep the caller's time zone, never its calendar system.
-        var gregorian = Calendar(identifier: .gregorian)
-        gregorian.timeZone = calendar.timeZone
-        let parts = gregorian.dateComponents([.month, .day], from: date)
-        guard let month = parts.month, let day = parts.day else { return nil }
-        switch (month, day) {
-        case (10, 24...), (11, 1): return .halloween
-        case (11, 3...), (12, 1): return offline ? .flightClub : nil
-        default: return nil
-        }
+        let gregorian = parts(of: date, on: .gregorian, in: calendar.timeZone)
+        let hijri = parts(of: date, on: .islamicUmmAlQura, in: calendar.timeZone)
+        let persian = parts(of: date, on: .persian, in: calendar.timeZone)
+        if case (10, 24...) = gregorian { return .halloween }
+        if case (11, 1) = gregorian { return .halloween }
+        if case (10, 2 ... 4) = hijri { return .eid }
+        if case (9, 29 ... 30) = hijri { return .moonSighting }
+        if case (10, 1) = hijri { return .moonSighting }
+        if case (3, 14 ... 17) = gregorian { return .stPatricks }
+        if case (1, 1 ... 7) = persian { return .nowruz }
+        if case (9, 1 ... 28) = hijri { return .ramadan }
+        if case (12, 2...) = gregorian { return .christmas }
+        if case (1, 1 ... 7) = gregorian { return .christmas }
+        if case (11, 3...) = gregorian { return offline ? .flightClub : nil }
+        if case (12, 1) = gregorian { return offline ? .flightClub : nil }
+        return nil
+    }
+
+    /// Month and day of `date` on `identifier`'s calendar in `zone`; (0, 0) if it cannot say.
+    private static func parts(of date: Date, on identifier: Calendar.Identifier, in zone: TimeZone) -> (month: Int, day: Int) {
+        var calendar = Calendar(identifier: identifier)
+        calendar.timeZone = zone
+        let parts = calendar.dateComponents([.month, .day], from: date)
+        return (parts.month ?? 0, parts.day ?? 0)
     }
 
     /// The look to wear: a launch override wins (regardless of date and network), then the user's
     /// opt-out, then the date and the network.
     public static func resolve(on date: Date, calendar: Calendar, enabled: Bool, offline: Bool, override: Override?) -> SeasonalLook? {
         switch override {
-        case .halloween: .halloween
-        case .flightClub: .flightClub
+        case let .look(season): season
         case .off: nil
         case nil: enabled ? active(on: date, calendar: calendar, offline: offline) : nil
         }
@@ -112,6 +161,42 @@ public enum SeasonalLook: String, Sendable {
                 bundle: .module,
                 comment: "Seasonal greeting shown 3 Nov - 1 Dec, ONLY while the device is offline (Offline AI Flight Club). M1K3 is a theatrical villain who is entirely on the user's side; keep it playful, honest (it must be true when offline, even with no brain downloaded yet, so it promises presence, never answers) and family-safe, one short line of at most 70 characters."
             )
+        case .christmas:
+            String(
+                localized: "Merry Christmas! I made the nice list this year. Mostly.",
+                bundle: .module,
+                comment: "Greeting shown 2 Dec - 7 Jan (Christmas, New Year). M1K3 is a playful villain on the user's side; family-safe, one line, at most 70 characters."
+            )
+        case .ramadan:
+            String(
+                localized: "Ramadan Kareem. I'm here whenever you need me, day or night.",
+                bundle: .module,
+                comment: "Greeting shown during Ramadan. Respectful and warm, NO villain play or jokes; 'Ramadan Kareem' is customary. One line, at most 70 characters."
+            )
+        case .eid:
+            String(
+                localized: "Eid Mubarak! Wishing you and yours a joyful Eid.",
+                bundle: .module,
+                comment: "Greeting shown on the first three days of Eid al-Fitr. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. One line, at most 70 characters."
+            )
+        case .moonSighting:
+            String(
+                localized: "Wishing you and yours peace and blessings.",
+                bundle: .module,
+                comment: "Greeting for the last days of Ramadan and Eid's first day, when either may be true; must name neither. Respectful, NO villain play, at most 70 characters."
+            )
+        case .nowruz:
+            String(
+                localized: "Happy Nowruz! A new spring, a fresh start.",
+                bundle: .module,
+                comment: "Greeting for the first 7 days of Nowruz (Nauryz in Kazakhstan, Navruz in Uzbekistan); use the local name. Warm, family-safe, at most 70 characters."
+            )
+        case .stPatricks:
+            String(
+                localized: "Happy St Patrick's Day from an AI made in Ireland!",
+                bundle: .module,
+                comment: "Seasonal greeting shown 14-17 March. M1K3 is made in Ireland (true: Round Tower, Ireland). Playful and family-safe, one short line of at most 70 characters."
+            )
         case nil:
             nil
         }
@@ -125,6 +210,35 @@ public enum SeasonalLook: String, Sendable {
     /// opt-out the caller already observes (`@AppStorage(CompanionDefaults.seasonalLooksKey)`);
     /// `offline` is `NetworkPathWatch.shared.isOffline`, read where the view observes it.
     public static func now(enabled: Bool, offline: Bool) -> SeasonalLook? {
-        resolve(on: Date(), calendar: .autoupdatingCurrent, enabled: enabled, offline: offline, override: launchOverride)
+        let date = Date()
+        let calendar = Calendar.autoupdatingCurrent
+        let key = Memo.Key(zone: calendar.timeZone.identifier, minute: Int(date.timeIntervalSince1970 / 60),
+                           enabled: enabled, offline: offline, override: launchOverride)
+        return memo.value(for: key) {
+            resolve(on: date, calendar: calendar, enabled: enabled, offline: offline, override: launchOverride)
+        }
+    }
+
+    private static let memo = Memo()
+
+    /// The last answer, keyed by everything it depends on. A window only moves at a local midnight,
+    /// so a minute bucket is exact to the minute and spares the three calendars on every frame.
+    final class Memo: Sendable {
+        struct Key: Hashable {
+            let zone: String
+            let minute: Int
+            let enabled: Bool
+            let offline: Bool
+            let override: Override?
+        }
+
+        private let last = Mutex<(key: Key, value: SeasonalLook?)?>(nil)
+
+        func value(for key: Key, compute: () -> SeasonalLook?) -> SeasonalLook? {
+            if let hit = last.withLock({ $0 }), hit.key == key { return hit.value }
+            let value = compute()
+            last.withLock { $0 = (key, value) }
+            return value
+        }
     }
 }

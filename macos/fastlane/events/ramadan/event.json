@@ -1,0 +1,79 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "ramadan-eid-2027",
+  "publishStart": "2027-01-25T10:00:00Z",
+  "eventStart": "2027-02-08T10:00:00Z",
+  "eventEnd": "2027-03-11T09:00:00Z",
+  "deepLink": "m1k3://event/ramadan",
+  "copy": {
+    "name": "Ramadan Lanterns",
+    "shortDescription": "A lantern-gold glow and a warm hello.",
+    "longDescription": "Through Ramadan and Eid al-Fitr, the Phosphor Fox glows lantern gold and greets you: Ramadan Kareem, then Eid Mubarak."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Ramadan Lanterns",
+      "shortDescription": "A lantern-gold glow and a warm hello.",
+      "longDescription": "Through Ramadan and Eid al-Fitr, the Phosphor Fox glows lantern gold and greets you: Ramadan Kareem, then Eid Mubarak."
+    },
+    "en-GB": {
+      "name": "Ramadan · Ramzan Lanterns",
+      "shortDescription": "A lantern-gold glow and a warm hello.",
+      "longDescription": "Through Ramadan and Eid al-Fitr, the Phosphor Fox glows lantern gold and greets you: Ramadan Kareem, then Eid Mubarak."
+    },
+    "de-DE": {
+      "name": "Ramadan-Laternen",
+      "shortDescription": "Laternengold und ein herzlicher Gruß.",
+      "longDescription": "Im Ramadan und zu Eid al-Fitr leuchtet der Phosphorfuchs laternengold und grüßt: Ramadan Kareem, dann Eid Mubarak."
+    },
+    "es-ES": {
+      "name": "Faroles de Ramadán",
+      "shortDescription": "Brillo dorado de farol y un cálido saludo.",
+      "longDescription": "Durante el Ramadán y el Eid al-Fitr, el zorro brilla dorado como un farol y saluda: Ramadán Karim y luego Eid Mubarak."
+    },
+    "es-MX": {
+      "name": "Faroles de Ramadán",
+      "shortDescription": "Brillo dorado de farol y un cálido saludo.",
+      "longDescription": "Durante el Ramadán y el Eid al-Fitr, el zorro brilla dorado como un farol y saluda: Ramadán Karim y luego Eid Mubarak."
+    },
+    "fr-FR": {
+      "name": "Lanternes du Ramadan",
+      "shortDescription": "Une lueur dorée et un salut chaleureux.",
+      "longDescription": "Pendant le Ramadan et l'Aïd al-Fitr, le renard brille d'or et vous salue : Ramadan Moubarak, puis Aïd Moubarak."
+    },
+    "ja": {
+      "name": "ラマダンのランタン",
+      "shortDescription": "ランタンの金色の光と、あたたかなあいさつ。",
+      "longDescription": "ラマダンとイード・アル＝フィトルの間、燐光のキツネがランタンの金色に輝き、あいさつをします。"
+    },
+    "ko": {
+      "name": "라마단 등불",
+      "shortDescription": "등불 같은 금빛과 따뜻한 인사.",
+      "longDescription": "라마단과 이드 알피트르 동안 인광 여우가 등불 같은 금빛으로 빛나며 라마단 카림, 이드 무바라크 인사를 건네요."
+    },
+    "pt-BR": {
+      "name": "Lanternas do Ramadã",
+      "shortDescription": "Brilho dourado de lanterna e um oi caloroso.",
+      "longDescription": "No Ramadã e no Eid al-Fitr, a raposa brilha dourada como lanterna e saúda: Ramadã Kareem, depois Eid Mubarak."
+    },
+    "zh-Hans": {
+      "name": "斋月灯笼",
+      "shortDescription": "灯笼金光，温暖问候。",
+      "longDescription": "斋月和开斋节期间，磷光狐狸闪耀灯笼般的金光，向你送上斋月吉庆和开斋节快乐的问候。"
+    },
+    "ru": {
+      "name": "Фонари Рамадана",
+      "shortDescription": "Золотой свет фонаря и тёплый привет.",
+      "longDescription": "В Рамадан и Ураза-байрам Фосфорный лис светится золотом фонаря и приветствует: Рамадан Карим, затем Ид Мубарак."
+    },
+    "ar-SA": {
+      "name": "فوانيس رمضان",
+      "shortDescription": "توهّج ذهبي كالفانوس وتحية دافئة.",
+      "longDescription": "طوال رمضان وعيد الفطر، يتوهج Phosphor Fox بذهبي الفانوس ويلقي التحية: رمضان كريم، ثم عيد مبارك."
+    }
+  }
+}

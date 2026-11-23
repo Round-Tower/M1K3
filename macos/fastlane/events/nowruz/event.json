@@ -1,0 +1,79 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "nowruz-2027",
+  "publishStart": "2027-03-14T10:00:00Z",
+  "eventStart": "2027-03-21T10:00:00Z",
+  "eventEnd": "2027-03-27T10:00:00Z",
+  "deepLink": "m1k3://event/nowruz",
+  "copy": {
+    "name": "Nowruz · Nauryz · Navruz",
+    "shortDescription": "A spring glow and a new-year hello.",
+    "longDescription": "From Mar 21, for the new year's first week, the Phosphor Fox wears blossom pink and spring sun. Happy Nowruz!"
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Nowruz · Nauryz · Navruz",
+      "shortDescription": "A spring glow and a new-year hello.",
+      "longDescription": "From Mar 21, for the new year's first week, the Phosphor Fox wears blossom pink and spring sun. Happy Nowruz!"
+    },
+    "en-GB": {
+      "name": "Nowruz · Nauryz · Navruz",
+      "shortDescription": "A spring glow and a new-year hello.",
+      "longDescription": "From 21 Mar, for the new year's first week, the Phosphor Fox wears blossom pink and spring sun. Happy Nowruz!"
+    },
+    "de-DE": {
+      "name": "Nouruz-Frühling",
+      "shortDescription": "Frühlingslicht und ein Neujahrsgruß.",
+      "longDescription": "In der ersten Woche ab 21.3. trägt der Phosphorfuchs Blütenrosa und Frühlingssonne und wünscht ein frohes Nouruz."
+    },
+    "es-ES": {
+      "name": "Primavera de Nouruz",
+      "shortDescription": "Brillo de primavera y un saludo de año nuevo.",
+      "longDescription": "La primera semana del año nuevo, desde el 21 mar., el zorro viste rosa y sol de primavera y te desea un feliz Nouruz."
+    },
+    "es-MX": {
+      "name": "Primavera de Nouruz",
+      "shortDescription": "Brillo de primavera y un saludo de año nuevo.",
+      "longDescription": "La primera semana del año nuevo, desde el 21 mar., el zorro viste rosa y sol de primavera y te desea un feliz Nouruz."
+    },
+    "fr-FR": {
+      "name": "Printemps de Norouz",
+      "shortDescription": "Une lueur de printemps et des vœux.",
+      "longDescription": "Dès le 21 mars, pour la 1re semaine de l'an, le renard porte le rose et le soleil du printemps. Bon Norouz !"
+    },
+    "ja": {
+      "name": "ノウルーズの春",
+      "shortDescription": "春の光と新年のあいさつ。",
+      "longDescription": "3月21日からの新年最初の一週間、燐光のキツネが花のピンクと春の陽射しをまとい、ノウルーズを祝います。"
+    },
+    "ko": {
+      "name": "노루즈의 봄",
+      "shortDescription": "봄빛과 새해 인사.",
+      "longDescription": "3월 21일부터 새해 첫 주 동안 인광 여우가 꽃분홍과 봄 햇살을 입고 행복한 노루즈를 기원해요."
+    },
+    "pt-BR": {
+      "name": "Primavera do Nowruz",
+      "shortDescription": "Brilho de primavera e um oi de ano-novo.",
+      "longDescription": "Na primeira semana do ano-novo, a partir de 21/3, a raposa veste rosa e sol de primavera e deseja um feliz Nowruz."
+    },
+    "zh-Hans": {
+      "name": "诺鲁孜节之春",
+      "shortDescription": "春日光彩，新年问候。",
+      "longDescription": "3月21日起的新年第一周，磷光狐狸换上花粉与春阳的颜色，祝你诺鲁孜节快乐。"
+    },
+    "ru": {
+      "name": "Наурыз · Навруз",
+      "shortDescription": "Весеннее сияние и новогодний привет.",
+      "longDescription": "С 21 марта, в первую неделю нового года, Фосфорный лис светится цветами весны и поздравляет с Наурызом."
+    },
+    "ar-SA": {
+      "name": "ربيع النوروز",
+      "shortDescription": "توهّج ربيعي وتحية بالعام الجديد.",
+      "longDescription": "في الأسبوع الأول من العام الجديد بدءًا من 21 مارس، يرتدي Phosphor Fox ألوان الزهر وشمس الربيع ويلقي تهنئة النوروز."
+    }
+  }
+}
