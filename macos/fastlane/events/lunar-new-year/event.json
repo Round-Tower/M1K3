@@ -1,0 +1,79 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "lunar-new-year-2027",
+  "publishStart": "2027-01-22T10:00:00Z",
+  "eventStart": "2027-02-05T10:00:00Z",
+  "eventEnd": "2027-02-07T10:00:00Z",
+  "deepLink": "m1k3://event/lunar-new-year",
+  "copy": {
+    "name": "Lunar New Year Glow",
+    "shortDescription": "Lucky red and gold for the new year.",
+    "longDescription": "For Lunar New Year, the Phosphor Fox glows red and gold and wishes you luck and good health. All on your device."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Lunar New Year Glow",
+      "shortDescription": "Lucky red and gold for the new year.",
+      "longDescription": "For Lunar New Year, the Phosphor Fox glows red and gold and wishes you luck and good health. All on your device."
+    },
+    "en-GB": {
+      "name": "Lunar New Year · Tết",
+      "shortDescription": "Lucky red and gold for the new year.",
+      "longDescription": "For Lunar New Year, the Phosphor Fox glows red and gold and wishes you luck and good health. All on your device."
+    },
+    "de-DE": {
+      "name": "Mondneujahr",
+      "shortDescription": "Glücksrot und Gold zum neuen Jahr.",
+      "longDescription": "Zum Mondneujahr leuchtet der Phosphorfuchs rot und gold und wünscht dir Glück und Gesundheit."
+    },
+    "es-ES": {
+      "name": "Año Nuevo Lunar",
+      "shortDescription": "Rojo y oro de la suerte para el año nuevo.",
+      "longDescription": "En el Año Nuevo Lunar, el zorro fosforescente brilla en rojo y oro y te desea suerte y salud."
+    },
+    "es-MX": {
+      "name": "Año Nuevo Lunar",
+      "shortDescription": "Rojo y oro de la suerte para el año nuevo.",
+      "longDescription": "En el Año Nuevo Lunar, el zorro fosforescente brilla en rojo y oro y te desea suerte y salud."
+    },
+    "fr-FR": {
+      "name": "Nouvel An lunaire",
+      "shortDescription": "Rouge et or porte-bonheur pour l'année.",
+      "longDescription": "Pour le Nouvel An lunaire, le renard phosphorescent brille de rouge et d'or et vous souhaite chance et santé."
+    },
+    "ja": {
+      "name": "旧正月のお祝い",
+      "shortDescription": "幸運の赤と金で新年を。",
+      "longDescription": "旧正月に、燐光のキツネが赤と金に輝き、幸運と健康を願うあいさつをします。すべてデバイス上で。"
+    },
+    "ko": {
+      "name": "설날",
+      "shortDescription": "새해를 여는 행운의 빨강과 금빛.",
+      "longDescription": "설날에 인광 여우가 빨강과 금빛으로 빛나며 행운과 건강을 비는 인사를 건네요. 모두 기기 안에서."
+    },
+    "pt-BR": {
+      "name": "Ano-Novo Lunar",
+      "shortDescription": "Vermelho e dourado da sorte para o ano novo.",
+      "longDescription": "No Ano-Novo Lunar, a raposa fosforescente brilha em vermelho e dourado e te deseja sorte e saúde."
+    },
+    "zh-Hans": {
+      "name": "欢度春节",
+      "shortDescription": "红金好运，迎接新年。",
+      "longDescription": "除夕和春节期间，磷光狐狸闪耀红金两色，祝你新年好运、身体健康。全部在设备上运行。"
+    },
+    "ru": {
+      "name": "Лунный Новый год",
+      "shortDescription": "Красный и золотой на удачу.",
+      "longDescription": "На Лунный Новый год Фосфорный лис светится красным и золотым и желает удачи и здоровья. Всё на устройстве."
+    },
+    "ar-SA": {
+      "name": "رأس السنة القمرية",
+      "shortDescription": "أحمر وذهبي للحظ في العام الجديد.",
+      "longDescription": "في رأس السنة القمرية، يتوهج Phosphor Fox بالأحمر والذهبي ويتمنى الحظ والصحة. كل ذلك على الجهاز."
+    }
+  }
+}
