@@ -136,3 +136,33 @@ struct ArtifactCSPLeadsTests {
         }
     }
 }
+
+/// DNS prefetch is the one egress no CSP directive and no content rule list governs: `<link rel=dns-prefetch>` (or
+/// WebKit's own prefetch of a link's host) resolves a name the page chose, which could carry what's on the page. A
+/// loopback canary (2026-11-23) showed the rule list stops every fetch channel, but a bare lookup can't be seen
+/// without root; `x-dns-prefetch-control: off`, honoured by WebKit, closes it at the source.
+struct ArtifactDNSPrefetchOffTests {
+    @Test("the seal turns DNS prefetch off, right after the CSP, in every injected document")
+    func injectedDocumentsTurnPrefetchOff() {
+        for page in ArtifactCSPLeadsTests.hostile {
+            let out = ArtifactFormatter.injectCSPMeta(page)
+            #expect(ArtifactCSPLeadsTests.afterDoctype(out).hasPrefix(ArtifactSandboxPolicy.sealHead), "not first in: \(page)")
+        }
+    }
+
+    @Test("formatted html and markdown previews both lead with the full seal, once")
+    func formattedPreviewsLeadWithTheSeal() {
+        let html = ArtifactFormatter.formatHTML("<p>x</p><link rel=\"dns-prefetch\" href=\"//leak.example\">")
+        let markdown = ArtifactFormatter.formatMarkdown("# Hi")
+        for out in [html, markdown] {
+            #expect(ArtifactCSPLeadsTests.afterDoctype(out).hasPrefix(ArtifactSandboxPolicy.sealHead))
+            #expect(out.components(separatedBy: ArtifactSandboxPolicy.dnsPrefetchOffMetaTag).count == 2)
+        }
+    }
+
+    @Test("the prefetch switch is the exact http-equiv WebKit reads")
+    func prefetchMetaIsWellFormed() {
+        #expect(ArtifactSandboxPolicy.dnsPrefetchOffMetaTag == "<meta http-equiv=\"x-dns-prefetch-control\" content=\"off\">")
+        #expect(ArtifactSandboxPolicy.sealHead.hasPrefix(ArtifactSandboxPolicy.cspMetaTag))
+    }
+}
