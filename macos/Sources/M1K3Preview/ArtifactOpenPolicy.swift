@@ -42,12 +42,32 @@ public enum ArtifactOpenPolicy {
 
 /// Where the artifact view shows on a device.
 public enum ArtifactPresentation: Equatable, Sendable {
-    /// A sheet over the chat (iPhone, and iPad in a compact window).
+    /// A sheet over the chat (iPhone, and iPad in a compact or narrow window).
     case sheet
-    /// A column beside the chat (a regular-width window).
+    /// A column beside the chat (a wide, regular-width window).
     case besideChat
 
-    public static func style(isRegularWidth: Bool) -> ArtifactPresentation {
-        isRegularWidth ? .besideChat : .sheet
+    /// The narrowest window (points) that keeps a readable chat beside the column. A half-width iPad
+    /// Split View is still `.regular` but far narrower than this.
+    public static let minimumBesideWidth: Double = 900
+
+    public static func style(isRegularWidth: Bool, width: Double) -> ArtifactPresentation {
+        isRegularWidth && width >= minimumBesideWidth ? .besideChat : .sheet
+    }
+}
+
+/// An opened artifact and the conversation it was opened in. It shows only in that conversation, so a
+/// new chat, a delete or a switch leaves no stale page beside the wrong transcript.
+public struct ScopedArtifact: Equatable, Sendable {
+    public let artifact: CodeArtifact
+    public let conversationID: UUID
+
+    public init(_ artifact: CodeArtifact, conversationID: UUID) {
+        self.artifact = artifact
+        self.conversationID = conversationID
+    }
+
+    public func visible(in conversationID: UUID) -> CodeArtifact? {
+        self.conversationID == conversationID ? artifact : nil
     }
 }

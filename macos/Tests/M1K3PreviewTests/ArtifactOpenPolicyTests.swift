@@ -4,6 +4,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.85, Prior: Unknown (new file)
 
+import Foundation
 @testable import M1K3Preview
 import Testing
 
@@ -100,9 +101,26 @@ struct ArtifactOpenPolicyTests {
 
     // MARK: - Where it shows
 
-    @Test("regular width shows beside the chat, compact is a sheet")
+    @Test("a wide regular window shows beside the chat; compact or narrow is a sheet")
     func presentation() {
-        #expect(ArtifactPresentation.style(isRegularWidth: true) == .besideChat)
-        #expect(ArtifactPresentation.style(isRegularWidth: false) == .sheet)
+        #expect(ArtifactPresentation.style(isRegularWidth: true, width: 1024) == .besideChat)
+        #expect(ArtifactPresentation.style(isRegularWidth: true, width: 900) == .besideChat)
+        // Half-width Split View is still regular, but too narrow to share.
+        #expect(ArtifactPresentation.style(isRegularWidth: true, width: 507) == .sheet)
+        #expect(ArtifactPresentation.style(isRegularWidth: false, width: 1200) == .sheet)
+    }
+
+    @Test("an artifact shows only in the conversation it was opened in")
+    func scoped() {
+        let here = UUID()
+        let scoped = ScopedArtifact(CodeArtifact(source: "<p>x</p>", language: .html), conversationID: here)
+        #expect(scoped.visible(in: here)?.source == "<p>x</p>")
+        #expect(scoped.visible(in: UUID()) == nil)
+    }
+
+    @Test("formatting keeps createdAt, so a sheet/column identity stays stable")
+    func formatKeepsIdentity() {
+        let artifact = CodeArtifact(source: "<p>x</p>", language: .html)
+        #expect(ArtifactFormatter.format(artifact).createdAt == artifact.createdAt)
     }
 }
