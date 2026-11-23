@@ -139,6 +139,7 @@
 //  Review: claude-opus-5-5, 2026-11-20 — user-visible English reaches the string catalog; English unchanged. Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the staged-switch pitch and the Switch/Fetch button
 //  too. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — the window root supplies `openCodeBlock`, so every code card's Open button opens its block in the panel (1.6). Verify-by-launch. Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
@@ -311,6 +312,10 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: env.review.isPresented)
+        // Every code block's Open button opens THAT block in the panel (1.6).
+        .environment(\.openCodeBlock) { language, code in
+            env.openCodeBlock(language: language, code: code)
+        }
         // Screengrab harness: one launch beat per plate once the brain is ready
         // (no-op without M1K3_SCREENGRAB=1 — see AppEnvironment+Screengrab).
         .task(id: env.isReady) {

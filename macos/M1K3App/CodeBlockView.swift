@@ -14,6 +14,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — every card grows an Open button (1.6: code opens beside the chat) when
+//  the shell supplies `openCodeBlock`; the colouring moves out to `CodeHighlighting` so the panel's Code tab paints
+//  the same way. Not yet seen on a device. Confidence 0.75.
 
 #if canImport(AppKit)
     import AppKit
@@ -23,9 +26,23 @@
 import M1K3Chat
 import SwiftUI
 
+/// What a shell does when a code block's Open button is tapped: (fence tag, code). Absent → no button.
+private struct OpenCodeBlockKey: EnvironmentKey {
+    static let defaultValue: (@MainActor (String?, String) -> Void)? = nil
+}
+
+extension EnvironmentValues {
+    var openCodeBlock: (@MainActor (String?, String) -> Void)? {
+        get { self[OpenCodeBlockKey.self] }
+        set { self[OpenCodeBlockKey.self] = newValue }
+    }
+}
+
 struct CodeBlockView: View {
     let code: String
     let language: String?
+
+    @Environment(\.openCodeBlock) private var openCodeBlock
 
     @State private var didCopy = false
 
@@ -52,10 +69,26 @@ struct CodeBlockView: View {
                     .foregroundStyle(.readableSecondary)
             }
             Spacer()
+            if let openCodeBlock {
+                openButton(openCodeBlock)
+            }
             copyButton
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+    }
+
+    private func openButton(_ open: @escaping @MainActor (String?, String) -> Void) -> some View {
+        Button {
+            open(language, code)
+        } label: {
+            Label("Open", systemImage: "arrow.up.right.square")
+                .font(.caption2.weight(.semibold))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.readableSecondary)
+        .accessibilityLabel("Open code block")
+        .help("Open beside the chat")
     }
 
     private var copyButton: some View {
@@ -83,23 +116,29 @@ struct CodeBlockView: View {
         }
     }
 
-    /// Maps CodeSyntaxHighlighter's pure token kinds onto colour. Independent
-    /// of ReadingMode — code always stays monospaced/plain-colour-scheme
-    /// regardless of the reading-accessibility mode active for prose.
     private var highlighted: AttributedString {
+        CodeHighlighting.attributed(code, language: language, font: .system(.callout, design: .monospaced))
+    }
+}
+
+/// Maps CodeSyntaxHighlighter's pure token kinds onto colour. Independent
+/// of ReadingMode — code always stays monospaced/plain-colour-scheme
+/// regardless of the reading-accessibility mode active for prose.
+enum CodeHighlighting {
+    static func attributed(_ code: String, language: String?, font: Font) -> AttributedString {
         var result = AttributedString()
         for token in CodeSyntaxHighlighter.tokenize(code, language: language) {
             var run = AttributedString(token.text)
             run.foregroundColor = color(for: token.kind)
             if token.kind == .comment {
-                run.font = .system(.callout, design: .monospaced).italic()
+                run.font = font.italic()
             }
             result += run
         }
         return result
     }
 
-    private func color(for kind: CodeTokenKind) -> Color {
+    private static func color(for kind: CodeTokenKind) -> Color {
         switch kind {
         case .keyword: .pink
         case .string: .green

@@ -185,6 +185,9 @@
 //  Review: claude-opus-5-5, 2026-11-20 — "The Tell": the send's avatar holds `.thinking` while the answer carries a
 //  `thinkAside` (a think was announced), so the pose matches the quiet; other turns keep the 600 ms advance.
 //  Verify-by-launch. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: `surfaceCodeArtifact` opens the first RENDERABLE
+//  artifact (ArtifactOpenPolicy), not `.first`; `surfaceLastAnswerArtifact` lets the voice route open it too;
+//  `openCodeBlock` serves the Open button. Verify-by-launch owed. Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -1663,14 +1666,30 @@ final class AppEnvironment {
     @ObservationIgnored private var distressSettle: Task<Void, Never>?
 
     private func surfaceCodeArtifact(from responseText: String) {
-        let artifacts = CodeBlockDetector.detect(in: responseText)
-        // MVP: surface only the first artifact; multi-block picker is a follow-up.
-        guard let first = artifacts.first else { return }
-        review.open(artifact: first)
+        // The page the answer made opens by itself (any route: typed, voice); plain code waits for
+        // its Open button. Before 1.6 this took `artifacts.first` and only the typed route called it.
+        guard let artifact = ArtifactOpenPolicy.autoOpen(inAnswer: responseText) else { return }
+        review.open(artifact: artifact)
         // Documents the model wrapped in <artifact> tags now live in the panel —
         // replace the raw tag blocks in the bubble with a breadcrumb. No-op when the
         // artifact came from a fenced block (those stay inline, as code always has).
         chat.stripArtifactTagsFromLastMessage()
+    }
+
+    /// A voice turn's answer has landed: open the page it made, like a typed turn does. A stopped or
+    /// failed answer opens nothing (a truncated block is no artifact).
+    func surfaceLastAnswerArtifact() {
+        guard let answer = chat.messages.last, answer.role == .assistant,
+              answer.interrupted != true
+        else { return }
+        if case .failed = answer.status { return }
+        surfaceCodeArtifact(from: answer.text)
+    }
+
+    /// A code block's Open button: that block, beside the chat.
+    func openCodeBlock(language: String?, code: String) {
+        guard let artifact = ArtifactOpenPolicy.artifact(language: language, code: code) else { return }
+        review.open(artifact: artifact)
     }
 
     // speak/stopSpeaking/wireSpeechCallbacks live in AppEnvironment+VoiceMode.swift
