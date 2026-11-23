@@ -9,6 +9,11 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (pure + temp-folder I/O; the share sheet itself is
 //  verify-on-device). Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the claim is read-only (`pending`) and only staging
+//  deletes a drop, so a kill between claim and stage loses nothing (interrupted-claim retry test); a second claim
+//  dedupes by drop name (`unseen`); shared text is read from disk up to the cap (`readText`); a symlink or a folder is
+//  refused; a huge share is capped without counting it whole. The holding-folder tests went with the holding folder.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -80,6 +85,15 @@ struct ShareInboxBodyTests {
         #expect(body?.truncated == true)
     }
 
+    @Test("a huge share is capped from its first characters: the cap never needs the whole text counted")
+    func hugeText() {
+        let huge = String(repeating: "a", count: ShareInbox.textCap * 4)
+        let body = ShareInbox.body(texts: [huge, "tail"], links: [])
+        #expect(body?.text.utf8.count == ShareInbox.textCap)
+        #expect(body?.truncated == true)
+        #expect(ShareInbox.placement(of: huge) == .textFile)
+    }
+
     @Test("short text is a composer draft; long text is staged as a text file, like a file picked with ＋")
     func placement() {
         #expect(ShareInbox.placement(of: String(repeating: "a", count: ShareInbox.draftLimit)) == .draft)
@@ -125,32 +139,72 @@ struct ShareInboxDropTests {
         #expect(ShareInbox.created(folderName: "." + name) == nil, "a drop still being written is not a drop")
     }
 
-    @Test("a drop is invisible until it is committed, then the claim takes it: the draft and the file, in order")
-    func writeThenClaim() throws {
+    @Test("a drop is invisible until it is committed, then pending: its draft and its file, read where they lie")
+    func writeThenPending() throws {
         let root = try scratch()
         defer { try? FileManager.default.removeItem(at: root) }
         let inbox = root.appending(path: "inbox")
-        let holding = root.appending(path: "holding")
         let source = try file("notes.json", "{}", in: root)
         let now = Date(timeIntervalSince1970: 1_800_000_000)
 
         let writer = try ShareInbox.DropWriter(inbox: inbox, now: now)
         try writer.setDraft("look at this")
         _ = try writer.addFile(copying: source)
-        #expect(ShareInbox.claimAll(inbox: inbox, holding: holding, now: now) == ShareInbox.Claimed(),
-                "half-written drops are never claimed")
+        #expect(ShareInbox.pending(inbox: inbox, now: now).isEmpty, "half-written drops are never claimed")
         try writer.commit()
 
-        let claimed = ShareInbox.claimAll(inbox: inbox, holding: holding, now: now.addingTimeInterval(5))
-        #expect(claimed.drafts == ["look at this"])
-        #expect(claimed.files.map(\.lastPathComponent) == ["notes.json"])
-        let moved = try #require(claimed.files.first)
-        #expect(try String(contentsOf: moved, encoding: .utf8) == "{}")
-        #expect(ShareInbox.holdingDrop(of: moved, holding: holding) != nil, "the file now waits in our holding folder")
+        let drops = ShareInbox.pending(inbox: inbox, now: now.addingTimeInterval(5))
+        let drop = try #require(drops.first)
+        #expect(drops.count == 1)
+        #expect(drop.name == writer.destination.lastPathComponent)
+        #expect(drop.draft == "look at this")
+        #expect(drop.files.map(\.lastPathComponent) == ["notes.json"])
+        let held = try #require(drop.files.first)
+        #expect(try String(contentsOf: held, encoding: .utf8) == "{}")
         #expect(FileManager.default.fileExists(atPath: source.path), "the source is copied, never moved")
-        // Claimed once: the drop is gone from the shared container.
-        #expect(try FileManager.default.contentsOfDirectory(atPath: inbox.path).isEmpty)
-        #expect(ShareInbox.claimAll(inbox: inbox, holding: holding, now: now) == ShareInbox.Claimed())
+    }
+
+    @Test("a claim interrupted before staging (the app killed mid-onboarding) loses nothing: the retry finds it again")
+    func interruptedClaimRetries() throws {
+        let root = try scratch()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let inbox = root.appending(path: "inbox")
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let writer = try ShareInbox.DropWriter(inbox: inbox, now: now)
+        try writer.setDraft("keep me")
+        try writer.addTextFile("long words", named: "Shared text.txt")
+        try writer.commit()
+
+        // First launch claims it, then iOS kills the app before the chat stages it: nothing was deleted.
+        let first = ShareInbox.pending(inbox: inbox, now: now)
+        // The relaunch reads the same drop again, whole.
+        let retry = ShareInbox.pending(inbox: inbox, now: now.addingTimeInterval(60))
+        #expect(retry == first)
+        #expect(retry.first?.draft == "keep me")
+        #expect(retry.first.map { $0.files.allSatisfy { FileManager.default.fileExists(atPath: $0.path) } } == true)
+
+        // Only staging deletes it; after that no claim finds it.
+        let staged = try #require(retry.first)
+        ShareInbox.discard(staged)
+        #expect(ShareInbox.pending(inbox: inbox, now: now.addingTimeInterval(120)).isEmpty)
+    }
+
+    @Test("a second claim in the same run never stages a drop twice: dedupe by drop name")
+    func secondClaimDedupes() throws {
+        let root = try scratch()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let inbox = root.appending(path: "inbox")
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        for text in ["one", "two"] {
+            let writer = try ShareInbox.DropWriter(inbox: inbox, now: now)
+            try writer.setDraft(text)
+            try writer.commit()
+        }
+        let all = ShareInbox.pending(inbox: inbox, now: now)
+        let firstName = try #require(all.first?.name)
+        #expect(ShareInbox.unseen(all, seen: []) == all)
+        #expect(ShareInbox.unseen(all, seen: [firstName]).map(\.name) == all.dropFirst().map(\.name))
+        #expect(ShareInbox.unseen(all, seen: Set(all.map(\.name))).isEmpty)
     }
 
     @Test("drops are claimed oldest first")
@@ -164,9 +218,7 @@ struct ShareInboxDropTests {
             try writer.setDraft(text)
             try writer.commit()
         }
-        let holding = root.appending(path: "h")
-        let claimed = ShareInbox.claimAll(inbox: inbox, holding: holding, now: now.addingTimeInterval(30))
-        #expect(claimed.drafts == ["first", "second"])
+        #expect(ShareInbox.pending(inbox: inbox, now: now.addingTimeInterval(30)).map(\.draft) == ["first", "second"])
     }
 
     @Test("a drop older than its lifetime is deleted unread: shared words don't wait around for days")
@@ -183,9 +235,37 @@ struct ShareInboxDropTests {
         try abandoned.setDraft("half")
 
         let later = then.addingTimeInterval(ShareInbox.lifetime + 1)
-        let holding = root.appending(path: "h")
-        #expect(ShareInbox.claimAll(inbox: inbox, holding: holding, now: later) == ShareInbox.Claimed())
+        #expect(ShareInbox.pending(inbox: inbox, now: later).isEmpty)
         #expect(try FileManager.default.contentsOfDirectory(atPath: inbox.path).isEmpty)
+    }
+
+    @Test("shared text is read from disk only up to the cap, and a cut never splits a character")
+    func boundedTextRead() throws {
+        let root = try scratch()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let short = try file("a.txt", "héllo", in: root)
+        #expect(ShareInbox.readText(at: short) == "héllo")
+        // Far past the cap: only the first `cap` characters come back, without reading the rest into memory.
+        let long = try file("b.txt", String(repeating: "é", count: 1000), in: root)
+        #expect(ShareInbox.readText(at: long, cap: 10) == String(repeating: "é", count: 10))
+        let bytes = try file("c.bin", "", in: root)
+        try Data([0xFF, 0xFE, 0x00, 0xC3]).write(to: bytes)
+        #expect(ShareInbox.readText(at: bytes) == nil, "not UTF-8 is not text")
+        #expect(ShareInbox.readText(at: root.appending(path: "missing.txt")) == nil)
+    }
+
+    @Test("a symlink or a folder is never taken as a file, whatever its name says")
+    func onlyRegularFiles() throws {
+        let root = try scratch()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let target = try file("real.txt", "secret", in: root)
+        let link = root.appending(path: "link.txt")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        let folder = root.appending(path: "folder.txt")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let writer = try ShareInbox.DropWriter(inbox: root.appending(path: "inbox"))
+        #expect(throws: ShareInbox.Refusal.notReadable) { try writer.addFile(copying: link) }
+        #expect(throws: ShareInbox.Refusal.notReadable) { try writer.addFile(copying: folder) }
     }
 
     @Test("a file over the cap is refused before it is copied")
@@ -214,29 +294,5 @@ struct ShareInboxDropTests {
         let second = try writer.addFile(copying: file("notes.txt", "2", in: b))
         #expect(first.lastPathComponent == "notes.txt")
         #expect(second.lastPathComponent == "notes 2.txt")
-    }
-
-    @Test("a held file's drop folder is ours to delete once staged; a file anywhere else is not")
-    func holdingDrop() {
-        let holding = URL(fileURLWithPath: "/private/var/mobile/X/tmp/SharedToM1K3")
-        let file = holding.appending(path: "123-abc/notes.json")
-        #expect(ShareInbox.holdingDrop(of: file, holding: holding) == holding.appending(path: "123-abc"))
-        // iOS names tmp under /private/var and /var both: one place.
-        let viaVar = URL(fileURLWithPath: "/var/mobile/X/tmp/SharedToM1K3/123-abc/notes.json")
-        #expect(ShareInbox.holdingDrop(of: viaVar, holding: holding) != nil)
-        #expect(ShareInbox.holdingDrop(of: holding.appending(path: "loose.json"), holding: holding) == nil)
-        let elsewhere = URL(fileURLWithPath: "/var/mobile/X/Documents/notes.json")
-        #expect(ShareInbox.holdingDrop(of: elsewhere, holding: holding) == nil)
-        #expect(ShareInbox.holdingDrop(of: holding.appending(path: "123-abc/../../x.json"), holding: holding) == nil)
-    }
-
-    @Test("held drops no file is waiting on are leftovers to sweep")
-    func unclaimed() {
-        let holding = URL(fileURLWithPath: "/var/mobile/X/tmp/SharedToM1K3")
-        let kept = holding.appending(path: "1-a")
-        let stale = holding.appending(path: "2-b")
-        let waiting = [kept.appending(path: "notes.json")]
-        #expect(ShareInbox.unclaimed([kept, stale], waiting: waiting, holding: holding) == [stale])
-        #expect(ShareInbox.unclaimed([kept, stale], waiting: [], holding: holding) == [kept, stale])
     }
 }

@@ -166,6 +166,10 @@
 //  file (wait out a turn or the consent sheet, new chat if this one has messages) and join the composer after what
 //  is typed (`ShareInbox.merge`); never sent. A claimed file's held copy goes once staged. Confidence 0.75
 //  (Simulator-built; the hand-off on a phone is owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the chat now takes whole drops (`sharedDrops`):
+//  their words merge, their files go through `attach` straight from the group container, and only then
+//  `ShareInbox.discard` deletes each drop, so a kill before staging keeps it for the next launch (the held tmp copy is
+//  gone). The drops' onChange has no `initial: true` on purpose: the `sharedFiles` handler covers launch. Confidence 0.8.
 //
 
 import M1K3Avatar
@@ -194,9 +198,9 @@ struct ChatScreen: View {
     @Binding var screengrabPath: [ScreengrabRoute]
     /// Files shared to M1K3 from another app (RootView's `onOpenURL`), staged here and never sent (#893 C).
     @Binding var sharedFiles: [URL]
-    /// Text and web links shared from another app's share sheet (RootView claims them from the share extension's
-    /// inbox), put in the composer and never sent (slice 2).
-    @Binding var sharedDrafts: [String]
+    /// Shares from another app's share sheet (RootView claims them from the share extension's inbox): words go in
+    /// the composer, files through `attach`, never sent (slice 2). Each drop is discarded once staged.
+    @Binding var sharedDrops: [ShareInbox.Drop]
     /// A consented Private Cloud send between the sheet closing and `isResponding`: a shared file waits it out, since
     /// opening a new chat under it would leave the send aimed at the old conversation (#895 second pass).
     @State private var privateCloudSending = false
@@ -408,7 +412,9 @@ struct ChatScreen: View {
             }
             // A shared file waits out a turn in flight, then lands in a new chat's composer.
             .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
-            .onChange(of: sharedDrafts) { _, _ in receiveSharedFiles() }
+            // No `initial: true` on purpose: the `sharedFiles` handler above runs at launch, and receiveSharedFiles
+            // takes the drops too.
+            .onChange(of: sharedDrops) { _, _ in receiveSharedFiles() }
             .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
                 receiveSharedFiles()
             }
@@ -1355,9 +1361,10 @@ struct ChatScreen: View {
     /// A file shared from another app (AirDrop, Files, Share → Open in): staged through the ＋ picker's own
     /// `attach`, so it takes the same route and the same on-device rules (ADR 0010), in a new chat when this one
     /// has messages. Never sent: the person reads what landed and sends it themselves (#893 C). Words from another
-    /// app's share sheet (`sharedDrafts`) take the same step and join the composer after what is already typed.
+    /// app's share sheet (`sharedDrops`) take the same step: words join the composer after what is already typed,
+    /// files go through `attach`, and only then does each drop leave the App Group container.
     private func receiveSharedFiles() {
-        guard !sharedFiles.isEmpty || !sharedDrafts.isEmpty else { return }
+        guard !sharedFiles.isEmpty || !sharedDrops.isEmpty else { return }
         switch SharedFileIntake.step(
             isResponding: core.chat.isResponding,
             hasMessages: !core.chat.messages.isEmpty,
@@ -1371,24 +1378,26 @@ struct ChatScreen: View {
         case .stageHere:
             break
         }
-        let drafts = sharedDrafts
-        sharedDrafts = []
+        let drops = sharedDrops
+        sharedDrops = []
+        let drafts = drops.compactMap(\.draft)
         if !drafts.isEmpty {
             draft = ShareInbox.merge(draft: draft, shared: drafts)
         }
-        let urls = sharedFiles
+        let urls = sharedFiles + drops.flatMap(\.files)
         sharedFiles = []
-        guard !urls.isEmpty else { return }
-        attach(urls)
+        if !urls.isEmpty {
+            attach(urls)
+        }
         // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
         // it goes. Only these: a batch's siblings may still be on their way (RootView sweeps leftovers on background).
-        // A file claimed from the share extension waits in its own held folder, which goes with it.
-        for url in urls {
-            if SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
-                try? FileManager.default.removeItem(at: url)
-            } else if let held = ShareInbox.holdingDrop(of: url, holding: RootView.shareHolding) {
-                try? FileManager.default.removeItem(at: held)
-            }
+        for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
+            try? FileManager.default.removeItem(at: url)
+        }
+        // Staged (attach reads each file before it returns), so each drop leaves the group container now, never
+        // before: a kill earlier keeps it for the next launch's claim.
+        for drop in drops {
+            ShareInbox.discard(drop)
         }
     }
 

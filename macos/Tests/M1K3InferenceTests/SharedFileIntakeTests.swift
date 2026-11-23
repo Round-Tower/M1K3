@@ -255,28 +255,45 @@ struct ShareExtensionScanTests {
         #expect(code.contains("notify_post(ShareInbox.droppedNotification)"))
     }
 
-    @Test("the app claims drops at launch, on activation and when the extension says so, held above onboarding")
+    @Test("shared text streams to disk and is read only up to the cap: the extension's memory ceiling is tight")
+    func extensionCapsTextEarly() throws {
+        let code = try Self.flat("M1K3ShareExtension/ShareViewController.swift")
+        let text = try Self.body(of: "private static func loadText(", in: code)
+        let fileRep = try #require(text.range(of: "loadFileRepresentation("), "text streams to a file first")
+        let bounded = try #require(text.range(of: "ShareInbox.readText("), "and is read back only up to the cap")
+        #expect(fileRep.lowerBound < bounded.lowerBound)
+        // The fallback (a provider with no file form) trims a string the moment it arrives, and refuses big data.
+        #expect(text.contains(".prefix(ShareInbox.textCap)"))
+        #expect(text.contains("data.count <= ShareInbox.fileByteCap"))
+    }
+
+    @Test("the app claims drops at launch, on activation and on the ping, held above onboarding, never deleting them")
     func rootClaims() throws {
         let code = try Self.flat("M1K3iOSApp/RootView.swift")
         let claim = try Self.body(of: "private func claimShares()", in: code)
-        #expect(claim.contains("ShareInbox.claimAll("))
-        #expect(claim.contains("sharedFiles.append(contentsOf:") && claim.contains("sharedDrafts.append(contentsOf:"))
+        #expect(claim.contains("ShareInbox.pending("))
+        #expect(claim.contains("ShareInbox.unseen(") && claim.contains("seen: seenDrops"),
+                "a second claim never stages a drop twice")
+        #expect(claim.contains("sharedDrops.append(contentsOf:"))
+        // Claim then kill must lose nothing: the drop stays in the group container until the chat has staged it.
+        #expect(!code.contains("ShareInbox.discard"), "the root claims; only the chat, once staged, deletes")
         #expect(code.contains("phase == .active"), "claimed when M1K3 comes forward")
         #expect(code.contains("ShareInbox.droppedNotification"), "and when a drop lands while it is on screen (iPad)")
-        let sweep = try Self.body(of: "private func sweepInboxLeftovers()", in: code)
-        #expect(sweep.contains("ShareInbox.unclaimed(") && sweep.contains("waiting: sharedFiles"))
     }
 
-    @Test("a shared draft joins the composer through the same step as a shared file, and is never sent")
-    func chatStagesDrafts() throws {
+    @Test("a shared drop joins the composer through the same step as a shared file, is never sent, and goes once staged")
+    func chatStagesDrops() throws {
         let code = try Self.flat("M1K3iOSApp/ChatScreen.swift")
         let receive = try Self.body(of: "private func receiveSharedFiles()", in: code)
-        #expect(receive.contains("sharedDrafts"))
+        #expect(receive.contains("sharedDrops"))
         #expect(receive.contains("ShareInbox.merge(draft: draft"))
-        #expect(receive.contains("ShareInbox.holdingDrop("), "a claimed file's held copy goes once staged")
         let step = try #require(receive.range(of: "SharedFileIntake.step("))
         let merge = try #require(receive.range(of: "ShareInbox.merge("))
-        #expect(step.lowerBound < merge.lowerBound, "drafts wait out a turn and the consent sheet like files do")
+        let attach = try #require(receive.range(of: "attach(urls)"))
+        let discard = try #require(receive.range(of: "ShareInbox.discard("), "a staged drop leaves the group container")
+        #expect(step.lowerBound < merge.lowerBound, "drops wait out a turn and the consent sheet like files do")
+        #expect(merge.lowerBound < discard.lowerBound && attach.lowerBound < discard.lowerBound,
+                "deleted only after its words and files are staged")
         for forbidden in ["send(", ".send", "sendTurn", "submit("] {
             #expect(!receive.contains(forbidden), "the intake must never send: found \(forbidden)")
         }

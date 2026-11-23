@@ -22,6 +22,10 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.7 (builds for the Simulator; the share sheet on a real
 //  device, the App Group signing and the card's look are owed). Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — memory: shared text was loaded whole (an
+//  unbounded string, or all of its data before the size check) under a ~120 MB ceiling. `loadText` now streams it
+//  to a file and reads back only the cap (`ShareInbox.readText`); the no-file fallback trims on arrival and refuses
+//  data over the byte cap unread. Confidence 0.75 (a huge selection on a device is still owed).
 //
 
 import M1K3ShareInbox
@@ -148,18 +152,35 @@ enum Loader {
             // A web link is words: it is never fetched. A file URL shared as a link is a file.
             return url.isFileURL ? copy(url, into: writer) : .link(url)
         case .textOrFile:
-            switch await item(provider, UTType.plainText.identifier) {
-            case let .string(text): return .text(text)
-            case let .url(url) where url.isFileURL: return copy(url, into: writer)
-            case let .data(data) where data.count <= ShareInbox.fileByteCap:
-                // Not UTF-8 is not text M1K3 can read: left out, never shown as replacement characters.
-                return String(bytes: data, encoding: .utf8).map(Loaded.text) ?? .skipped
-            default: return .skipped
-            }
+            return await loadText(provider, into: writer)
         case let .file(type):
             let name = ShareInbox.fileName(suggested: provider.suggestedName, typeIdentifier: type)
             return await copyRepresentation(provider, type: type, named: name, into: writer)
         case .unsupported:
+            return .skipped
+        }
+    }
+
+    /// Plain text, kept small: the system streams it to a temporary file and only the first `textCap` characters
+    /// are read back (a share extension has a tight memory ceiling, and a pasted book must not land whole). A
+    /// provider with no file form falls back to the item, trimmed the moment it arrives; data over the byte cap is
+    /// refused unread, and bytes that aren't UTF-8 are left out, never shown as replacement characters.
+    private static func loadText(_ provider: NSItemProvider, into writer: ShareInbox.DropWriter) async -> Loaded {
+        let streamed: String? = await withCheckedContinuation { continuation in
+            _ = provider.loadFileRepresentation(forTypeIdentifier: UTType.plainText.identifier) { url, _ in
+                // The system's copy lives only until this callback returns, so it is read here.
+                continuation.resume(returning: url.flatMap { ShareInbox.readText(at: $0) })
+            }
+        }
+        if let streamed { return .text(streamed) }
+        switch await item(provider, UTType.plainText.identifier) {
+        case let .string(text):
+            return .text(String(text.prefix(ShareInbox.textCap)))
+        case let .url(url) where url.isFileURL:
+            return copy(url, into: writer)
+        case let .data(data) where data.count <= ShareInbox.fileByteCap:
+            return String(bytes: data, encoding: .utf8).map { .text(String($0.prefix(ShareInbox.textCap))) } ?? .skipped
+        default:
             return .skipped
         }
     }

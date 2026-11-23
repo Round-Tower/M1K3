@@ -8,7 +8,8 @@
 //  the drop box between the two processes that slice needs:
 //
 //    share extension (M1K3ShareExtension) ── DropWriter ──▶ <App Group>/ShareInbox/<ms>-<uuid>/
-//    app (RootView, on activation)        ◀── claimAll ──── draft.txt + files/*  → composer draft / ＋ attach
+//    app (RootView, on activation)        ◀── pending ───── draft.txt + files/*  → composer draft / ＋ attach
+//    chat (ChatScreen, once staged)       ─── discard ───▶ the drop leaves the group container
 //
 //  Why an App Group and not a hand-off that opens the app (researched on the iOS 27.2 SDK, 2026-11-23):
 //  `NSExtensionContext.open(_:)` is honoured only by the Today and iMessage extension points (Apple's doc on
@@ -23,6 +24,11 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (pure + temp-folder tested; the share sheet, the
 //  App Group container and the hand-off timing are verify-on-device). Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — claim then kill lost the share: `claimAll` deleted
+//  the drop once read, leaving it only in app memory and tmp. Now `pending` reads drops where they lie, `unseen` dedupes
+//  a second claim by drop name, and only `discard`, after the chat has staged a drop, deletes it (the holding folder is
+//  gone). `readText` reads shared text from disk up to the cap; `body` and `placement` cap before counting; `addFile`
+//  refuses symlinks and folders. Confidence 0.85 (pure + temp-folder tested; the hand-off is Simulator-verified).
 //
 
 import Foundation
@@ -33,9 +39,8 @@ public enum ShareInbox {
     public static let appGroup = "group.app.m1k3"
     /// The folder in the group container the extension drops into.
     public static let inboxFolderName = "ShareInbox"
-    /// The app's own folder (under its tmp) where a claimed file waits to be staged.
-    public static let holdingFolderName = "SharedToM1K3"
     /// Posted (Darwin notify) by the extension after a drop, so an app already on screen (iPad Split View) claims it.
+    /// Any process can post this name: the worst a stray post does is one extra claim, which finds nothing new.
     public static let droppedNotification = "app.m1k3.share.dropped"
 
     /// Text up to this many characters becomes a composer draft; longer text is staged as a text file, so a pasted
@@ -117,16 +122,17 @@ public enum ShareInbox {
         }
     }
 
+    /// Each piece is cut to just past the cap BEFORE anything else, so a huge share is never counted or copied whole.
     public static func body(texts: [String], links: [URL]) -> Body? {
         let linkLines = links.map(\.absoluteString)
         var parts = texts
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .map { String($0.prefix(textCap + 1)).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && !linkLines.contains($0) }
         parts += linkLines
-        let joined = parts.joined(separator: "\n\n")
-        guard !joined.isEmpty else { return nil }
-        guard joined.count > textCap else { return Body(text: joined, truncated: false) }
-        return Body(text: String(joined.prefix(textCap)), truncated: true)
+        let capped = parts.joined(separator: "\n\n").prefix(textCap + 1)
+        guard !capped.isEmpty else { return nil }
+        guard capped.count > textCap else { return Body(text: String(capped), truncated: false) }
+        return Body(text: String(capped.prefix(textCap)), truncated: true)
     }
 
     public enum Placement: Equatable, Sendable {
@@ -137,7 +143,7 @@ public enum ShareInbox {
     }
 
     public static func placement(of text: String) -> Placement {
-        text.count <= draftLimit ? .draft : .textFile
+        text.prefix(draftLimit + 1).count <= draftLimit ? .draft : .textFile
     }
 
     /// A shared draft lands AFTER what the person already typed, never in place of it.
@@ -187,12 +193,15 @@ public enum ShareInbox {
         }
 
         /// Copies (never moves) a readable file under the byte cap; a second file with the same name gets " 2".
+        /// Only a regular file: a symlink's size is the link's (and copying it would copy the link), a folder has no
+        /// size at all, so both are refused whatever their names say.
         @discardableResult
         public func addFile(copying source: URL, named name: String? = nil) throws -> URL {
             let fileName = name ?? source.lastPathComponent
             guard ShareInbox.accepts(fileNamed: fileName) else { throw Refusal.notReadable }
-            let size = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size <= ShareInbox.fileByteCap else { throw Refusal.tooBig }
+            let values = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard values.isSymbolicLink != true, values.isRegularFile == true else { throw Refusal.notReadable }
+            guard let size = values.fileSize, size <= ShareInbox.fileByteCap else { throw Refusal.tooBig }
             let target = uniqueURL(for: fileName)
             try FileManager.default.copyItem(at: source, to: target)
             return target
@@ -228,79 +237,74 @@ public enum ShareInbox {
         }
     }
 
-    /// What the app took from the inbox: drafts for the composer, files for the ＋ picker's `attach`.
-    public struct Claimed: Equatable, Sendable {
-        public var drafts: [String] = []
-        public var files: [URL] = []
+    /// One committed share, read where it lies in the group container. Nothing is moved or deleted by reading it:
+    /// the drop stays until the chat has staged it (`discard`), so a kill between claim and stage loses nothing.
+    public struct Drop: Equatable, Sendable, Identifiable {
+        /// The folder name, `<ms>-<uuid>`: unique per share, the key a second claim dedupes on.
+        public let name: String
+        public let folder: URL
+        /// Words for the composer, if the share carried any.
+        public let draft: String?
+        /// Files for the ＋ picker's `attach`, inside `folder`.
+        public let files: [URL]
 
-        public init(drafts: [String] = [], files: [URL] = []) {
-            self.drafts = drafts
-            self.files = files
+        public var id: String {
+            name
         }
     }
 
-    /// Takes every committed, fresh drop (oldest first): its draft is read, its files MOVE into `holding/<drop>/`,
-    /// and the drop leaves the shared container. Expired drops and abandoned half-writes are deleted unread.
-    public static func claimAll(inbox: URL, holding: URL, now: Date = .now) -> Claimed {
+    /// Every committed, fresh drop, oldest first, read without moving or deleting anything, so a claim can be
+    /// interrupted and read again. Only drops past `lifetime`, and half-writes that old, are deleted (unread).
+    /// The age is wall-clock time from the drop's name: a clock set back keeps a drop longer, never loses one early
+    /// unless the clock jumps a day forward.
+    public static func pending(inbox: URL, now: Date = .now) -> [Drop] {
         let fm = FileManager.default
         let names = (try? fm.contentsOfDirectory(atPath: inbox.path)) ?? []
         var fresh: [(Date, String)] = []
         for name in names {
-            let folder = inbox.appending(path: name)
             let written = created(folderName: name.hasPrefix(".") ? String(name.dropFirst()) : name)
             let expired = written.map { now.timeIntervalSince($0) > lifetime } ?? true
             if expired {
-                try? fm.removeItem(at: folder)
+                try? fm.removeItem(at: inbox.appending(path: name))
             } else if let written, !name.hasPrefix(".") {
                 fresh.append((written, name))
             }
         }
-        var claimed = Claimed()
-        for (_, name) in fresh.sorted(by: { $0.0 < $1.0 }) {
+        return fresh.sorted { ($0.0, $0.1) < ($1.0, $1.1) }.map { _, name in
             let folder = inbox.appending(path: name)
-            if let data = fm.contents(atPath: folder.appending(path: draftFileName).path),
-               let text = String(data: data, encoding: .utf8), !text.isEmpty
-            {
-                claimed.drafts.append(text)
-            }
             let files = folder.appending(path: filesFolderName)
             let fileNames = ((try? fm.contentsOfDirectory(atPath: files.path)) ?? []).sorted()
-            if !fileNames.isEmpty {
-                let held = holding.appending(path: name)
-                try? fm.createDirectory(at: held, withIntermediateDirectories: true)
-                for fileName in fileNames {
-                    let target = held.appending(path: fileName)
-                    if (try? fm.moveItem(at: files.appending(path: fileName), to: target)) != nil {
-                        claimed.files.append(target)
-                    }
-                }
+            return Drop(
+                name: name,
+                folder: folder,
+                draft: readText(at: folder.appending(path: draftFileName)),
+                files: fileNames.map { files.appending(path: $0) }
+            )
+        }
+    }
+
+    /// The drops not already claimed in this run (waiting to be staged, or staged), by drop name.
+    public static func unseen(_ drops: [Drop], seen: Set<String>) -> [Drop] {
+        drops.filter { !seen.contains($0.name) }
+    }
+
+    /// Deletes a drop from the group container. Only once the chat has staged it.
+    public static func discard(_ drop: Drop) {
+        try? FileManager.default.removeItem(at: drop.folder)
+    }
+
+    /// Up to `cap` characters of a UTF-8 text file, reading at most `cap * 4` bytes (UTF-8's widest character), so a
+    /// huge share never lands in memory whole. A read that ends mid-character drops the partial bytes. Nil for no
+    /// file, an empty one, or bytes that aren't UTF-8.
+    public static func readText(at url: URL, cap: Int = textCap) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: cap * 4), !data.isEmpty else { return nil }
+        for trim in 0 ... min(3, data.count - 1) {
+            if let text = String(bytes: data.dropLast(trim), encoding: .utf8) {
+                return String(text.prefix(cap))
             }
-            try? fm.removeItem(at: folder)
         }
-        return claimed
-    }
-
-    /// The `holding/<drop>` folder a claimed file waits in, or nil for a file anywhere else. Once the file is
-    /// staged that folder is ours to delete.
-    public static func holdingDrop(of url: URL, holding: URL) -> URL? {
-        let root = components(holding)
-        let path = components(url)
-        guard path.count == root.count + 2, Array(path.prefix(root.count)) == root else { return nil }
-        return holding.appending(path: path[root.count])
-    }
-
-    /// Held drop folders no waiting file lives in: swept when the app goes to the background.
-    public static func unclaimed(_ folders: [URL], waiting: [URL], holding: URL) -> [URL] {
-        let busy = Set(waiting.compactMap { holdingDrop(of: $0, holding: holding) }.map(components))
-        return folders.filter { !busy.contains(components($0)) }
-    }
-
-    /// Path components with `..` folded and `/private/var` read as `/var` (iOS names both), without the disk.
-    private static func components(_ url: URL) -> [String] {
-        let parts = url.standardizedFileURL.pathComponents
-        if parts.count > 2, parts[0] == "/", parts[1] == "private", parts[2] == "var" {
-            return ["/"] + parts.dropFirst(2)
-        }
-        return parts
+        return nil
     }
 }
