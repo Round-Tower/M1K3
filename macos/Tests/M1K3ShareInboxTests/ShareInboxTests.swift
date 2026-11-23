@@ -164,7 +164,8 @@ struct ShareInboxDropTests {
             try writer.setDraft(text)
             try writer.commit()
         }
-        let claimed = ShareInbox.claimAll(inbox: inbox, holding: root.appending(path: "h"), now: now.addingTimeInterval(30))
+        let holding = root.appending(path: "h")
+        let claimed = ShareInbox.claimAll(inbox: inbox, holding: holding, now: now.addingTimeInterval(30))
         #expect(claimed.drafts == ["first", "second"])
     }
 
@@ -182,7 +183,8 @@ struct ShareInboxDropTests {
         try abandoned.setDraft("half")
 
         let later = then.addingTimeInterval(ShareInbox.lifetime + 1)
-        #expect(ShareInbox.claimAll(inbox: inbox, holding: root.appending(path: "h"), now: later) == ShareInbox.Claimed())
+        let holding = root.appending(path: "h")
+        #expect(ShareInbox.claimAll(inbox: inbox, holding: holding, now: later) == ShareInbox.Claimed())
         #expect(try FileManager.default.contentsOfDirectory(atPath: inbox.path).isEmpty)
     }
 
@@ -223,7 +225,8 @@ struct ShareInboxDropTests {
         let viaVar = URL(fileURLWithPath: "/var/mobile/X/tmp/SharedToM1K3/123-abc/notes.json")
         #expect(ShareInbox.holdingDrop(of: viaVar, holding: holding) != nil)
         #expect(ShareInbox.holdingDrop(of: holding.appending(path: "loose.json"), holding: holding) == nil)
-        #expect(ShareInbox.holdingDrop(of: URL(fileURLWithPath: "/var/mobile/X/Documents/notes.json"), holding: holding) == nil)
+        let elsewhere = URL(fileURLWithPath: "/var/mobile/X/Documents/notes.json")
+        #expect(ShareInbox.holdingDrop(of: elsewhere, holding: holding) == nil)
         #expect(ShareInbox.holdingDrop(of: holding.appending(path: "123-abc/../../x.json"), holding: holding) == nil)
     }
 

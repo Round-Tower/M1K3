@@ -844,3 +844,20 @@ a new chat, a switch or a delete hides it. An answer that makes a page opens it 
 THIS send produced it (`LandedAnswer`). A page opened from voice mode or the look camera presents when that cover closes.
 Verify-on-device: the sheet and the column on an iPad, the cover hand-off, the seal loading on iOS and visionOS.
 Confidence 0.7._
+
+## Addendum — 2026-11-23: share to M1K3 from any app (1.6, slice 2)
+
+Selected text, a web link or a text file shared from ANY app's share sheet (Safari, Notes, Mail) lands in M1K3's
+composer, staged and never sent. Slice 1 (#895, `SharedFileIntake`) registered document types, which put M1K3 under
+"Open in…" for files but never in the share sheet's app row for text or links. The route (researched on the iOS 27.2
+SDK): a share extension cannot open its app (`NSExtensionContext.open` is honoured for Today and iMessage extensions
+only), and App Intents have no share-sheet surface, so the `M1K3ShareExtension` target (`app.m1k3.share`, links only
+`M1K3ShareInbox`) drops the share into the App Group `group.app.m1k3` and its card says "Open M1K3 to see it".
+`RootView` claims drops at launch, on becoming active, and on the extension's Darwin ping (an iPad showing M1K3
+beside Safari): words go to the composer after what is typed (past 2,000 characters they are staged as a text file),
+files through the ＋ picker's `attach`, in a new chat when this one has messages, waiting out a turn and the consent
+sheet. A link is words, never fetched. Caps: 5 attachments, 5 MB a file, 50,000 characters; an unclaimed drop is
+deleted after a day. **Kev registers `group.app.m1k3` in the portal on `app.m1k3` and `app.m1k3.share` before the next
+device or store build** (both entitlements carry it; `check_store_targets.py` pins that). iOS only: visionOS links the
+inbox (one shell) but has no group, so the claim finds nothing. The sheet, the signing and the card's look are
+verify-on-device. Confidence 0.7.

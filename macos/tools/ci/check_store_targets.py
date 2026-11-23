@@ -36,6 +36,10 @@ Review: Kev + claude-opus-5.5, 2026-11-16 — app EXTENSIONS are audited too (th
 extension). They have their own bundle id, so the "must be app.m1k3" rule is not theirs; theirs are a privacy
 manifest, a child id of the one record, an embedding app, a package allow-list (the ~30 MB ceiling), and the
 parent's NSSupportsLiveActivities. Confidence 0.8 (the rules are Apple's and the ceiling's; verify on an archive).
+Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — the share extension (app.m1k3.share) may link the
+Foundation-only M1K3ShareInbox, and an extension that does, plus every app embedding it, must name an entitlements file
+carrying the App Group group.app.m1k3: the inbox lives in that group's container, and a target without it builds fine
+and then finds no container (the share is lost). Confidence 0.8 (pure + the real files; the portal grant is Kev's).
 """
 from __future__ import annotations
 
@@ -57,10 +61,15 @@ ALL_ORIENTATIONS = {
 }
 # An extension is a child of the one store record: its id is `app.m1k3.<something>`, never `app.m1k3` itself.
 EXTENSION_ID_PREFIX = EXPECTED_BUNDLE_ID + "."
-# Package products an extension may link. A WidgetKit extension has a ~30 MB memory ceiling: MLX, the chat
-# stack or the knowledge graph would not fit, and a stray product in its list is how that creeps in.
-EXTENSION_ALLOWED_PRODUCTS = {"M1K3LiveActivity"}
+# Package products an extension may link. A WidgetKit extension has a ~30 MB memory ceiling (a share extension's
+# is not much more): MLX, the chat stack or the knowledge graph would not fit, and a stray product in its list is how
+# that creeps in. Both allowed products are Foundation-only leaves.
+EXTENSION_ALLOWED_PRODUCTS = {"M1K3LiveActivity", "M1K3ShareInbox"}
 LIVE_ACTIVITY_PRODUCT = "M1K3LiveActivity"
+# The share extension drops into this App Group's container and the app claims from it (M1K3ShareInbox.appGroup).
+SHARE_INBOX_PRODUCT = "M1K3ShareInbox"
+SHARE_APP_GROUP = "group.app.m1k3"
+APP_GROUPS_KEY = "com.apple.security.application-groups"
 # In-app events (iPhone and iPad only) deep-link into the app through this scheme. App Store
 # Connect won't add an event for review without a deep link (2026-10-14), and a custom-scheme
 # link opens nothing unless the iOS target registers the scheme. fastlane/events/*/event.json.
@@ -209,7 +218,7 @@ def audit_extensions(project: dict) -> list[str]:
         extra = _dependency_products(t) - EXTENSION_ALLOWED_PRODUCTS
         if extra:
             problems.append(
-                f"{name}: links {sorted(extra)} — a widget extension has a ~30 MB memory ceiling; "
+                f"{name}: links {sorted(extra)} — an app extension has a ~30 MB memory ceiling; "
                 f"only {sorted(EXTENSION_ALLOWED_PRODUCTS)} may be linked (extend EXTENSION_ALLOWED_PRODUCTS on purpose)"
             )
         parents = {a: apps[a] for a in apps if name in _dependency_targets(apps[a])}
@@ -222,7 +231,37 @@ def audit_extensions(project: dict) -> list[str]:
                         f"{parent}: embeds {name} but its Info.plist lacks NSSupportsLiveActivities = YES — "
                         f"ActivityKit refuses every request without it"
                     )
+    for name, path in app_group_entitlements(project).items():
+        if not path:
+            problems.append(
+                f"{name}: no CODE_SIGN_ENTITLEMENTS — it must carry the App Group {SHARE_APP_GROUP!r}, where the "
+                f"share inbox lives (without it the container is missing and every share is lost)"
+            )
     return problems
+
+
+def app_group_entitlements(project: dict) -> dict[str, str | None]:
+    """Every target that must carry the share App Group, with its entitlements path (None = names none): each
+    extension that links the share inbox, and each store app that embeds one."""
+    apps = store_targets(project)
+    out: dict[str, str | None] = {}
+    for name, t in extension_targets(project).items():
+        if SHARE_INBOX_PRODUCT not in _dependency_products(t):
+            continue
+        out[name] = _setting(t, "CODE_SIGN_ENTITLEMENTS")
+        for parent, pt in apps.items():
+            if name in _dependency_targets(pt):
+                out[parent] = _setting(pt, "CODE_SIGN_ENTITLEMENTS")
+    return out
+
+
+def app_group_gaps(name: str, entitlements: dict) -> list[str]:
+    if SHARE_APP_GROUP in (entitlements.get(APP_GROUPS_KEY) or []):
+        return []
+    return [
+        f"{name} lacks {APP_GROUPS_KEY} {SHARE_APP_GROUP} — the share extension and M1K3 meet in that group's "
+        f"container; without it the extension can't drop a share or the app can't claim one"
+    ]
 
 
 def audit(project: dict) -> list[str]:
@@ -372,6 +411,9 @@ def main(argv: list[str]) -> int:
         problems += lane_gaps(os.path.basename(lane), ents)
         if lane in STORE_LANE_ENTITLEMENTS:
             problems += store_lane_gaps(os.path.basename(lane), ents)
+    for path in sorted({p for p in app_group_entitlements(project).values() if p}):
+        with open(os.path.join(macos, path), "rb") as f:
+            problems += app_group_gaps(path, plistlib.load(f))
     names = sorted(store_targets(project))
     if not problems:
         exts = sorted(extension_targets(project))

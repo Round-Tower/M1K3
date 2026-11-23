@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  PrivacyInfo.xcprivacy for the M1K3 share extension. It copies what the person shares into the App
+  Group on this device, for M1K3 to stage in its composer. Nothing leaves the device and nothing is
+  tracked. No required-reason API: a drop's age is read from its folder name, never from file dates,
+  and it reads no disk space or user defaults.
+
+  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8, Prior: Unknown (new file).
+-->
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
