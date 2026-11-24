@@ -67,6 +67,9 @@ def test_localization_problems_prefixes_the_locale() -> None:
 EVENT_SPECS = sorted((Path(__file__).resolve().parents[2] / "fastlane/events").glob("*/event.json"))
 # Every store locale: an event covers each one the iPhone listing has.
 LOCALES = {p.name for p in (Path(__file__).resolve().parents[2] / "fastlane/metadata_ios").iterdir() if p.is_dir()}
+# Event-only locales: ASC's event languages (hi, vi, zh-Hant) outrun the iPhone listing's twelve.
+# Reach copy for the markets an event brings in (IN for Diwali; TW, HK and VN for Lunar New Year).
+EXTRA_EVENT_LOCALES = {"diwali": {"hi"}, "lunar-new-year": {"vi", "zh-Hant"}}
 
 
 def _when(stamp: str) -> datetime:
@@ -88,13 +91,25 @@ def test_every_event_spec_is_within_apples_rules(path: Path) -> None:
     # Waking Up never shipped (its draft, never submitted, runs out on 16 Oct) and predates the
     # store's en-GB, es-MX, ru and ar-SA (2026-10-22); an event that ships covers every store locale.
     expected = LOCALES - {"en-GB", "es-MX", "ru", "ar-SA"} if path.parent.name == "waking-up" else LOCALES
-    assert set(spec["localizations"]) == expected
+    assert set(spec["localizations"]) == expected | EXTRA_EVENT_LOCALES.get(path.parent.name, set())
     assert spec["localizations"][spec.get("locale", "en-US")] == spec["copy"]   # one primary copy, not two
     events.event_payload(spec, ["USA"])                                            # badge + purpose in the enums
     assert spec.get("priority", "HIGH") in ("HIGH", "NORMAL")
     start, end, publish = (_when(spec[k]) for k in ("eventStart", "eventEnd", "publishStart"))
     assert timedelta(0) <= start - publish <= timedelta(days=14)
     assert timedelta(minutes=15) <= end - start <= timedelta(days=31)
+
+
+@pytest.mark.parametrize("event", EXTRA_EVENT_LOCALES)
+def test_the_reach_locales_ship_inside_the_caps(event: str) -> None:
+    spec = json.loads((Path(__file__).resolve().parents[2] / f"fastlane/events/{event}/event.json").read_text())
+    assert EXTRA_EVENT_LOCALES[event] <= set(spec["localizations"])
+    assert not (EXTRA_EVENT_LOCALES[event] & LOCALES)   # a store locale belongs in the listing's set, not here
+    assert events.localization_problems(spec) == []
+    if event == "lunar-new-year":   # never "Chinese New Year", never a zodiac animal
+        for loc in ("zh-Hant", "vi"):
+            assert "中國" not in json.dumps(spec["localizations"][loc], ensure_ascii=False)
+        assert "Tết" in spec["localizations"]["vi"]["name"]
 
 
 def test_the_halloween_event_runs_the_apps_window() -> None:

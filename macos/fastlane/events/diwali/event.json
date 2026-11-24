@@ -9,7 +9,9 @@
   "eventStart": "2028-10-15T10:00:00Z",
   "eventEnd": "2028-10-19T10:00:00Z",
   "deepLink": "m1k3://event/diwali",
-  "looks": ["diwali"],
+  "looks": [
+    "diwali"
+  ],
   "copy": {
     "name": "Diwali Lights",
     "shortDescription": "A marigold glow and a warm hello.",
@@ -75,6 +77,11 @@
       "name": "أضواء ديوالي",
       "shortDescription": "توهّج ذهبي وتحية دافئة.",
       "longDescription": "في ديوالي، يتوهج Phosphor Fox بذهبي كالقنديل ويتمنى بيتًا مليئًا بالنور. كل ذلك على الجهاز."
+    },
+    "hi": {
+      "name": "दीवाली की रोशनी",
+      "shortDescription": "गेंदे-सी सुनहरी चमक और एक गर्मजोशी भरा नमस्ते।",
+      "longDescription": "दीवाली पर फॉस्फर फॉक्स दीये की तरह सुनहरा चमकता है और आपके घर में रोशनी की कामना करता है। सब कुछ आपके डिवाइस पर।"
     }
   }
 }
