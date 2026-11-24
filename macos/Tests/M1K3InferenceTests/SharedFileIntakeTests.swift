@@ -16,6 +16,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review) — the waiting hint: its reason mirrors `step` over every
 //  input, its English (both plural forms) is pinned, and a scan holds both shells to showing it over the composer,
 //  announcing it and never sending or wrapping it in glass. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the bar scan reads the call, not its layout,
+//  and pins the hint to a top overlay hung from a zero-height anchor (never a row that grows the bar); the
+//  announcement is keyed on the wait reason. Confidence 0.8.
 //
 
 import Foundation
@@ -359,26 +362,36 @@ struct SharedFileIntakeScanTests {
         let code = try Self.flat(file)
         let text = try Self.body(of: "private var sharedFileHintText: String?", in: code)
         #expect(text.contains("SharedFileIntake.waitingHint(count: \(count)"))
-        #expect(text.contains("SharedFileIntake.waitReason("))
+        let reason = try Self.body(of: "private var sharedFileWaitReason: SharedFileIntake.WaitReason?", in: code)
+        #expect(reason.contains("SharedFileIntake.waitReason("))
         let hint = try Self.body(of: "private func sharedFileHint(_ text: String)", in: code)
         #expect(hint.contains("doc.badge.clock"))
         #expect(hint.contains(".accessibilityLabel(text)"))
         for forbidden in ["send(", ".send", "sendTurn", "submit(", "attach(", "glassEffect", "m1k3Glass"] {
-            #expect(!hint.contains(forbidden), "the hint only tells: found \(forbidden)")
-            #expect(!text.contains(forbidden), "the hint only tells: found \(forbidden)")
+            for (name, part) in [("hint", hint), ("text", text), ("reason", reason)] {
+                #expect(!part.contains(forbidden), "the hint only tells: found \(forbidden) in \(name)")
+            }
         }
         let bar = try Self.body(of: "private var \(composer): some View", in: code)
-        #expect(bar.contains("if let sharedFileHintText { sharedFileHint(sharedFileHintText)"),
-                "the hint sits over the composer, only while a file waits")
-        #expect(code.contains(".onChange(of: sharedFileHintText != nil, initial: true)"))
+        #expect(bar.contains("sharedFileHint(sharedFileHintText)"), "the hint sits over the composer")
+        // Hung from the bar's top edge, never a row in it: a row grows the bar (the Mac's safe-area inset) mid-reply
+        // and jumps the transcript (#898 follow-up review).
+        // The hint hangs from a zero-height anchor on the top edge (an alignmentGuide was not honoured on the Mac).
+        let overlay = try #require(bar.range(of: ".overlay(alignment: .top)"), "the hint rides a top overlay")
+        let anchor = try #require(bar.range(of: ".frame(height: 0) .overlay(alignment: .bottom)"),
+                                  "hung above the bar from a zero-height anchor, not drawn over the bar")
+        let call = try #require(bar.range(of: "sharedFileHint(sharedFileHintText)"))
+        #expect(overlay.lowerBound < anchor.lowerBound && anchor.lowerBound < call.lowerBound)
+        // Announced when it shows and again for each new reason, not once per count.
+        #expect(code.contains(".onChange(of: sharedFileWaitReason, initial: true)"))
         #expect(code.contains("AccessibilityNotification.Announcement(sharedFileHintText).post()"))
     }
 
     @Test("the Mac's waiting hint also shows over voice mode, where the composer hides")
     func macHintOverVoice() throws {
         let code = try Self.flat("M1K3App/ContentView.swift")
-        let text = try Self.body(of: "private var sharedFileHintText: String?", in: code)
-        #expect(text.contains("inVoice: env.isVoiceModeActive"))
+        let reason = try Self.body(of: "private var sharedFileWaitReason: SharedFileIntake.WaitReason?", in: code)
+        #expect(reason.contains("inVoice: env.isVoiceModeActive"))
         #expect(code.contains("VoiceModeView() .overlay(alignment: .top) { if let sharedFileHintText {"))
     }
 }
