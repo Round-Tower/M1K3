@@ -26,6 +26,11 @@
 //  unbounded string, or all of its data before the size check) under a ~120 MB ceiling. `loadText` now streams it
 //  to a file and reads back only the cap (`ShareInbox.readText`); the no-file fallback trims on arrival and refuses
 //  data over the byte cap unread. Confidence 0.75 (a huge selection on a device is still owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-24 (device try on Kev's iPhone 17 Pro) — the share reached the composer, but
+//  Kev expected M1K3 to open. A share extension can't (Apple's line, kept for 1.6: Kev's call, option A), so "Open M1K3
+//  to see it." is now the card's own bold row with an icon on a tinted capsule, above the quieter lines. Opening the
+//  app from here (the responder-chain route) and a "tap to open" notification are follow-ups on #893. The App Group
+//  signing and the hand-off are now device-proven. Confidence 0.8 (the new row's look is owed a glance).
 //
 
 import M1K3ShareInbox
@@ -235,6 +240,19 @@ struct ShareCard: View {
             Text(title)
                 .font(.title2.bold())
                 .multilineTextAlignment(.center)
+            if case .added = model.outcome {
+                // The one thing to do next, and the card's job: a share extension can't open M1K3 (Kev's device try,
+                // 2026-11-24, expected it to), so the step reads first and loudest.
+                Label {
+                    Text(String(localized: "Open M1K3 to see it.", comment: "Share card: M1K3 can't open itself from here"))
+                } icon: {
+                    Image(systemName: "arrow.up.forward.app")
+                }
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.tint.opacity(0.15), in: Capsule())
+            }
             ForEach(lines, id: \.self) { line in
                 Text(line)
                     .font(.body)
@@ -280,8 +298,8 @@ struct ShareCard: View {
         case .working:
             return []
         case let .added(cut, leftOut):
+            // "Open M1K3 to see it." is the card's own row above these.
             var lines = [
-                String(localized: "Open M1K3 to see it.", comment: "Share card: M1K3 can't open itself from here"),
                 String(
                     localized: "Nothing is sent until you send it.", comment: "Share card: the share is staged, not sent"
                 ),
