@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.8 (pure decisions + coarse scans; the share sheet,
 //  AirDrop and cold launch are verify-on-device). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — ShareExtensionScanTests: the share extension's
+//  types are the ＋ picker's, its activation rule matches them, both targets carry the App Group, the app claims drops
+//  on activation and stages them through the same never-send path. Confidence 0.8 (scans; the sheet is on-device).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#893 C, the Mac half) — `admit` (the Mac's held queue: files only,
 //  each once) and Mac scans: the M1K3 target registers the same types (Viewer, Alternate), the delegate holds what
 //  arrives above the onboarding gate, and ContentView stages through the paperclip's `attach` and never sends. The
@@ -23,6 +26,7 @@
 
 import Foundation
 @testable import M1K3Inference
+import M1K3ShareInbox
 import Testing
 
 struct SharedFileIntakeTests {
@@ -393,5 +397,118 @@ struct SharedFileIntakeScanTests {
         let reason = try Self.body(of: "private var sharedFileWaitReason: SharedFileIntake.WaitReason?", in: code)
         #expect(reason.contains("inVoice: env.isVoiceModeActive"))
         #expect(code.contains("VoiceModeView() .overlay(alignment: .top) { if let sharedFileHintText {"))
+    }
+}
+
+/// Share to M1K3, slice 2: text, a link or a file from ANY app's share sheet, through the share extension and the App
+/// Group inbox (M1K3ShareInbox), staged by the same never-send path as slice 1. The suite (not a trailing helper) owns
+/// every test below.
+struct ShareExtensionScanTests {
+    private static func source(_ relative: String) throws -> String {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let text = try String(contentsOf: root.appendingPathComponent(relative), encoding: .utf8)
+        #expect(!text.isEmpty, "scan read an empty file: \(relative) moved")
+        return text
+    }
+
+    private static func flat(_ relative: String) throws -> String {
+        try source(relative).split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    private static func body(of signature: String, in code: String) throws -> Substring {
+        let start = try #require(code.range(of: signature), "\(signature) moved")
+        let open = try #require(code[start.upperBound...].firstIndex(of: "{"))
+        var depth = 0
+        var index = open
+        while index < code.endIndex {
+            if code[index] == "{" { depth += 1 }
+            if code[index] == "}" { depth -= 1; if depth == 0 { return code[open ... index] } }
+            index = code.index(after: index)
+        }
+        Issue.record("unbalanced braces after \(signature)")
+        return ""
+    }
+
+    @Test("the share extension takes exactly the ＋ picker's file types")
+    func extensionTypesArePickerTypes() {
+        #expect(ShareInbox.fileTypeIdentifiers == SharedFileIntake.registeredTypeIdentifiers)
+    }
+
+    @Test("the extension's activation rule offers M1K3 for exactly those types and a web link, nothing more")
+    func activationRule() throws {
+        let yml = try Self.source("project.yml")
+        let start = try #require(yml.range(of: "NSExtensionActivationRule:"), "no activation rule on the extension")
+        let line = yml[start.upperBound...].prefix { $0 != "\n" }
+        let conforms = line.components(separatedBy: "UTI-CONFORMS-TO \"").dropFirst()
+            .compactMap { $0.split(separator: "\"").first.map(String.init) }
+        #expect(conforms == ShareInbox.fileTypeIdentifiers + ["public.url"])
+        #expect(yml.contains("NSExtensionPointIdentifier: com.apple.share-services"))
+    }
+
+    @Test("the app and its share extension both carry the App Group the inbox lives in")
+    func appGroupOnBoth() throws {
+        for path in ["M1K3iOSApp/M1K3iOS.entitlements", "M1K3ShareExtension/M1K3ShareExtension.entitlements"] {
+            let plist = try Self.source(path)
+            #expect(plist.contains("<key>com.apple.security.application-groups</key>"), "\(path)")
+            #expect(plist.contains("<string>\(ShareInbox.appGroup)</string>"), "\(path)")
+        }
+    }
+
+    @Test("the extension never fetches, never opens the app by a back door, and only drops into the inbox")
+    func extensionStaysInItsLane() throws {
+        let code = try Self.flat("M1K3ShareExtension/ShareViewController.swift")
+        for forbidden in ["URLSession", "openURL", ".open(", "UIApplication", "perform(", "NSSelectorFromString"] {
+            #expect(!code.contains(forbidden), "the share extension must not use \(forbidden)")
+        }
+        #expect(code.contains("ShareInbox.DropWriter("))
+        #expect(code.contains("ShareInbox.appGroup"))
+        #expect(code.contains("notify_post(ShareInbox.droppedNotification)"))
+    }
+
+    @Test("shared text streams to disk and is read only up to the cap: the extension's memory ceiling is tight")
+    func extensionCapsTextEarly() throws {
+        let code = try Self.flat("M1K3ShareExtension/ShareViewController.swift")
+        let text = try Self.body(of: "private static func loadText(", in: code)
+        let fileRep = try #require(text.range(of: "loadFileRepresentation("), "text streams to a file first")
+        let bounded = try #require(text.range(of: "ShareInbox.readText("), "and is read back only up to the cap")
+        #expect(fileRep.lowerBound < bounded.lowerBound)
+        // The fallback (a provider with no file form) trims a string the moment it arrives, and refuses big data.
+        #expect(text.contains(".prefix(ShareInbox.textCap)"))
+        #expect(text.contains("data.count <= ShareInbox.fileByteCap"))
+    }
+
+    @Test("the app claims drops at launch, on activation and on the ping, held above onboarding, never deleting them")
+    func rootClaims() throws {
+        let code = try Self.flat("M1K3iOSApp/RootView.swift")
+        let claim = try Self.body(of: "private func claimShares()", in: code)
+        #expect(claim.contains("ShareInbox.pending("))
+        #expect(claim.contains("ShareInbox.unseen(") && claim.contains("seen: seenDrops"),
+                "a second claim never stages a drop twice")
+        #expect(claim.contains("sharedDrops.append(contentsOf:"))
+        // Claim then kill must lose nothing: the drop stays in the group container until the chat has staged it.
+        #expect(!code.contains("ShareInbox.discard"), "the root claims; only the chat, once staged, deletes")
+        #expect(code.contains("phase == .active"), "claimed when M1K3 comes forward")
+        #expect(code.contains("ShareInbox.droppedNotification"), "and when a drop lands while it is on screen (iPad)")
+    }
+
+    @Test("a shared drop joins the composer through the same step as a shared file, is never sent, and goes once staged")
+    func chatStagesDrops() throws {
+        let code = try Self.flat("M1K3iOSApp/ChatScreen.swift")
+        let receive = try Self.body(of: "private func receiveSharedFiles()", in: code)
+        #expect(receive.contains("sharedDrops"))
+        #expect(receive.contains("ShareInbox.merge(draft: draft"))
+        let step = try #require(receive.range(of: "SharedFileIntake.step("))
+        let merge = try #require(receive.range(of: "ShareInbox.merge("))
+        let attach = try #require(receive.range(of: "attach(urls)"))
+        let discard = try #require(receive.range(of: "ShareInbox.discard("), "a staged drop leaves the group container")
+        #expect(step.lowerBound < merge.lowerBound, "drops wait out a turn and the consent sheet like files do")
+        #expect(merge.lowerBound < discard.lowerBound && attach.lowerBound < discard.lowerBound,
+                "deleted only after its words and files are staged")
+        for forbidden in ["send(", ".send", "sendTurn", "submit("] {
+            #expect(!receive.contains(forbidden), "the intake must never send: found \(forbidden)")
+        }
     }
 }

@@ -26,8 +26,17 @@
   (com.apple.developer.private-cloud-compute). check_store_targets.py now pins it on
   store lanes (STORE_REQUIRED_ENTITLEMENTS). The iOS App ID capability is verify-owed
   (profile must carry it or Xcode Cloud archive fails). Confidence 0.8.
+  Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — the App Group group.app.m1k3: the share
+  extension (app.m1k3.share) drops text, links and text files into its container and the app claims them into
+  the composer (M1K3ShareInbox). A PORTAL capability, unlike the rest of this file: Kev registers the group and
+  enables it on app.m1k3 and app.m1k3.share before the next device, TestFlight or store build, or signing
+  fails. Confidence 0.75 (Simulator-built; the profile carrying it is verify-by-archive).
 -->
 <dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.app.m1k3</string>
+	</array>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
 	<true/>
 	<key>com.apple.developer.declared-age-range</key>

@@ -29,10 +29,22 @@
 //  `SharedFileIntake.classify` tells a file from an `m1k3://` link. Confidence 0.8 (verify on the phone).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 third pass) — Inbox leftovers are swept here when the app goes to
 //  the background, sparing `sharedFiles`; never while staging (a batch AirDrop's siblings). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — the root claims the share extension's drops
+//  from the App Group inbox (`ShareInbox.claimAll`) at launch, whenever the app becomes active, and on the extension's
+//  Darwin ping (an iPad already showing M1K3 beside Safari): words go to `sharedDrafts`, files to `sharedFiles`, both
+//  held above onboarding like slice 1. The background sweep also clears held drops nothing waits on. On visionOS
+//  there is no group, so the claim finds nothing. Confidence 0.75 (Simulator-built; the device hand-off is owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — claim then kill lost the share (the claim deleted
+//  the drop, leaving it only in @State and tmp). The root now holds whole drops (`sharedDrops`) read in place by
+//  `ShareInbox.pending`, dedupes a second claim by name (`seenDrops`), and never deletes: ChatScreen discards a drop
+//  once staged, so a jetsam mid-onboarding re-finds it on the next launch. The holding folder and its sweep are gone.
+//  Confidence 0.8.
 //
 
 import M1K3Inference
 import M1K3Screengrab
+import M1K3ShareInbox
+import notify
 import SwiftUI
 
 struct RootView: View {
@@ -43,6 +55,11 @@ struct RootView: View {
     /// Files shared to M1K3 (AirDrop, Files, Share → Open in), held until the chat screen stages them. Lives here,
     /// above the onboarding gate, so a file shared on first run or at cold launch waits instead of being lost.
     @State private var sharedFiles: [URL] = []
+    /// Shares from another app's share sheet (words and files), held like `sharedFiles` until the chat screen stages
+    /// them. Never sent. Each stays in the App Group container until then, so a kill before staging loses nothing.
+    @State private var sharedDrops: [ShareInbox.Drop] = []
+    /// Drop names already claimed in this run (waiting or staged): a second claim never stages one twice.
+    @State private var seenDrops: Set<String> = []
     @Environment(\.scenePhase) private var scenePhase
 
     init(startOnboarded: Bool) {
@@ -53,7 +70,8 @@ struct RootView: View {
         Group {
             if onboarded {
                 NavigationStack(path: $screengrabPath) {
-                    ChatScreen(screengrabPath: $screengrabPath, sharedFiles: $sharedFiles).modifier(SnagNoteHost())
+                    ChatScreen(screengrabPath: $screengrabPath, sharedFiles: $sharedFiles, sharedDrops: $sharedDrops)
+                        .modifier(SnagNoteHost())
                 }
                 .preferredColorScheme(.dark)
             } else {
@@ -83,6 +101,15 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { sweepInboxLeftovers() }
+            // Back from the app the person shared in: take what the share extension dropped.
+            if phase == .active { claimShares() }
+        }
+        // At launch, then whenever the extension pings (M1K3 already on screen, beside the sharing app on an iPad).
+        .task {
+            claimShares()
+            for await _ in Self.shareDrops() {
+                claimShares()
+            }
         }
         #if os(iOS)
         // An auto-lock suspends a foreground download (the retry restarts the file from zero). When iOS carries it
@@ -102,6 +129,38 @@ extension RootView {
         let listed = (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? []
         for url in SharedFileIntake.inboxLeftovers(listed, waiting: sharedFiles) {
             try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// Takes what the share extension dropped into the App Group, oldest first, and pops to the chat. It reads the
+    /// drops where they lie and deletes nothing: ChatScreen discards a drop once it is staged, so a kill in between
+    /// (a jetsam mid-onboarding) finds it again on the next launch. A drop already claimed this run is skipped by name.
+    /// Expired drops are deleted unread (`pending`). Nothing is sent: ChatScreen only stages.
+    private func claimShares() {
+        guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: ShareInbox.appGroup)
+        else { return }
+        let inbox = group.appending(path: ShareInbox.inboxFolderName)
+        let fresh = ShareInbox.unseen(ShareInbox.pending(inbox: inbox), seen: seenDrops)
+        guard !fresh.isEmpty else { return }
+        seenDrops.formUnion(fresh.map(\.name))
+        sharedDrops.append(contentsOf: fresh)
+        screengrabPath = []
+    }
+
+    /// The share extension's "a drop landed" ping (a Darwin notification: no payload, no capability), as a stream.
+    /// Any process may post the name; the worst a stray post does is one extra claim, which finds nothing new.
+    private static func shareDrops() -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            var token: Int32 = 0
+            let status = notify_register_dispatch(ShareInbox.droppedNotification, &token, .main) { _ in
+                continuation.yield()
+            }
+            guard status == NOTIFY_STATUS_OK else {
+                continuation.finish()
+                return
+            }
+            let registered = token
+            continuation.onTermination = { _ in notify_cancel(registered) }
         }
     }
 }

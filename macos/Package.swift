@@ -54,6 +54,10 @@
 //  strings. No dependency or product moves. Confidence 0.8.
 //  Review: claude-opus-5-5, 2026-11-19 — M1K3ChatTests copies its Resources folder (the reply-language blind sets
 //  read by ReplyLanguageBlindSetTests). Test-only; no dependency moves. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — M1K3ShareInbox leaf (+ tests): the App Group
+//  inbox the iPhone share extension drops into and the app claims from. Foundation + UniformTypeIdentifiers only, so
+//  the extension (a tight memory ceiling) can link it. M1K3InferenceTests links it test-only to pin its file types
+//  to the ＋ picker's. No package dependency moves. Confidence 0.8.
 
 import Foundation
 import PackageDescription
@@ -73,6 +77,9 @@ let package = Package(
         // The Live Activity's phase-only state + attributes. Foundation (and ActivityKit on iOS) only: the widget
         // extension links it under a ~30 MB ceiling and the Mac's Live Activities will reuse it.
         .library(name: "M1K3LiveActivity", targets: ["M1K3LiveActivity"]),
+        // Share to M1K3 (iPhone): the App Group inbox the share extension writes and the app claims. Foundation-only:
+        // the extension links it under a tight memory ceiling.
+        .library(name: "M1K3ShareInbox", targets: ["M1K3ShareInbox"]),
         .library(name: "M1K3Knowledge", targets: ["M1K3Knowledge"]),
         .library(name: "M1K3Memory", targets: ["M1K3Memory"]),
         .library(name: "M1K3MemoryViz", targets: ["M1K3MemoryViz"]),
@@ -247,6 +254,15 @@ let package = Package(
             dependencies: ["M1K3LiveActivity", "M1K3ScreensaverCore"],
             path: "Tests/M1K3LiveActivityTests"
         ),
+        .target(
+            name: "M1K3ShareInbox",
+            path: "Sources/M1K3ShareInbox"
+        ),
+        .testTarget(
+            name: "M1K3ShareInboxTests",
+            dependencies: ["M1K3ShareInbox"],
+            path: "Tests/M1K3ShareInboxTests"
+        ),
         .testTarget(
             name: "M1K3LogCoreTests",
             dependencies: ["M1K3LogCore"],
@@ -337,7 +353,8 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3InferenceTests",
-            dependencies: ["M1K3Inference"],
+            // M1K3ShareInbox is TEST-ONLY: its file types are pinned to the ＋ picker's (SharedFileIntakeTests).
+            dependencies: ["M1K3Inference", "M1K3ShareInbox"],
             path: "Tests/M1K3InferenceTests"
         ),
         // Privacy scrub + issue-report formatting (no deps; the redaction rules

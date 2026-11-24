@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  M1K3ShareExtension.entitlements — the iPhone/iPad share extension (app.m1k3.share).
+
+  One entry: the App Group whose container holds the share inbox (M1K3ShareInbox). The extension drops
+  text, links and text files there; M1K3 (app.m1k3, which carries the same group) claims them into the
+  composer. A PORTAL capability: group.app.m1k3 must be registered and enabled on BOTH App IDs before a
+  device or store build signs (Kev's step; nothing here registers it).
+
+  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.75 (Apple's documented sharing route; the portal
+  registration and a signed device build are owed). Prior: Unknown (new file).
+-->
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.app.m1k3</string>
+	</array>
+</dict>
+</plist>

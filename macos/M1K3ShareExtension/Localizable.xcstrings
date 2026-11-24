@@ -1,0 +1,42 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Added to M1K3" : {
+      "comment" : "Share card title once the share is saved"
+    },
+    "Adding to M1K3…" : {
+      "comment" : "Share card title while the share is saved"
+    },
+    "Done" : {
+      "comment" : "Closes the share card"
+    },
+    "It takes text, links and text files." : {
+      "comment" : "Share card: what M1K3 can take"
+    },
+    "It was long, so M1K3 kept the first part." : {
+      "comment" : "Share card: text was cut"
+    },
+    "M1K3 can't read this yet" : {
+      "comment" : "Share card title for images, PDFs, big files"
+    },
+    "M1K3 left out what it can't read yet." : {
+      "comment" : "Share card: some items were skipped"
+    },
+    "Nothing is sent until you send it." : {
+      "comment" : "Share card: the share is staged, not sent"
+    },
+    "Open M1K3 to see it." : {
+      "comment" : "Share card: M1K3 can't open itself from here"
+    },
+    "Please try again." : {
+      "comment" : "Share card: saving failed"
+    },
+    "Shared text" : {
+      "comment" : "The file name for long shared text"
+    },
+    "That didn't work" : {
+      "comment" : "Share card title when saving failed"
+    }
+  },
+  "version" : "1.0"
+}

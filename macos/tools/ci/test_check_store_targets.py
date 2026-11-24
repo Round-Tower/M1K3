@@ -415,3 +415,62 @@ def test_extension_sharing_an_info_plist_with_an_app_is_flagged():
     project = _project_with_extension()
     project["targets"]["M1K3LiveActivityExtension"]["info"] = {"path": "a.plist"}
     assert any("share one generated Info.plist" in p for p in m.audit(project))
+
+
+# --- the share extension (share to M1K3, slice 2): the App Group inbox -------------------------------
+
+
+def _share_project(ext_entitlements="M1K3ShareExtension/M1K3ShareExtension.entitlements",
+                   app_entitlements="M1K3iOSApp/M1K3iOS.entitlements"):
+    ios = _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"])
+    ios["dependencies"] = [{"target": "M1K3ShareExtension", "embed": True}]
+    if app_entitlements:
+        ios["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"] = app_entitlements
+    ext = _ext(bundle_id="app.m1k3.share", products=("M1K3ShareInbox",), sources=[
+        {"path": "M1K3ShareExtension"},
+        {"path": "M1K3ShareExtension/PrivacyInfo.xcprivacy", "buildPhase": "resources"},
+    ])
+    if ext_entitlements:
+        ext["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"] = ext_entitlements
+    return _project({"M1K3iOS": ios, "M1K3ShareExtension": ext}, templates={"MobileShell": TEMPLATE_WITH_MANIFEST})
+
+
+def test_the_share_inbox_is_an_allowed_extension_product():
+    assert m.audit(_share_project()) == []
+
+
+def test_the_share_extension_and_its_app_must_name_entitlements_for_the_group():
+    assert m.app_group_entitlements(_share_project()) == {
+        "M1K3ShareExtension": "M1K3ShareExtension/M1K3ShareExtension.entitlements",
+        "M1K3iOS": "M1K3iOSApp/M1K3iOS.entitlements",
+    }
+    problems = m.audit(_share_project(app_entitlements=None))
+    assert len(problems) == 1 and "M1K3iOS" in problems[0] and m.SHARE_APP_GROUP in problems[0]
+    problems = m.audit(_share_project(ext_entitlements=None))
+    assert len(problems) == 1 and "M1K3ShareExtension" in problems[0]
+
+
+def test_a_project_without_the_share_inbox_needs_no_group():
+    assert m.app_group_entitlements(_project_with_extension()) == {}
+
+
+def test_entitlements_without_the_group_are_flagged():
+    good = {"com.apple.security.application-groups": [m.SHARE_APP_GROUP]}
+    assert m.app_group_gaps("x.entitlements", good) == []
+    for bad in ({}, {"com.apple.security.application-groups": ["group.other"]}):
+        gaps = m.app_group_gaps("x.entitlements", bad)
+        assert len(gaps) == 1 and "x.entitlements" in gaps[0] and m.SHARE_APP_GROUP in gaps[0]
+
+
+def test_the_real_share_extension_and_app_carry_the_group():
+    import pathlib
+    import plistlib
+
+    import yaml
+
+    macos = pathlib.Path(__file__).resolve().parents[2]
+    project = yaml.safe_load((macos / "project.yml").read_text())
+    paths = m.app_group_entitlements(project)
+    assert set(paths) == {"M1K3ShareExtension", "M1K3iOS"}
+    for path in paths.values():
+        assert m.app_group_gaps(path, plistlib.loads((macos / path).read_bytes())) == []

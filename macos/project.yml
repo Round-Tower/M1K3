@@ -79,6 +79,13 @@
 # Files and Share → Open in. Pinned against SharedFileIntake by SharedFileIntakeScanTests. Confidence 0.8 (verify on device).
 # Review: Kev + claude-opus-5-5, 2026-11-23 — MobileShell compiles M1K3App/ArtifactView.swift (the sealed artifact view)
 # so the phone shows opened code in a sheet and the iPad beside the chat (1.6). Confidence 0.8.
+# Review: Kev + claude-opus-5-5, 2026-11-23 (share to M1K3, slice 2) — M1K3ShareExtension (a Share Extension,
+# app.m1k3.share, embedded in M1K3iOS): text, a web link or a text file from ANY app's share sheet is dropped into the
+# App Group group.app.m1k3 and claimed into the composer, never sent. Both entitlements carry the group, a PORTAL
+# capability Kev registers on app.m1k3 and app.m1k3.share before the next device or store build. MobileShell links the
+# Foundation-only M1K3ShareInbox (RootView / ChatScreen claim and stage; visionOS has no group, so it finds nothing).
+# The activation rule's types are pinned to the ＋ picker's by ShareExtensionScanTests. Confidence 0.75 (Simulator-built;
+# the portal, signing and the sheet on a device are owed).
 # Review: Kev + claude-opus-5-5, 2026-11-23 — Open With on the Mac (#893 C, the Mac half): the M1K3 target registers the same
 # document types (Viewer, Alternate), so Finder's Open With, a drop on the Dock icon and `open -a M1K3` reach
 # AppDelegate.application(_:open:). One plist serves both Mac lanes (Developer ID and MAS differ only in entitlements).
@@ -254,6 +261,10 @@ targetTemplates:
       # inert without M1K3_SCREENGRAB=1; driven by M1K3iOSScreengrabUITests.
       - package: M1K3
         product: M1K3Screengrab
+      # Share to M1K3 (slice 2): the App Group inbox the share extension drops into; RootView claims, ChatScreen
+      # stages. Foundation-only. visionOS links it too (one shell), but has no group, so the claim finds nothing.
+      - package: M1K3
+        product: M1K3ShareInbox
 
 targets:
   M1K3:
@@ -550,6 +561,9 @@ targets:
         product: M1K3LiveActivity
       - target: M1K3LiveActivityExtension
         embed: true
+      # Share to M1K3 from any app's share sheet (slice 2): iOS only, like the Live Activity.
+      - target: M1K3ShareExtension
+        embed: true
     settings:
       base:
         # ONE App Store record for Mac + iPhone/iPad + Vision Pro (universal
@@ -682,6 +696,52 @@ targets:
           - Silkscreen-Regular.ttf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  # "Share to M1K3" from ANY app's share sheet (Safari, Notes, Mail), slice 2 of 1.6 (#893): selected text, a web link
+  # or a text file is dropped into the App Group inbox (M1K3ShareInbox) and M1K3 claims it into the composer the next
+  # time it comes forward, staged and never sent. A share extension can't open its app (NSExtensionContext.open works
+  # for Today and iMessage extensions only) and App Intents have no share-sheet surface, so the card says "Open M1K3
+  # to see it". Links only M1K3ShareInbox (Foundation): no chat stack under an extension's memory ceiling. Sources live
+  # OUTSIDE M1K3iOSApp/ (the MobileShell sweep). Its own id app.m1k3.share and App ID; the App Group
+  # group.app.m1k3 must be registered in the portal on both App IDs before a device or store build signs.
+  M1K3ShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: M1K3ShareExtension
+        # Named below (check_store_targets.py reads the explicit entry), or referenced by a build setting.
+        excludes:
+          - PrivacyInfo.xcprivacy
+          - M1K3ShareExtension.entitlements
+          - Info.generated.plist
+      # Apple REQUIRES a manifest in every extension that ships (the same rule as the app's).
+      - path: M1K3ShareExtension/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    dependencies:
+      - package: M1K3
+        product: M1K3ShareInbox
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.share
+        CODE_SIGN_ENTITLEMENTS: M1K3ShareExtension/M1K3ShareExtension.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        SWIFT_VERSION: "6.2"
+        INFOPLIST_KEY_CFBundleDisplayName: M1K3
+    info:
+      path: M1K3ShareExtension/Info.generated.plist
+      properties:
+        CFBundleDisplayName: M1K3
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            # M1K3 shows in the share sheet for the ＋ picker's file types and a link (a file URL is a link too, so
+            # a PDF from Files still offers M1K3, and the card says it can't read it yet). One line on purpose:
+            # ShareExtensionScanTests reads these types against ShareInbox.fileTypeIdentifiers.
+            NSExtensionActivationRule: 'SUBQUERY(extensionItems, $item, SUBQUERY($item.attachments, $a, ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.plain-text" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.text" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.source-code" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.json" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.yaml" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.xml" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.html" OR ANY $a.registeredTypeIdentifiers UTI-CONFORMS-TO "public.url").@count >= 1).@count >= 1'
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of
