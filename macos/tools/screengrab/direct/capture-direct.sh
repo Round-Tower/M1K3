@@ -25,6 +25,8 @@
 # arguments to every launch and file under plates/mac-<suffix>; defaults unchanged. Not run.
 # Review: claude-opus-5-5, 2026-11-20 — first real run: under `set -u`, mainWin's optional $2 and shoot's optional $3
 # aborted every plate ("parameter not set"), and a relative app path broke once the script cds into $S. Both fixed.
+# Review: Kev + claude-opus-5-5, 2026-11-24 — a fourteenth Mac plate, `brain-picker`: the onboarding harness launched at
+# the brain step, so the Mac "Pick a brain" frame shows the picker, not the hello card. Confidence 0.75 (run once).
 set -u
 here=${0:A:h}
 source ${here:h}/l10n-args.zsh   # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
@@ -71,6 +73,10 @@ for plate in chat documents memories; do
 done
 
 p=$(launch onboarding PhosphorFox NO -onboarding.startAtBrain NO); waitFor $p "brain" 60; sleep 5; shoot $p onboarding; quitApp
+
+# brain-picker: the same onboarding harness, landed on the brain step (Settings → "Change brain…" sets the same two
+# defaults, here shadowed by argument): the real Mini / Lil / Big picker for the Mac "Pick a brain" frame (Kev, 2026-11-24).
+p=$(launch onboarding PhosphorFox NO -onboarding.startAtBrain YES); waitFor $p "Lil" 60; sleep 5; shoot $p brain-picker; quitApp
 
 p=$(launch voice-listening PhosphorFox YES); sleep 40; shoot $p voice-listening; quitApp
 

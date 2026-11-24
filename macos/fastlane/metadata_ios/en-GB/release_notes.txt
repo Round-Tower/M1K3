@@ -1,18 +1,21 @@
-NEW IN 1.5
+NEW IN 1.6
 
-• I speak your language. The app is now in German, French, Spanish and Brazilian Portuguese as well as English, following your device's language, and I reply in the language you write in. In voice mode I still listen in English for now; an answer in another language is read by a voice that speaks it. A few privacy notes stay in English until a native speaker has checked them.
-• Read a text. Attach a .txt, .md, .csv or .log file from Files and ask about it ("when does the warranty end?"). The answer sticks to the file and comes from your device. Ask more keeps asking about the same text; Keep this saves it to your documents.
-• Leave while I answer. Lock your phone or go home during a long answer: a Live Activity on the Lock Screen and in the Dynamic Island shows when it's ready, and a notification tells you. It never shows your question or the answer.
-• Fixed: leaving the app while Lil was answering could close M1K3. It now stops where it was and picks up when you're back.
-• Lil works it out. On a multi-step problem, a sum or a puzzle, Lil now works through it in short steps before answering: more right answers, and still the fast brain.
-• I tell you when I'm thinking. When a question needs real thought, I say so in one plain line, instead of leaving you with a spinner.
-• See what I'm quoting. In voice mode, when I quote a web page, tap the chip or say "show me that" and the page pops up with the quote lit up.
-• I say numbers the way people do: dates, times, money, fractions, versions and "Henry VIII". And "I'm", "I'll" and "I've" sound right now.
-• Plainer talk. The villain is the look, not the voice. Ask me to talk plainer and I will.
-• Accessibility: every control has a name for VoiceOver and Voice Control, and dates and small print read larger.
-• A clean start: a new chat opens without suggested questions.
-• Fixed: an answer could stop at certain emoji.
-• Fixed privacy bugs: text from an attached file could reach web search, or Apple's Private Cloud if you had picked it. On iPhone and iPad, Content Controls didn't turn off web search or adjust Mike's tone for younger users. Both are fixed.
+• Dressed for the season. From 2 December I glow candy red and gold for Christmas and New Year, and through the year I dress up for Lunar New Year, Ramadan and Eid, St Patrick's Day and Nowruz. One switch in Settings turns the looks off.
+• Code beside the chat. Ask me for a small web page and it opens by itself: in a sheet on iPhone, beside the chat on iPad. Tap Open on any code block to see that one. Pages are sealed: no scripts run and nothing loads from the internet.
+• Share to M1K3 from any app. Share a link from Safari or some text from Notes, and it lands in my box, never sent. Open M1K3 to see it.
+• Send me a file. AirDrop a text, code or JSON file to M1K3, or share it from Files, and it lands in the box, ready to ask about. A web page opens beside the chat too.
+• If something arrives while I'm answering, I tell you it's waiting and put it in the box when I'm done.
+
+IN CASE YOU MISSED IT (1.4 AND 1.5)
+
+• Show me. Tap the eye at the top of a chat, point your camera and ask. I answer about what I see, on your device. In voice mode, just ask "what am I looking at?"
+• I speak your language: the app is in German, French, Spanish and Brazilian Portuguese as well as English, and I reply in the language you write in.
+• Read a text. Attach a .txt, .md, .csv or .log file from Files and ask about it.
+• Leave while I answer. A Live Activity on the Lock Screen and in the Dynamic Island shows when the answer is ready.
+• Lil works through a multi-step problem in short steps, and I tell you in one plain line when a question needs real thought.
+• In voice mode, the web page I quote pops up with the quote lit up.
+• I say dates, money and numbers the way people do. Ask me to talk plainer and I will.
+• Every control has a name for VoiceOver and Voice Control.
 
 NEW TO M1K3? HERE'S WHAT I DO
 

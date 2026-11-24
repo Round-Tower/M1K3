@@ -1,16 +1,19 @@
-NEU IN 1.5
+NEU IN 1.6
 
-• Ich spreche deine Sprache. Die App gibt es jetzt auf Deutsch, Französisch, Spanisch und brasilianischem Portugiesisch, zusätzlich zu Englisch, und sie folgt der Sprache deines Macs. Ich antworte in der Sprache, in der du schreibst, egal welches Hirn gerade antwortet. Im Sprachmodus höre ich vorerst nur auf Englisch zu; eine Antwort in einer anderen Sprache liest eine Stimme vor, die sie spricht. Ein paar Datenschutzhinweise bleiben auf Englisch, bis sie jemand mit der passenden Muttersprache geprüft hat.
-• Einen Text lesen. Zieh eine .txt-, .md-, .csv- oder .log-Datei in den Chat und frag danach („Wann endet die Garantie?“). Die Antwort bleibt bei der Datei, und die Datei geht nirgendwohin sonst. Mit „Nachfragen“ fragst du weiter zum selben Text; „Aufbewahren“ legt ihn in deinen Dokumenten ab.
-• Lil rechnet es durch. Bei einem Problem mit mehreren Schritten, einer Rechnung oder einem Rätsel arbeitet Lil es jetzt in kurzen Schritten durch, bevor es antwortet: mehr richtige Antworten, und trotzdem das schnelle Hirn.
-• Ich sage dir, wenn ich nachdenke. Braucht eine Frage echtes Nachdenken, sage ich das in einer schlichten Zeile, statt dich mit einem sich drehenden Ladekreis allein zu lassen.
-• Sieh, was ich zitiere. Wenn ich im Sprachmodus eine Webseite zitiere, klick auf den Chip oder sag „show me that“, und die Seite öffnet sich neben mir, das Zitat hervorgehoben. „Scroll down“, „go back“ und „close it“ funktionieren auch. Eine Seite öffnet sich nie von allein.
-• Ich sage Zahlen, wie Menschen sie sagen: Daten, Uhrzeiten, Geldbeträge, Brüche, Versionen und „Henry VIII“. Und „I'm“, „I'll“ und „I've“ klingen jetzt richtig.
-• Schlichter reden. Der Schurke ist der Look, nicht die Stimme. Bitte mich, schlichter zu reden, und ich tue es.
-• Barrierefreiheit: Jedes Bedienelement hat einen Namen für VoiceOver und Sprachsteuerung, und der Kontrast ist gemessen.
-• Ein sauberer Start: Ein neuer Chat öffnet sich ohne Vorschlagsfragen.
-• Behoben: Eine Antwort konnte bei bestimmten Emoji abbrechen.
-• Behoben: Text aus angehängten Dateien konnte in die Websuche gelangen oder in Apples Private Cloud, wenn du sie gewählt hattest. Auf iPhone und iPad schalteten die Inhaltskontrollen für Jüngere weder die Websuche aus noch passten sie Mikes Ton an. Beides ist behoben.
+• Festlich angezogen. Ab dem 2. Dezember leuchte ich zu Weihnachten und Neujahr in Bonbonrot und Gold, und übers Jahr kleide ich mich für das Mondneujahr, Ramadan und Eid, den St. Patrick's Day und Nowruz. Ein Schalter in Settings schaltet die Looks ab.
+• Code neben dem Chat. Bitte mich um eine kleine Webseite, und sie öffnet sich neben dem Chat, zum Anschauen statt nur zum Lesen. Klick bei einem Codeblock auf „Öffnen“, um genau den zu sehen. Die Seiten sind abgeschottet: Es laufen keine Skripte, und nichts wird aus dem Internet geladen. Teile eine Seite oder sichere sie als .html-Datei.
+• Öffnen mit M1K3. Klick im Finder mit der rechten Maustaste auf eine Text-, Code- oder JSON-Datei und wähl „Öffnen mit“ ▸ M1K3, oder zieh sie im Dock auf mich. Sie landet im Nachrichtenfeld, bereit für deine Frage, und wird nie von allein gesendet.
+• Kommt eine Datei an, während ich antworte, sage ich dir, dass sie wartet, und lege sie ins Nachrichtenfeld, sobald ich fertig bin.
+
+FALLS DU ES VERPASST HAST (1.4 UND 1.5)
+
+• Ich spreche deine Sprache: Die App gibt es auf Deutsch, Französisch, Spanisch und brasilianischem Portugiesisch, zusätzlich zu Englisch, und ich antworte in der Sprache, in der du schreibst.
+• Einen Text lesen. Zieh eine .txt-, .md-, .csv- oder .log-Datei in den Chat und frag danach. Die Datei geht nirgendwohin sonst.
+• Lil arbeitet ein Problem mit mehreren Schritten in kurzen Schritten durch, und braucht eine Frage echtes Nachdenken, sage ich das in einer schlichten Zeile.
+• Wenn ich im Sprachmodus eine Webseite zitiere, öffnet sie sich neben mir, das Zitat hervorgehoben.
+• Ich sage Daten, Geldbeträge und Zahlen, wie Menschen sie sagen. Bitte mich, schlichter zu reden, und ich tue es.
+• Jedes Bedienelement hat einen Namen für VoiceOver und Sprachsteuerung.
+• Die Local API: Schalte sie unter Settings > Server ein, und jede App, die die OpenAI API spricht, kann das Hirn nutzen, das du geladen hast, nur auf diesem Mac. Standardmäßig aus, mit eigenem Schlüssel.
 
 NEU BEI M1K3? DAS MACHE ICH
 
