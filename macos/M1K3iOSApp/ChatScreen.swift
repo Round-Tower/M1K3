@@ -181,6 +181,9 @@
 //  bar's top edge, on a fixed material capsule (an overlay, not a row: a row grew the bar mid-reply and jumped the
 //  transcript), and it is announced again for each new wait reason. Confidence 0.75 (compile-checked; device look
 //  owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-24 (#899 met #903) — with the drop watcher and the waiting hint both in the
+//  body's modifier chain, the iOS compiler timed out type-checking it. The share-in onChange handlers now ride
+//  `watchingShares(_:)` around `chat`; their order never mattered. Confidence 0.85 (device build green, scans 29/29).
 //
 
 import M1K3Avatar
@@ -300,6 +303,12 @@ struct ChatScreen: View {
     }
 
     var body: some View {
+        watchingShares(chat)
+    }
+
+    /// The chat with its chrome, sheets and handlers. The share-in watchers ride `watchingShares`: with them in this
+    /// chain too, the type-checker gave up on the body (after #899 met #903's waiting hint).
+    private var chat: some View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 hero
@@ -421,20 +430,6 @@ struct ChatScreen: View {
             .onChange(of: core.reviewLedger.completedTurns) { _, _ in
                 askForRatingIfEarned()
             }
-            // A shared file waits out a turn in flight, then lands in a new chat's composer.
-            .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
-            // No `initial: true` on purpose: the `sharedFiles` handler above runs at launch, and receiveSharedFiles
-            // takes the drops too.
-            .onChange(of: sharedDrops) { _, _ in receiveSharedFiles() }
-            .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
-                receiveSharedFiles()
-            }
-            // VoiceOver hears the waiting hint when it shows, and again each time the reason changes.
-            .onChange(of: sharedFileWaitReason, initial: true) { _, reason in
-                if reason != nil, let sharedFileHintText {
-                    AccessibilityNotification.Announcement(sharedFileHintText).post()
-                }
-            }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
                 if Self.voiceAtLaunch {
@@ -480,6 +475,26 @@ struct ChatScreen: View {
                 core.privateCloudArming.controlChanged(newValue)
             }
             .task { await core.refreshPrivateCloudStatus() }
+    }
+
+    /// Shared files and share-sheet drops: staged when they arrive and again whenever what they wait on clears, and the
+    /// waiting hint announced. Order among `onChange`s does not matter, so these sit apart from `chat`'s chain.
+    private func watchingShares(_ content: some View) -> some View {
+        content
+            // A shared file waits out a turn in flight, then lands in a new chat's composer.
+            .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
+            // No `initial: true` on purpose: the `sharedFiles` handler above runs at launch, and receiveSharedFiles
+            // takes the drops too.
+            .onChange(of: sharedDrops) { _, _ in receiveSharedFiles() }
+            .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
+                receiveSharedFiles()
+            }
+            // VoiceOver hears the waiting hint when it shows, and again each time the reason changes.
+            .onChange(of: sharedFileWaitReason, initial: true) { _, reason in
+                if reason != nil, let sharedFileHintText {
+                    AccessibilityNotification.Announcement(sharedFileHintText).post()
+                }
+            }
     }
 
     private func privateCloudConsentView(_ pending: PendingPrivateCloudSend) -> some View {
