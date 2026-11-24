@@ -23,6 +23,15 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (challenger on sealed interactive pages) — a top-level `data:`
 //  navigation is refused (a fresh document with no CSP), and the CSP now leads every document instead of being
 //  spliced into a `<head>` the page could hide or precede (ArtifactFormatter.injectCSPMeta). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#893 follow-up: the DNS-prefetch canary) — a loopback canary with the app's
+//  exact config (JS off, non-persistent store, this rule list) saw 0 of 14 fetches from 13 channels (control: 14); a bare
+//  DNS lookup can't be seen without root, so `dnsPrefetchOffMetaTag` closes it at the source, led by `sealHead`.
+//  Confidence 0.8 (the fetch channels measured; DNS off is WebKit's documented switch, packet capture owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-24 — the packet capture is in (Kev's root tcpdump, 2026-11-24: three runs, a
+//  curl probe proving the capture; control pages resolved their preconnect, img and fetch hosts; no page, sealed or
+//  not, ever looked up a dns-prefetch or link host, even with its own x-dns-prefetch-control "on"; every sealed page,
+//  "on" included, made zero lookups). The seal (rule list + CSP) already stops every lookup; `dnsPrefetchOffMetaTag` is
+//  insurance against a WebKit change. Confidence 0.9.
 
 import Foundation
 
@@ -56,5 +65,15 @@ public enum ArtifactSandboxPolicy {
     /// The CSP as a `<meta>` element to inject at the top of a formatted document's `<head>`.
     public static var cspMetaTag: String {
         "<meta http-equiv=\"Content-Security-Policy\" content=\"\(contentSecurityPolicy)\">"
+    }
+
+    /// DNS prefetch off. A lookup is the one egress no CSP directive and no content rule list governs (a
+    /// `<link rel=dns-prefetch>`, or WebKit prefetching a link's host, resolves a name the page chose); WebKit
+    /// honours this http-equiv for the whole document.
+    public static let dnsPrefetchOffMetaTag = "<meta http-equiv=\"x-dns-prefetch-control\" content=\"off\">"
+
+    /// What leads every previewed document, before any byte the page wrote: the CSP, then DNS prefetch off.
+    public static var sealHead: String {
+        cspMetaTag + "\n" + dnsPrefetchOffMetaTag
     }
 }

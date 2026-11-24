@@ -7,6 +7,11 @@
 //  page could hide, omit or precede. Measured in WKWebView on macOS 27 with an inline-script canary: leading, the
 //  CSP blocked the script with no head, with a script before the head, and with a normal head; the old splice let a
 //  script before the head run. The rest of the file predates this. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — the lead is now `ArtifactSandboxPolicy.sealHead` (the CSP, then DNS
+//  prefetch off); the house sheet anchors after it. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-24 (#902, measured) — the second pass's strip of the page's own prefetch hints
+//  is gone again: WebKit never resolved a dns-prefetch or link host for these documents, even unsealed and told "on",
+//  and the sealed page made no lookup at all. The meta stays as cheap insurance. Confidence 0.9.
 //
 
 import Foundation
@@ -118,7 +123,7 @@ public enum ArtifactFormatter {
     static func injectHouseStyle(_ html: String) -> String {
         guard !html.contains(ArtifactHouseStyle.marker) else { return html }
         let anchor: String.Index? = {
-            if let csp = html.range(of: ArtifactSandboxPolicy.cspMetaTag) { return csp.upperBound }
+            if let seal = html.range(of: ArtifactSandboxPolicy.sealHead) { return seal.upperBound }
             return headContentIndex(of: html)
         }()
         guard let anchor else { return html }
@@ -155,8 +160,8 @@ public enum ArtifactFormatter {
     /// (policies intersect). Idempotent: a document already led by our tag comes back unchanged.
     static func injectCSPMeta(_ html: String) -> String {
         let (doctype, rest) = splitLeadingDoctype(html)
-        guard !rest.hasPrefix(ArtifactSandboxPolicy.cspMetaTag) else { return html }
-        return doctype + ArtifactSandboxPolicy.cspMetaTag + "\n" + rest
+        guard !rest.hasPrefix(ArtifactSandboxPolicy.sealHead) else { return html }
+        return doctype + ArtifactSandboxPolicy.sealHead + "\n" + rest
     }
 
     /// A leading `<!doctype …>` (kept first so the page stays in standards mode) and everything after it, with the
