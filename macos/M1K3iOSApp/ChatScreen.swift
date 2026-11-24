@@ -164,6 +164,14 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
 //  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
 //  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review: a waiting share looked lost) — a plain caption over the
+//  composer while shared files wait out a reply or the Private Cloud sheet (`SharedFileIntake.waitingHint`), with
+//  `doc.badge.clock`, an accessibility label and one announcement when it shows. It only tells: staging is
+//  unchanged. Confidence 0.75 (compile-checked; device look owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the hint hangs from a zero-height anchor on the
+//  bar's top edge, on a fixed material capsule (an overlay, not a row: a row grew the bar mid-reply and jumped the
+//  transcript), and it is announced again for each new wait reason. Confidence 0.75 (compile-checked; device look
+//  owed).
 //
 
 import M1K3Avatar
@@ -404,6 +412,12 @@ struct ChatScreen: View {
             .onChange(of: sharedFiles, initial: true) { _, _ in receiveSharedFiles() }
             .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
                 receiveSharedFiles()
+            }
+            // VoiceOver hears the waiting hint when it shows, and again each time the reason changes.
+            .onChange(of: sharedFileWaitReason, initial: true) { _, reason in
+                if reason != nil, let sharedFileHintText {
+                    AccessibilityNotification.Announcement(sharedFileHintText).post()
+                }
             }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
@@ -915,6 +929,26 @@ struct ChatScreen: View {
                 }
             }
         }
+        // A shared file waiting out a reply or the Private Cloud sheet says so, just above the bar it will land in.
+        // An overlay hung from the bar's top edge, not a row in it: a row would grow the bar mid-reply and shrink
+        // (jump) the transcript above it.
+        // A zero-height anchor on the bar's top edge; the hint hangs from it, upward (an `alignmentGuide` on the
+        // conditional child was not honoured on the Mac, where the hint drew inside the band).
+        .overlay(alignment: .top) {
+            Color.clear
+                .frame(height: 0)
+                .overlay(alignment: .bottom) {
+                    if let sharedFileHintText {
+                        sharedFileHint(sharedFileHintText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(.bottom, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .allowsHitTesting(false)
+        }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .frame(maxWidth: 760)
@@ -1375,6 +1409,38 @@ struct ChatScreen: View {
         for url in urls where SharedFileIntake.isSystemInboxCopy(url, documents: URL.documentsDirectory) {
             try? FileManager.default.removeItem(at: url)
         }
+    }
+
+    /// What the hint over the composer says while shared files wait, or nil when none do. The phone's `step` does
+    /// not wait on voice (the voice cover hides this screen), so `inVoice` is false; a consented send still
+    /// launching reads as the reply it starts.
+    private var sharedFileHintText: String? {
+        SharedFileIntake.waitingHint(count: sharedFiles.count, reason: sharedFileWaitReason)
+    }
+
+    /// Why shared files wait, or nil when none do. VoiceOver hears the hint again each time this changes.
+    private var sharedFileWaitReason: SharedFileIntake.WaitReason? {
+        guard !sharedFiles.isEmpty else { return nil }
+        return SharedFileIntake.waitReason(
+            isResponding: core.chat.isResponding || privateCloudSending,
+            inVoice: false,
+            consentPending: privateCloudPending != nil
+        )
+    }
+
+    /// A plain caption, not glass (the caller sets it on a fixed material capsule): it only tells, and nothing in it
+    /// ticks.
+    private func sharedFileHint(_ text: String) -> some View {
+        Label {
+            Text(text)
+        } icon: {
+            Image(systemName: "doc.badge.clock")
+        }
+        .font(.footnote)
+        .foregroundStyle(.readableSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
     }
 
     /// A shared file's name and text when it could be a page (the policy decides), capped like the composer's read.

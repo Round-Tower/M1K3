@@ -146,6 +146,14 @@
 //  destination, in a new chat when this one has messages, waiting out a turn, voice, the Private Cloud sheet or a
 //  consented send still launching (`privateCloudSending`, as on the phone). Never sent. Confidence 0.8 (verified by
 //  launch on the sandboxed Debug build: a running app, two files at once, and a menu-bar-only cold launch).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review: a waiting file looked lost) — a plain caption over the
+//  composer while opened files wait out a reply or the Private Cloud sheet, and on a material capsule at the top of
+//  the voice overlay while voice holds them (the bar hides in voice); `SharedFileIntake.waitingHint` words it, one
+//  announcement when it shows. It only tells: staging is unchanged. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the hint hangs above the bottom band from a
+//  zero-height anchor, on a fixed material capsule, instead of a row in it (a row grew the safe-area inset mid-reply
+//  and jumped the transcript; an alignmentGuide was ignored and drew it over an offer card), and it is announced again
+//  for each new wait reason. Confidence 0.8 (verified by launch: the transcript holds still when the hint appears).
 
 import M1K3Avatar
 import M1K3Chat
@@ -389,6 +397,12 @@ struct ContentView: View {
         // then lands in the composer. `initial` stages one held through onboarding or a cold launch.
         .onChange(of: sharedFiles.files, initial: true) { _, _ in receiveSharedFiles() }
         .onChange(of: sharedFilesWait) { _, _ in receiveSharedFiles() }
+        // VoiceOver hears the waiting hint when it shows, and again each time the reason changes.
+        .onChange(of: sharedFileWaitReason, initial: true) { _, reason in
+            if reason != nil, let sharedFileHintText {
+                AccessibilityNotification.Announcement(sharedFileHintText).post()
+            }
+        }
         // A conversation row is a PICK, not a destination to linger on —
         // switch to it and immediately return the selection to .chat so the
         // sidebar highlight settles on "Chat", matching what's now showing.
@@ -451,6 +465,17 @@ struct ContentView: View {
         .overlay {
             if env.isVoiceModeActive {
                 VoiceModeView()
+                    // The waiting hint, at the top where nothing of voice's own glass sits (its spoken lines and
+                    // controls are bottom-anchored), on a fixed material capsule so it reads over the face.
+                    .overlay(alignment: .top) {
+                        if let sharedFileHintText {
+                            sharedFileHint(sharedFileHintText)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .padding(.top, 12)
+                        }
+                    }
                     // Grow open from the centre, where the backdrop's face sits, instead of a
                     // flat cross-fade — the felt "hero zoom" without matchedGeometry's
                     // empty-frame trap: the hero is a FRESH RealityView that rebuilds
@@ -919,6 +944,28 @@ struct ContentView: View {
                 inputBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        // A file opened in M1K3 that is waiting out a reply or the Private Cloud sheet says so, just above the band
+        // it will land in. An overlay hung from the band's top edge, not a row in it: a row would grow this
+        // safe-area inset mid-reply and jump the transcript. In voice the hint rides the voice overlay instead.
+        // A zero-height anchor on the band's top edge; the hint hangs from it, upward (an `alignmentGuide` on the
+        // conditional child was not honoured: the hint drew inside the band, over an offer card's title).
+        .overlay(alignment: .top) {
+            Color.clear
+                .frame(height: 0)
+                .overlay(alignment: .bottom) {
+                    if !env.isVoiceModeActive, let sharedFileHintText {
+                        sharedFileHint(sharedFileHintText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .frame(maxWidth: Self.chatContentMaxWidth, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 4)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .allowsHitTesting(false)
         }
         .background {
             // Faded bar: the material dissolves upward through a gradient mask
@@ -1525,6 +1572,37 @@ struct ContentView: View {
     /// Everything an opened file waits out; a change re-tries the staging.
     private var sharedFilesWait: Bool {
         env.chat.isResponding || env.isVoiceModeActive || privateCloudPending != nil || privateCloudSending
+    }
+
+    /// What the hint says while opened files wait, or nil when none do. A consented send still launching reads as
+    /// the reply it starts; voice is named on its own, since the Mac stages only after voice ends.
+    private var sharedFileHintText: String? {
+        SharedFileIntake.waitingHint(count: sharedFiles.files.count, reason: sharedFileWaitReason)
+    }
+
+    /// Why opened files wait, or nil when none do. VoiceOver hears the hint again each time this changes.
+    private var sharedFileWaitReason: SharedFileIntake.WaitReason? {
+        guard !sharedFiles.files.isEmpty else { return nil }
+        return SharedFileIntake.waitReason(
+            isResponding: env.chat.isResponding || privateCloudSending,
+            inVoice: env.isVoiceModeActive,
+            consentPending: privateCloudPending != nil
+        )
+    }
+
+    /// A plain caption, not glass (callers set it on a fixed material capsule): it only tells, and nothing in it
+    /// ticks.
+    private func sharedFileHint(_ text: String) -> some View {
+        Label {
+            Text(text)
+        } icon: {
+            Image(systemName: "doc.badge.clock")
+        }
+        .font(.caption)
+        .foregroundStyle(.readableSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
     }
 
     private static let intakeLog = Logger(subsystem: "app.m1k3", category: "launch")

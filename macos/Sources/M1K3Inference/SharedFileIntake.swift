@@ -23,6 +23,10 @@
 //  Open With, a drop on the Dock icon and `open -a M1K3` (files only, in order, each once). The Mac registers the
 //  same `registeredTypeIdentifiers`; `step` is shared. Confidence 0.85 (pure + tested; Open With verified by launch
 //  on the Debug build, the Dock-icon drop not yet).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review: a file that waits stages silently, minutes later) —
+//  `waitReason` + `waitingHint`: the plain-words hint both shells show over the composer while files wait (a reply,
+//  voice, or the Private Cloud sheet), plural by the catalog. Only the hint reads them; `step` still decides.
+//  Confidence 0.85 (pure + tested; the wording resolves through the catalog under swift test).
 //
 
 import Foundation
@@ -58,6 +62,93 @@ public enum SharedFileIntake {
     public static func step(isResponding: Bool, hasMessages: Bool, consentPending: Bool) -> Step {
         if isResponding || consentPending { return .wait }
         return hasMessages ? .newChatThenStage : .stageHere
+    }
+
+    /// Why a shared file is waiting, for the hint over the composer. Only the hint reads it; `step` decides.
+    public enum WaitReason: Equatable, Sendable {
+        /// A reply is streaming (or a consented Private Cloud send is starting one).
+        case reply
+        /// Voice mode is on (the Mac stages only after it ends).
+        case voice
+        /// The Private Cloud consent sheet is open.
+        case consent
+    }
+
+    /// The reason a file waits, or nil when `step` would stage it now. Voice outranks the sheet, which outranks a
+    /// reply: the hint names the last thing the file waits for, so it never promises a box that stays shut. The
+    /// phone passes `inVoice: false`, because its `step` does not wait on voice.
+    public static func waitReason(isResponding: Bool, inVoice: Bool, consentPending: Bool) -> WaitReason? {
+        if inVoice { return .voice }
+        if consentPending { return .consent }
+        return isResponding ? .reply : nil
+    }
+
+    /// The hint over the composer while shared files wait, in plain words (Kev is dyslexic: short sentences, no
+    /// jargon), or nil when nothing is waiting. It only tells: staging is still `step`'s, and nothing is sent.
+    public static func waitingHint(count: Int, reason: WaitReason?) -> String? {
+        guard count > 0, let reason else { return nil }
+        // One file has its own sentence rather than the catalog's plural "one" form: CI's older SwiftPM doesn't
+        // compile a package catalog's plural variations, so `count == 1` read "1 files are waiting" there (#903).
+        // The plural keys keep their variations for languages with more forms.
+        let one = count == 1
+        switch reason {
+        case .reply:
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when this reply ends.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 from another app waits until \
+                    M1K3 finishes its answer. 'the box' is the message box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when this reply ends.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 from another app wait until \
+                    M1K3 finishes its answer. 'the box' is the message box where you type. Plural by count.
+                    """
+                )
+        case .voice:
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when you leave voice.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 waits until the person leaves \
+                    voice mode. 'the box' is the message box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when you leave voice.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 wait until the person leaves \
+                    voice mode. 'the box' is the message box where you type. Plural by count.
+                    """
+                )
+        case .consent:
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when you answer the Private Cloud question.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 waits until the person answers the \
+                    sheet asking whether to send this message to Private Cloud Compute. 'the box' is the message \
+                    box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when you answer the Private Cloud question.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 wait until the person answers the \
+                    sheet asking whether to send this message to Private Cloud Compute. 'the box' is the message \
+                    box where you type. Plural by count.
+                    """
+                )
+        }
     }
 
     /// The Mac's held queue: the files among `incoming` (Launch Services' Open With, a drop on the Dock icon,
