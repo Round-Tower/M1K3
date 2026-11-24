@@ -9,9 +9,9 @@
 //  script before the head run. The rest of the file predates this. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — the lead is now `ArtifactSandboxPolicy.sealHead` (the CSP, then DNS
 //  prefetch off); the house sheet anchors after it. Confidence 0.85.
-//  Review: Kev + claude-opus-5-5, 2026-11-24 (#902 second pass) — the page's own prefetch-control metas and
-//  dns-prefetch / preconnect links are stripped (`stripPrefetchHints`): the switch is a toggle, so a page's "on"
-//  would have undone ours. Confidence 0.8 (pure + tested; the root packet capture is still owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-24 (#902, measured) — the second pass's strip of the page's own prefetch hints
+//  is gone again: WebKit never resolved a dns-prefetch or link host for these documents, even unsealed and told "on",
+//  and the sealed page made no lookup at all. The meta stays as cheap insurance. Confidence 0.9.
 //
 
 import Foundation
@@ -161,26 +161,8 @@ public enum ArtifactFormatter {
     static func injectCSPMeta(_ html: String) -> String {
         let (doctype, rest) = splitLeadingDoctype(html)
         guard !rest.hasPrefix(ArtifactSandboxPolicy.sealHead) else { return html }
-        return doctype + ArtifactSandboxPolicy.sealHead + "\n" + stripPrefetchHints(String(rest))
+        return doctype + ArtifactSandboxPolicy.sealHead + "\n" + rest
     }
-
-    /// The page's own DNS-prefetch levers, removed: a `x-dns-prefetch-control` meta (a toggle, not a policy: the
-    /// page's "on" would undo our "off", #902 second pass) and `<link rel=dns-prefetch|preconnect>`, which resolve a
-    /// name the page chose. Each match ends at the tag's first `>`, so a scan never runs past one tag.
-    static func stripPrefetchHints(_ html: String) -> String {
-        var result = html
-        for pattern in prefetchHintPatterns {
-            result = pattern.stringByReplacingMatches(
-                in: result, range: NSRange(result.startIndex..., in: result), withTemplate: ""
-            )
-        }
-        return result
-    }
-
-    private static let prefetchHintPatterns: [NSRegularExpression] = [
-        #"<meta\b[^>]*\bhttp-equiv\s*=\s*["']?\s*x-dns-prefetch-control[^>]*>"#,
-        #"<link\b[^>]*\brel\s*=\s*(?:"[^"]*\b(?:dns-prefetch|preconnect)\b[^"]*"|'[^']*\b(?:dns-prefetch|preconnect)\b[^']*'|(?:dns-prefetch|preconnect)\b)[^>]*>"#,
-    ].map { try! NSRegularExpression(pattern: $0, options: [.caseInsensitive]) } // swiftlint:disable:this force_try
 
     /// A leading `<!doctype …>` (kept first so the page stays in standards mode) and everything after it, with the
     /// whitespace between dropped. No doctype: an empty first half.

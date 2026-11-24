@@ -27,6 +27,11 @@
 //  exact config (JS off, non-persistent store, this rule list) saw 0 of 14 fetches from 13 channels (control: 14); a bare
 //  DNS lookup can't be seen without root, so `dnsPrefetchOffMetaTag` closes it at the source, led by `sealHead`.
 //  Confidence 0.8 (the fetch channels measured; DNS off is WebKit's documented switch, packet capture owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-24 — the packet capture is in (Kev's root tcpdump, 2026-11-24: three runs, a
+//  curl probe proving the capture; control pages resolved their preconnect, img and fetch hosts; no page, sealed or
+//  not, ever looked up a dns-prefetch or link host, even with its own x-dns-prefetch-control "on"; every sealed page,
+//  "on" included, made zero lookups). The seal (rule list + CSP) already stops every lookup; `dnsPrefetchOffMetaTag` is
+//  insurance against a WebKit change. Confidence 0.9.
 
 import Foundation
 
