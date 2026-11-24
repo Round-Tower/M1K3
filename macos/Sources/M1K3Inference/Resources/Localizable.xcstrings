@@ -134,6 +134,15 @@
         }
       }
     },
+    "1 file is waiting. It goes in the box when this reply ends." : {
+      "comment" : "Hint over the chat's message box: a file shared to M1K3 from another app waits until M1K3 finishes its answer. 'the box' is the message box where you type."
+    },
+    "1 file is waiting. It goes in the box when you answer the Private Cloud question." : {
+      "comment" : "Hint over the chat's message box: a file shared to M1K3 waits until the person answers the sheet asking whether to send this message to Private Cloud Compute. 'the box' is the message box where you type."
+    },
+    "1 file is waiting. It goes in the box when you leave voice." : {
+      "comment" : "Hint over the chat's message box: a file shared to M1K3 waits until the person leaves voice mode. 'the box' is the message box where you type."
+    },
     "A fully local engine — multi-turn conversation, memory, and reasoning that keeps up with you. Runs entirely on your Vision Pro." : {
       "comment" : "Brain card copy for Lil, on Apple Vision Pro. Vision Pro is Apple's product name: keep it untranslated."
     },

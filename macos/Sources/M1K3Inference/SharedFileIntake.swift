@@ -87,35 +87,67 @@ public enum SharedFileIntake {
     /// jargon), or nil when nothing is waiting. It only tells: staging is still `step`'s, and nothing is sent.
     public static func waitingHint(count: Int, reason: WaitReason?) -> String? {
         guard count > 0, let reason else { return nil }
+        // One file has its own sentence rather than the catalog's plural "one" form: CI's older SwiftPM doesn't
+        // compile a package catalog's plural variations, so `count == 1` read "1 files are waiting" there (#903).
+        // The plural keys keep their variations for languages with more forms.
+        let one = count == 1
         switch reason {
         case .reply:
-            return String(
-                localized: "\(count) files are waiting. They go in the box when this reply ends.",
-                bundle: .module,
-                comment: """
-                Hint over the chat's message box: files shared to M1K3 from another app wait until M1K3 finishes \
-                its answer. 'the box' is the message box where you type. Plural by count.
-                """
-            )
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when this reply ends.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 from another app waits until \
+                    M1K3 finishes its answer. 'the box' is the message box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when this reply ends.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 from another app wait until \
+                    M1K3 finishes its answer. 'the box' is the message box where you type. Plural by count.
+                    """
+                )
         case .voice:
-            return String(
-                localized: "\(count) files are waiting. They go in the box when you leave voice.",
-                bundle: .module,
-                comment: """
-                Hint over the chat's message box: files shared to M1K3 wait until the person leaves voice mode. \
-                'the box' is the message box where you type. Plural by count.
-                """
-            )
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when you leave voice.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 waits until the person leaves \
+                    voice mode. 'the box' is the message box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when you leave voice.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 wait until the person leaves \
+                    voice mode. 'the box' is the message box where you type. Plural by count.
+                    """
+                )
         case .consent:
-            return String(
-                localized: "\(count) files are waiting. They go in the box when you answer the Private Cloud question.",
-                bundle: .module,
-                comment: """
-                Hint over the chat's message box: files shared to M1K3 wait until the person answers the sheet \
-                asking whether to send this message to Private Cloud Compute. 'the box' is the message box where \
-                you type. Plural by count.
-                """
-            )
+            return one
+                ? String(
+                    localized: "1 file is waiting. It goes in the box when you answer the Private Cloud question.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: a file shared to M1K3 waits until the person answers the \
+                    sheet asking whether to send this message to Private Cloud Compute. 'the box' is the message \
+                    box where you type.
+                    """
+                )
+                : String(
+                    localized: "\(count) files are waiting. They go in the box when you answer the Private Cloud question.",
+                    bundle: .module,
+                    comment: """
+                    Hint over the chat's message box: files shared to M1K3 wait until the person answers the \
+                    sheet asking whether to send this message to Private Cloud Compute. 'the box' is the message \
+                    box where you type. Plural by count.
+                    """
+                )
         }
     }
 
