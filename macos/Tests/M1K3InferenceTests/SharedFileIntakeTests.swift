@@ -13,6 +13,9 @@
 //  each once) and Mac scans: the M1K3 target registers the same types (Viewer, Alternate), the delegate holds what
 //  arrives above the onboarding gate, and ContentView stages through the paperclip's `attach` and never sends. The
 //  one-block plist count is now a per-target read. Confidence 0.8 (pure + scans; the shell is verified by launch).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review) — the waiting hint: its reason mirrors `step` over every
+//  input, its English (both plural forms) is pinned, and a scan holds both shells to showing it over the composer,
+//  announcing it and never sending or wrapping it in glass. Confidence 0.8.
 //
 
 import Foundation
@@ -54,6 +57,55 @@ struct SharedFileIntakeTests {
     func waitsBehindConsent() {
         #expect(SharedFileIntake.step(isResponding: false, hasMessages: false, consentPending: true) == .wait)
         #expect(SharedFileIntake.step(isResponding: false, hasMessages: true, consentPending: true) == .wait)
+    }
+
+    // MARK: - The hint while a file waits
+
+    @Test("why a file waits: voice outranks the consent sheet, which outranks a reply; nothing waiting is nil")
+    func waitReason() {
+        #expect(SharedFileIntake.waitReason(isResponding: false, inVoice: false, consentPending: false) == nil)
+        #expect(SharedFileIntake.waitReason(isResponding: true, inVoice: false, consentPending: false) == .reply)
+        #expect(SharedFileIntake.waitReason(isResponding: false, inVoice: false, consentPending: true) == .consent)
+        #expect(SharedFileIntake.waitReason(isResponding: true, inVoice: false, consentPending: true) == .consent)
+        // A reply inside voice still waits for voice to end (the Mac stages only after voice).
+        #expect(SharedFileIntake.waitReason(isResponding: true, inVoice: true, consentPending: false) == .voice)
+        #expect(SharedFileIntake.waitReason(isResponding: false, inVoice: true, consentPending: true) == .voice)
+    }
+
+    @Test("the hint shows exactly when the step waits: never a hint over a file that stages now, never a silent wait")
+    func reasonMirrorsStep() {
+        for responding in [false, true] {
+            for voice in [false, true] {
+                for consent in [false, true] {
+                    for messages in [false, true] {
+                        // The Mac folds voice into isResponding for `step`; the phone passes inVoice: false.
+                        let waits = SharedFileIntake.step(isResponding: responding || voice, hasMessages: messages,
+                                                          consentPending: consent) == .wait
+                        let reason = SharedFileIntake.waitReason(isResponding: responding, inVoice: voice,
+                                                                 consentPending: consent)
+                        #expect((reason != nil) == waits, "responding \(responding) voice \(voice) consent \(consent)")
+                    }
+                }
+            }
+        }
+    }
+
+    @Test("the hint says, in plain words, how many files wait and when they go in the box; none waiting is no hint")
+    func waitingHintWording() {
+        #expect(SharedFileIntake.waitingHint(count: 1, reason: .reply)
+            == "1 file is waiting. It goes in the box when this reply ends.")
+        #expect(SharedFileIntake.waitingHint(count: 3, reason: .reply)
+            == "3 files are waiting. They go in the box when this reply ends.")
+        #expect(SharedFileIntake.waitingHint(count: 1, reason: .voice)
+            == "1 file is waiting. It goes in the box when you leave voice.")
+        #expect(SharedFileIntake.waitingHint(count: 2, reason: .voice)
+            == "2 files are waiting. They go in the box when you leave voice.")
+        #expect(SharedFileIntake.waitingHint(count: 1, reason: .consent)
+            == "1 file is waiting. It goes in the box when you answer the Private Cloud question.")
+        #expect(SharedFileIntake.waitingHint(count: 2, reason: .consent)
+            == "2 files are waiting. They go in the box when you answer the Private Cloud question.")
+        #expect(SharedFileIntake.waitingHint(count: 0, reason: .reply) == nil)
+        #expect(SharedFileIntake.waitingHint(count: 2, reason: nil) == nil)
     }
 
     // MARK: - Copies we may delete
@@ -292,5 +344,41 @@ struct SharedFileIntakeScanTests {
         }
         #expect(code.contains(".onChange(of: sharedFiles.files, initial: true)"),
                 "a file held through onboarding or a cold launch is staged when the chat first appears")
+    }
+
+    // MARK: - The "file waiting" hint (both shells)
+
+    /// Each shell's hint: read from the pure helper with its waiting count, a caption with a symbol, an accessibility
+    /// label, an announcement when it first shows, never a send, and never a glass surface that resizes around it.
+    @Test("both shells show the waiting hint over the composer, announce it, and never send from it",
+          arguments: [
+              ("M1K3iOSApp/ChatScreen.swift", "sharedFiles.count", "inputBar"),
+              ("M1K3App/ContentView.swift", "sharedFiles.files.count", "bottomChrome"),
+          ])
+    func waitingHintInBothShells(file: String, count: String, composer: String) throws {
+        let code = try Self.flat(file)
+        let text = try Self.body(of: "private var sharedFileHintText: String?", in: code)
+        #expect(text.contains("SharedFileIntake.waitingHint(count: \(count)"))
+        #expect(text.contains("SharedFileIntake.waitReason("))
+        let hint = try Self.body(of: "private func sharedFileHint(_ text: String)", in: code)
+        #expect(hint.contains("doc.badge.clock"))
+        #expect(hint.contains(".accessibilityLabel(text)"))
+        for forbidden in ["send(", ".send", "sendTurn", "submit(", "attach(", "glassEffect", "m1k3Glass"] {
+            #expect(!hint.contains(forbidden), "the hint only tells: found \(forbidden)")
+            #expect(!text.contains(forbidden), "the hint only tells: found \(forbidden)")
+        }
+        let bar = try Self.body(of: "private var \(composer): some View", in: code)
+        #expect(bar.contains("if let sharedFileHintText { sharedFileHint(sharedFileHintText)"),
+                "the hint sits over the composer, only while a file waits")
+        #expect(code.contains(".onChange(of: sharedFileHintText != nil, initial: true)"))
+        #expect(code.contains("AccessibilityNotification.Announcement(sharedFileHintText).post()"))
+    }
+
+    @Test("the Mac's waiting hint also shows over voice mode, where the composer hides")
+    func macHintOverVoice() throws {
+        let code = try Self.flat("M1K3App/ContentView.swift")
+        let text = try Self.body(of: "private var sharedFileHintText: String?", in: code)
+        #expect(text.contains("inVoice: env.isVoiceModeActive"))
+        #expect(code.contains("VoiceModeView() .overlay(alignment: .top) { if let sharedFileHintText {"))
     }
 }
