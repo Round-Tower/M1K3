@@ -90,6 +90,33 @@ struct ArtifactOpenPolicyTests {
         #expect(ArtifactOpenPolicy.autoOpen(from: []) == nil)
     }
 
+    // MARK: - A page shared in (#893 C meets B)
+
+    @Test("a shared .html file opens as its page, titled by its name, so sharing it back keeps the name")
+    func sharedHTMLOpens() throws {
+        let page = try #require(ArtifactOpenPolicy.sharedPage(filename: "Solar System.html", text: "<h1>Sun</h1>"))
+        #expect(page.language == .html)
+        #expect(page.title == "Solar System")
+        #expect(page.filename == "Solar System.html")
+        #expect(page.source.contains("<h1>") && page.source.contains("Sun"), "the formatter may re-indent, never drop")
+    }
+
+    @Test("a shared markdown file opens with a rendered preview; .htm and upper case count")
+    func sharedMarkdownAndVariants() throws {
+        let notes = try #require(ArtifactOpenPolicy.sharedPage(filename: "notes.md", text: "# Hi"))
+        #expect(notes.language == .markdown && notes.previewSource != nil)
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "OLD.HTM", text: "<p>x</p>")?.language == .html)
+    }
+
+    @Test("code, data and blank files stay in the composer only: nothing to look at")
+    func sharedNonPagesStayPut() {
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "data.json", text: "{}") == nil)
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "main.swift", text: "let x = 1") == nil)
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "style.css", text: "a { color: red }") == nil)
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "empty.html", text: "  \n") == nil)
+        #expect(ArtifactOpenPolicy.sharedPage(filename: "noext", text: "<p>x</p>") == nil)
+    }
+
     @Test("the Code tab highlights as the artifact's own language")
     func highlightLanguage() {
         #expect(CodeArtifact(source: "x", language: .html).highlightLanguage == "html")

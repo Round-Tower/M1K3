@@ -11,6 +11,8 @@
 //      tagged markdown document). Plain code waits for its Open button.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.85, Prior: Unknown (new file)
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (1.6 follow-up: B meets C) — `sharedPage`: an .html/.md file shared
+//  in opens beside the chat as well as staging in the composer. Confidence 0.85 (pure + tested).
 
 import Foundation
 
@@ -37,6 +39,17 @@ public enum ArtifactOpenPolicy {
     /// The artifact an answer opens by itself: the first renderable one, else nothing.
     public static func autoOpen(from artifacts: [CodeArtifact]) -> CodeArtifact? {
         artifacts.first { $0.language.isRenderable }
+    }
+
+    /// A file shared in from another app (AirDrop, Files, Share → M1K3) that is a page to look at: HTML or
+    /// markdown, by its extension, opened under the same seal as a page M1K3 made. Titled by the file's name, so
+    /// sharing it back out keeps that name. Code and data stay in the composer only (#893 C meets B).
+    public static func sharedPage(filename: String, text: String) -> CodeArtifact? {
+        let name = filename as NSString
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let language = CodeArtifact.Language(fileExtension: name.pathExtension), language.isRenderable
+        else { return nil }
+        return ArtifactFormatter.format(CodeArtifact(source: text, language: language, title: name.deletingPathExtension))
     }
 }
 

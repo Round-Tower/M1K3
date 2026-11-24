@@ -2,6 +2,8 @@ Thanks for testing M1K3 1.6.0 on iPhone and iPad.
 
 New in 1.6, please try:
 • Seasonal looks: from 2 December to 7 January, Mike's fox glows candy red and gold and says a Christmas hello. Tell us if the colours read well on your screen, in light and dark, and if the hello shows once. The Seasonal looks switch in Settings turns them off.
+• Code beside the chat: ask for a small web page. It should open by itself, in a sheet on iPhone and beside the chat on a wide iPad. Tap Open on any code block to see that one. Share a page: on your Mac it should arrive as an .html file, not text.
+• Share to M1K3: in Files, or by AirDrop, share a text, code, JSON or web file to M1K3. It should land in the box, ready to send, and never send by itself. A web page or markdown file should also open beside the chat. Try three files in one AirDrop: all three should land.
 
 And the basics:
 • Voice mode, a few turns in a row

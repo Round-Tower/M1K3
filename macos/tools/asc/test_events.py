@@ -3,14 +3,16 @@ no network)."""
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import types
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
 
 import asc
 import events
-import pytest
 
 
 def _spec() -> dict:
@@ -65,6 +67,9 @@ def test_localization_problems_prefixes_the_locale() -> None:
 EVENT_SPECS = sorted((Path(__file__).resolve().parents[2] / "fastlane/events").glob("*/event.json"))
 # Every store locale: an event covers each one the iPhone listing has.
 LOCALES = {p.name for p in (Path(__file__).resolve().parents[2] / "fastlane/metadata_ios").iterdir() if p.is_dir()}
+# Event-only locales: ASC's event languages (hi, vi, zh-Hant) outrun the iPhone listing's twelve.
+# Reach copy for the markets an event brings in (IN for Diwali; TW, HK and VN for Lunar New Year).
+EXTRA_EVENT_LOCALES = {"diwali": {"hi"}, "lunar-new-year": {"vi", "zh-Hant"}}
 
 
 def _when(stamp: str) -> datetime:
@@ -86,13 +91,25 @@ def test_every_event_spec_is_within_apples_rules(path: Path) -> None:
     # Waking Up never shipped (its draft, never submitted, runs out on 16 Oct) and predates the
     # store's en-GB, es-MX, ru and ar-SA (2026-10-22); an event that ships covers every store locale.
     expected = LOCALES - {"en-GB", "es-MX", "ru", "ar-SA"} if path.parent.name == "waking-up" else LOCALES
-    assert set(spec["localizations"]) == expected
+    assert set(spec["localizations"]) == expected | EXTRA_EVENT_LOCALES.get(path.parent.name, set())
     assert spec["localizations"][spec.get("locale", "en-US")] == spec["copy"]   # one primary copy, not two
     events.event_payload(spec, ["USA"])                                            # badge + purpose in the enums
     assert spec.get("priority", "HIGH") in ("HIGH", "NORMAL")
     start, end, publish = (_when(spec[k]) for k in ("eventStart", "eventEnd", "publishStart"))
     assert timedelta(0) <= start - publish <= timedelta(days=14)
     assert timedelta(minutes=15) <= end - start <= timedelta(days=31)
+
+
+@pytest.mark.parametrize("event", EXTRA_EVENT_LOCALES)
+def test_the_reach_locales_ship_inside_the_caps(event: str) -> None:
+    spec = json.loads((Path(__file__).resolve().parents[2] / f"fastlane/events/{event}/event.json").read_text())
+    assert EXTRA_EVENT_LOCALES[event] <= set(spec["localizations"])
+    assert not (EXTRA_EVENT_LOCALES[event] & LOCALES)   # a store locale belongs in the listing's set, not here
+    assert events.localization_problems(spec) == []
+    if event == "lunar-new-year":   # never "Chinese New Year", never a zodiac animal
+        for loc in ("zh-Hant", "vi"):
+            assert "中國" not in json.dumps(spec["localizations"][loc], ensure_ascii=False)
+        assert "Tết" in spec["localizations"]["vi"]["name"]
 
 
 def test_the_halloween_event_runs_the_apps_window() -> None:
@@ -578,7 +595,7 @@ def test_probe_refuses_without_ffprobe_and_on_a_failed_read(tmp_path, monkeypatc
 
 def test_create_says_clips_process_after_upload(tmp_path, live, capsys, monkeypatch) -> None:
     """Video processing is asynchronous: a clip that fails after the commit only shows in ASC."""
-    fake, spec_path = live()
+    _fake, spec_path = live()
     (tmp_path / events.CARD_VIDEO).write_bytes(b"\x00")
     monkeypatch.setattr(events, "probe", lambda _p: _probe())
     assert events.create(spec_path, tmp_path, dry_run=False) == 0
@@ -599,3 +616,246 @@ def test_update_sets_the_deep_link_and_creates_a_missing_locale_without_media(li
     assert fake.localization_posts() == [("fr-FR", "EV7")]
     assert fake.uploads == []
     assert "fr-FR: created (no art yet" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- #
+# `next` and `check`: the yearly re-date, read off the app's own SeasonalLook
+# --------------------------------------------------------------------------- #
+# Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.85 — this section only (the file is
+#   unsigned). Prior: Unknown (new tests). The day maps here are fakes; the one darwin test at the
+#   end compiles the app's real SeasonalLook.swift.
+
+D = date.fromisoformat
+UTC = timezone.utc
+
+
+def _days(*runs: tuple[str, str, str]) -> dict[date, str]:
+    """{day: look} from (first, last, look) runs, inclusive."""
+    out: dict[date, str] = {}
+    for first, last, look in runs:
+        day = D(first)
+        while day <= D(last):
+            out[day] = look
+            day += timedelta(days=1)
+    return out
+
+
+def _seasonal(**over) -> dict:
+    """A St Patrick's-shaped yearly spec: 10:00Z start, ends 10:00Z on the look's last day."""
+    return {**_spec(), "referenceName": "st-patricks-2027", "looks": ["stpatricks"],
+            "publishStart": "2027-03-07T10:00:00Z", "eventStart": "2027-03-14T10:00:00Z",
+            "eventEnd": "2027-03-17T10:00:00Z", **over}
+
+
+def test_look_runs_finds_whole_runs_and_drops_the_ones_cut_by_the_scan() -> None:
+    days = _days(("2027-01-01", "2027-01-03", "ramadan"),        # touches lo: began before the scan
+                 ("2027-01-05", "2027-01-07", "ramadan"), ("2027-01-08", "2027-01-08", "moonsighting"),
+                 ("2027-01-09", "2027-01-10", "eid"), ("2027-01-12", "2027-01-12", "nowruz"),
+                 ("2027-01-20", "2027-01-22", "ramadan"),
+                 ("2027-01-30", "2027-01-31", "ramadan"))         # touches hi: its end is unknown
+    looks = {"ramadan", "moonsighting", "eid"}
+    assert events.look_runs(days, D("2027-01-01"), D("2027-01-31"), looks) == [
+        (D("2027-01-05"), D("2027-01-10")), (D("2027-01-20"), D("2027-01-22"))]
+
+
+def test_next_run_takes_the_first_run_or_the_first_in_the_year() -> None:
+    days = _days(("2029-01-16", "2029-02-17", "ramadan"), ("2030-01-05", "2030-02-06", "ramadan"),
+                 ("2030-12-26", "2031-01-27", "ramadan"))   # 2030 holds two Ramadans: the first wins
+    lo, hi = D("2028-12-31"), D("2031-06-30")
+    assert events.next_run(days, lo, hi, {"ramadan"}) == (D("2029-01-16"), D("2029-02-17"))
+    assert events.next_run(days, lo, hi, {"ramadan"}, year=2030) == (D("2030-01-05"), D("2030-02-06"))
+    with pytest.raises(SystemExit, match="no whole stpatricks run"):
+        events.next_run(days, lo, hi, {"stpatricks"})
+
+
+def test_split_note_names_a_look_another_look_cuts_in_two() -> None:
+    # Halloween 2027: Diwali's five days sit inside it, so the app's Halloween is two pieces.
+    days = _days(("2027-10-24", "2027-10-26", "halloween"), ("2027-10-27", "2027-10-30", "diwali"),
+                 ("2027-10-31", "2027-11-01", "halloween"))
+    lo, hi = D("2027-10-01"), D("2027-11-30")
+    first, last = events.next_run(days, lo, hi, {"halloween"})
+    note = events.split_note(days, lo, hi, {"halloween"}, first, last)
+    assert note is not None and "2027-10-31" in note and "first piece" in note
+    # A whole run, or the next year's run far away, is no split.
+    whole = _days(("2028-10-24", "2028-11-01", "halloween"), ("2029-10-24", "2029-11-01", "halloween"))
+    assert events.split_note(whole, D("2028-10-01"), D("2029-11-30"), {"halloween"},
+                             D("2028-10-24"), D("2028-11-01")) is None
+
+
+def test_event_window_starts_at_10z_and_ends_by_10z_on_the_last_day_or_an_hour_short_of_31_days() -> None:
+    assert events.event_window(D("2027-03-14"), D("2027-03-17")) == (
+        datetime(2027, 3, 14, 10, tzinfo=UTC), datetime(2027, 3, 17, 10, tzinfo=UTC))
+    # Christmas: the look runs Dec 2 – Jan 7, the event stops an hour short of Apple's 31 days.
+    assert events.event_window(D("2027-12-02"), D("2028-01-07")) == (
+        datetime(2027, 12, 2, 10, tzinfo=UTC), datetime(2028, 1, 2, 9, tzinfo=UTC))
+    with pytest.raises(ValueError, match="one day"):
+        events.event_window(D("2027-03-14"), D("2027-03-14"))   # no instant has every zone on that day
+
+
+def test_next_fields_moves_the_dates_keeps_the_lead_and_bumps_the_year_in_the_name() -> None:
+    assert events.next_fields(_seasonal(), D("2028-03-14"), D("2028-03-17")) == {
+        "referenceName": "st-patricks-2028", "publishStart": "2028-03-07T10:00:00Z",
+        "eventStart": "2028-03-14T10:00:00Z", "eventEnd": "2028-03-17T10:00:00Z"}
+    # Halloween's 2026 lead was 7 days and an hour: whole days only, so publish lands on 10:00Z too.
+    halloween = _seasonal(referenceName="halloween-2026", publishStart="2026-10-17T09:00:00Z",
+                          eventStart="2026-10-24T10:00:00Z", eventEnd="2026-11-01T11:00:00Z")
+    assert events.next_fields(halloween, D("2027-10-24"), D("2027-11-01"))["publishStart"] == "2027-10-17T10:00:00Z"
+    # The lead stays inside Apple's 14 days and is never zero; a name without the year keeps its name.
+    long_lead = _seasonal(referenceName="paddy", publishStart="2027-02-20T10:00:00Z")
+    fields = events.next_fields(long_lead, D("2028-03-14"), D("2028-03-17"))
+    assert (fields["referenceName"], fields["publishStart"]) == ("paddy", "2028-02-29T10:00:00Z")
+    no_lead = _seasonal(publishStart="2027-03-14T10:00:00Z")
+    assert events.next_fields(no_lead, D("2028-03-14"), D("2028-03-17"))["publishStart"] == "2028-03-13T10:00:00Z"
+
+
+def test_rewrite_dates_changes_only_the_named_values_in_place() -> None:
+    text = json.dumps(_seasonal(), indent=2, ensure_ascii=False) + "\n"
+    fields = {"referenceName": "st-patricks-2028", "eventStart": "2028-03-14T10:00:00Z"}
+    out = events.rewrite_dates(text, fields)
+    changed = [(a, b) for a, b in zip(text.splitlines(), out.splitlines(), strict=True) if a != b]
+    assert changed == [('  "referenceName": "st-patricks-2027",', '  "referenceName": "st-patricks-2028",'),
+                       ('  "eventStart": "2027-03-14T10:00:00Z",', '  "eventStart": "2028-03-14T10:00:00Z",')]
+    assert json.loads(out) == {**_seasonal(), **fields}
+    with pytest.raises(ValueError, match="badgeName"):
+        events.rewrite_dates(text, {"badgeName": "x"})
+
+
+def test_schedule_problems_names_each_broken_rule() -> None:
+    assert events.schedule_problems(_seasonal()) == []
+    assert events.schedule_problems(_seasonal(eventEnd="2027-03-17T11:00:00Z")) == [
+        "eventEnd 2027-03-17T11:00:00Z: a yearly event ends by 10:00Z (local midnight in UTC+14)"]
+    assert events.schedule_problems(_seasonal(eventStart="2027-03-14T09:00:00Z")) == [
+        "eventStart 2027-03-14T09:00:00Z: a yearly event starts at 10:00Z (local midnight in UTC-10)"]
+    assert events.schedule_problems(_seasonal(publishStart="2027-02-27T10:00:00Z")) == [
+        "publishes 15 days before the start (Apple's limit is 14)"]
+    assert events.schedule_problems(_seasonal(eventEnd="2027-04-15T10:00:00Z")) == [
+        "runs 32 days (Apple's limit is 31)"]
+    assert events.schedule_problems(_seasonal(publishStart="2027-03-15T10:00:00Z")) == [
+        "publishStart is not before eventStart"]
+    # A one-off event (no looks) keeps Apple's limits but not the yearly 10:00Z times.
+    assert events.schedule_problems(_spec()) == []
+
+
+def test_coverage_problems_names_the_edge_zone_and_the_day_the_app_has_no_look() -> None:
+    days = _days(("2027-03-14", "2027-03-17", "stpatricks"))
+    assert events.coverage_problems(_seasonal(), days) == []
+    assert events.coverage_problems(_seasonal(eventEnd="2027-03-17T11:00:00Z"), days) == [
+        "UTC+14: live on 2027-03-18, when the app shows no look"]
+    # A day early: UTC−10 sees the card a whole local day before the look; UTC+14 is already in it.
+    assert events.coverage_problems(_seasonal(eventStart="2027-03-13T10:00:00Z"), days) == [
+        "UTC-10: live on 2027-03-13, when the app shows no look"]
+    other = {**days, D("2027-03-18"): "nowruz"}
+    assert events.coverage_problems(_seasonal(eventEnd="2027-03-17T11:00:00Z"), other) == [
+        "UTC+14: live on 2027-03-18, when the app shows nowruz"]
+
+
+def test_copy_date_notes_flags_the_locales_that_name_the_old_start_day() -> None:
+    spec = _seasonal(eventStart="2027-03-21T10:00:00Z", localizations={
+        "en-US": {"name": "Nowruz", "shortDescription": "s", "longDescription": "From Mar 21, a spring glow."},
+        "ja": {"name": "n", "shortDescription": "s", "longDescription": "3月21日からの一週間"},
+        "de-DE": {"name": "n", "shortDescription": "s", "longDescription": "Frühling, 121 Mal."}})
+    assert events.copy_date_notes(spec, D("2028-03-20")) == ["en-US", "ja"]
+    assert events.copy_date_notes(spec, D("2028-03-21")) == []   # same day: the copy still holds
+
+
+@pytest.fixture
+def season_dir(tmp_path, monkeypatch):
+    """A fake events dir (St Patrick's, a one-off, Nowruz) over a fake app calendar."""
+    root = tmp_path / "events"
+    for name, spec in (("st-patricks", _seasonal()), ("one-off", _spec()),
+                       ("nowruz", _seasonal(referenceName="nowruz-2027", looks=["nowruz"],
+                                            publishStart="2027-03-14T10:00:00Z", eventStart="2027-03-21T10:00:00Z",
+                                            eventEnd="2027-03-27T10:00:00Z"))):
+        (root / name).mkdir(parents=True)
+        (root / name / "event.json").write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n")
+    days = _days(("2027-03-14", "2027-03-17", "stpatricks"), ("2027-03-21", "2027-03-27", "nowruz"),
+                 ("2028-03-14", "2028-03-17", "stpatricks"), ("2028-03-20", "2028-03-26", "nowruz"),
+                 ("2029-03-14", "2029-03-17", "stpatricks"), ("2029-03-20", "2029-03-26", "nowruz"))
+    asked: list[tuple[date, date]] = []
+
+    def fake_days(lo: date, hi: date) -> tuple[set[str], dict[date, str]]:
+        asked.append((lo, hi))
+        return {"stpatricks", "nowruz", "halloween"}, {d: v for d, v in days.items() if lo <= d <= hi}
+    monkeypatch.setattr(events, "EVENTS_DIR", root)
+    monkeypatch.setattr(events, "app_season_days", fake_days)
+    return root, asked
+
+
+def test_next_prints_the_diff_and_writes_nothing_without_write(season_dir, capsys) -> None:
+    root, asked = season_dir
+    before = (root / "st-patricks/event.json").read_text()
+    assert events.next_events(["st-patricks"], year=None, write=False) == 0
+    out = capsys.readouterr().out
+    assert '-  "eventStart": "2027-03-14T10:00:00Z",' in out and '+  "eventStart": "2028-03-14T10:00:00Z",' in out
+    assert '+  "referenceName": "st-patricks-2028",' in out
+    assert "dry run" in out
+    assert (root / "st-patricks/event.json").read_text() == before
+    assert len(asked) == 1   # one compile and one scan for every spec
+
+
+def test_next_write_edits_only_the_date_lines_and_notes_a_dated_copy(season_dir, capsys) -> None:
+    root, _ = season_dir
+    path = root / "nowruz/event.json"
+    spec = json.loads(path.read_text())
+    spec["copy"]["longDescription"] = "From Mar 21, a spring glow."
+    path.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n")
+    before = path.read_text()
+    assert events.next_events(["nowruz"], year=None, write=True) == 0
+    after = path.read_text()
+    changed = [b for a, b in zip(before.splitlines(), after.splitlines(), strict=True) if a != b]
+    assert changed == ['  "referenceName": "nowruz-2028",', '  "publishStart": "2028-03-13T10:00:00Z",',
+                       '  "eventStart": "2028-03-20T10:00:00Z",', '  "eventEnd": "2028-03-26T10:00:00Z",']
+    out = capsys.readouterr().out
+    assert "names day 21" in out and "copy" in out
+    assert f"wrote {path}" in out
+
+
+def test_next_all_skips_specs_without_looks_and_takes_a_year(season_dir, capsys) -> None:
+    assert events.next_events([], year=2029, write=False) == 0
+    out = capsys.readouterr().out
+    assert "one-off: no looks, not a yearly event, skipped" in out
+    assert '+  "eventStart": "2029-03-14T10:00:00Z",' in out and '+  "eventStart": "2029-03-20T10:00:00Z",' in out
+
+
+def test_next_refuses_a_look_the_app_does_not_have_and_an_unknown_spec(season_dir) -> None:
+    root, _ = season_dir
+    path = root / "st-patricks/event.json"
+    path.write_text(json.dumps(_seasonal(looks=["easter"]), indent=2) + "\n")
+    with pytest.raises(SystemExit, match="st-patricks: the app has no look 'easter'"):
+        events.next_events(["st-patricks"], year=None, write=False)
+    with pytest.raises(SystemExit, match="no spec diwali"):
+        events.next_events(["diwali"], year=None, write=False)
+
+
+def test_check_passes_clean_specs_and_fails_naming_each_break(season_dir, capsys) -> None:
+    root, _ = season_dir
+    assert events.check_events([]) == 0
+    assert "3 specs, no problems" in capsys.readouterr().out
+    (root / "st-patricks/event.json").write_text(json.dumps(_seasonal(eventEnd="2027-03-17T11:00:00Z"), indent=2))
+    assert events.check_events([]) == 1
+    out = capsys.readouterr().out
+    assert "st-patricks: eventEnd 2027-03-17T11:00:00Z: a yearly event ends by 10:00Z" in out
+    assert "st-patricks: UTC+14: live on 2027-03-18, when the app shows no look" in out
+
+
+def test_main_wires_next_and_check(season_dir, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(sys, "argv", ["events.py", "next", "--all", "--year", "2028"])
+    assert events.main() == 0
+    assert '+  "eventStart": "2028-03-20T10:00:00Z",' in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", ["events.py", "check", "nowruz"])
+    assert events.main() == 0
+    monkeypatch.setattr(sys, "argv", ["events.py", "next"])
+    with pytest.raises(SystemExit, match="name a spec or pass --all"):
+        events.main()
+
+
+@pytest.mark.skipif(sys.platform != "darwin" or not shutil.which("swiftc"), reason="compiles the app's Swift")
+def test_app_season_days_reads_the_apps_own_calendar() -> None:
+    """The real thing: SeasonalLook.swift compiled beside season_days.swift. 2028 is a leap year,
+    so Nowruz (Farvardin 1) falls on Mar 20, and Ramadan 1449 begins Jan 28 on Umm al-Qura."""
+    lo, hi = D("2027-12-31"), D("2028-12-31")
+    looks, days = events.app_season_days(lo, hi)
+    assert {"christmas", "ramadan", "moonsighting", "eid", "nowruz", "stpatricks", "halloween"} <= looks
+    assert events.next_run(days, lo, hi, {"nowruz"}) == (D("2028-03-20"), D("2028-03-26"))
+    assert events.next_run(days, lo, hi, {"ramadan", "moonsighting", "eid"}) == (D("2028-01-28"), D("2028-02-29"))
+    assert days[D("2028-02-29")] == "eid"

@@ -1,3 +1,14 @@
+//
+//  ArtifactFormatter.swift
+//  M1K3Preview
+//
+//  Signed (this file's CSP placement only): Kev + claude-opus-5-5, 2026-11-23, Confidence 0.9 — `injectCSPMeta`
+//  puts the sandbox CSP first in the document (after a leading doctype) instead of splicing it into a `<head>` the
+//  page could hide, omit or precede. Measured in WKWebView on macOS 27 with an inline-script canary: leading, the
+//  CSP blocked the script with no head, with a script before the head, and with a normal head; the old splice let a
+//  script before the head run. The rest of the file predates this. Prior: Unknown.
+//
+
 import Foundation
 
 public enum ArtifactFormatter {
@@ -137,17 +148,26 @@ public enum ArtifactFormatter {
         return nil
     }
 
-    /// Insert the sandbox CSP as the first child of the TRUE `<head>` (via the
-    /// boundary-checked locator — `<header>` never matches). Idempotent (skips
-    /// if the CSP is already present). If the document has no `<head>` it is
-    /// returned unchanged rather than guessing a location — every synthesized
-    /// path above provides one.
+    /// Put the sandbox CSP first in the document, after a leading doctype only. The HTML parser files a `<meta>`
+    /// met before `<html>`/`<head>` into an implied `<head>`, so the policy is in force before any byte the page
+    /// wrote: no `<head>`, a `<head>` inside a comment, a script before the head, or the policy's own text in the
+    /// body can no longer skip or delay it (challenger, 2026-11-23). A policy the page adds can only tighten ours
+    /// (policies intersect). Idempotent: a document already led by our tag comes back unchanged.
     static func injectCSPMeta(_ html: String) -> String {
-        guard !html.contains(ArtifactSandboxPolicy.contentSecurityPolicy) else { return html }
-        guard let anchor = headContentIndex(of: html) else { return html }
-        var result = html
-        result.insert(contentsOf: "\n  " + ArtifactSandboxPolicy.cspMetaTag, at: anchor)
-        return result
+        let (doctype, rest) = splitLeadingDoctype(html)
+        guard !rest.hasPrefix(ArtifactSandboxPolicy.cspMetaTag) else { return html }
+        return doctype + ArtifactSandboxPolicy.cspMetaTag + "\n" + rest
+    }
+
+    /// A leading `<!doctype …>` (kept first so the page stays in standards mode) and everything after it, with the
+    /// whitespace between dropped. No doctype: an empty first half.
+    static func splitLeadingDoctype(_ html: String) -> (doctype: String, rest: Substring) {
+        let start = Substring(html).drop { $0.isWhitespace }
+        guard start.lowercased().hasPrefix("<!doctype"), let close = start.firstIndex(of: ">") else {
+            return ("", start)
+        }
+        let doctype = String(start[...close])
+        return (doctype + "\n", start[start.index(after: close)...].drop { $0.isWhitespace })
     }
 
     // MARK: - Unclosed tags

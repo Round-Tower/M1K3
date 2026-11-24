@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-23, Confidence 0.7 — pure decisions are tested in
 //  M1K3PreviewTests; the sheet and the side column are verify-on-device. Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 — `openSharedPage`: a shared .html/.md file opens here too. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -25,6 +26,12 @@ extension AppCore {
     func openCodeBlock(language: String?, code: String) {
         guard let opened = ArtifactOpenPolicy.artifact(language: language, code: code) else { return }
         artifactScope = ScopedArtifact(ArtifactFormatter.format(opened), conversationID: chat.activeConversationID)
+    }
+
+    /// A page shared in from another app (#893 C): it opens beside the chat too, in this conversation.
+    func openSharedPage(filename: String, text: String) {
+        guard let page = ArtifactOpenPolicy.sharedPage(filename: filename, text: text) else { return }
+        artifactScope = ScopedArtifact(page, conversationID: chat.activeConversationID)
     }
 
     func closeArtifact() {

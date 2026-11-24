@@ -9,6 +9,7 @@
   "eventStart": "2027-03-21T10:00:00Z",
   "eventEnd": "2027-03-27T10:00:00Z",
   "deepLink": "m1k3://event/nowruz",
+  "looks": ["nowruz"],
   "copy": {
     "name": "Nowruz · Nauryz · Navruz",
     "shortDescription": "A spring glow and a new-year hello.",

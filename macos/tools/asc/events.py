@@ -15,6 +15,16 @@ that "as early as possible".
   python3 events.py create --spec ../../fastlane/events/waking-up/event.json --art-dir <dir> [--dry-run]
   python3 events.py create --spec ... --art-dir <dir> --event 6811192045 [--dry-run]   # resume a half-built DRAFT
   python3 events.py update --event 6811192045 --spec ... [--dry-run]   # fix a DRAFT in place
+  ./events.py next <dir…|--all> [--year N] [--write]   # re-date yearly specs to the app's next look window
+  ./events.py check [dir…]                              # every spec against Apple's limits + the app's windows
+
+`next` and `check` touch local files only. A spec with `looks` (SeasonalLook raw values) is a
+yearly event; `next` reads the app's own SeasonalLook.swift (compiled beside season_days.swift),
+finds the next whole run of days the app wears those looks, and dates the event to it: 10:00Z on
+the first day (local midnight in UTC−10) to 10:00Z on the last (local midnight in UTC+14), an hour
+short of 31 days when the look runs longer, publishing as many whole days ahead as the spec did
+(1 to 14). It prints the diff; `--write` saves it, and `update` is still how App Store Connect hears.
+It re-dates, never re-words: copy that names the old day ("From Mar 21") is flagged.
 
 `create` makes the DRAFT and one localization per locale in the spec's
 `localizations` table (primary first), uploading the same card + details to
@@ -90,22 +100,36 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — the first live `create` worked (ei
 Review: Kev + claude-opus-5-5, 2026-10-14 — review fold: a non-string deepLink is refused, not an
   AttributeError, and the payload sends the stripped link; `update`'s PATCH carrying the link, and
   its creating a missing locale with no media, are pinned against the fake. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-11-23 (Kev: events "as often as possible"; Ramadan and Nowruz drift
+  every year and re-dating by hand costs an hour) — `next` and `check`. One source of truth: the dates
+  come from the app's SeasonalLook.swift itself, compiled with season_days.swift (about 2 s), so no
+  calendar (Umm al-Qura, Persian, Chinese later) or look precedence is restated in Python; a new kind is
+  a `looks` line in its spec. SeasonalEventSpecTests is the CI guard (Linux pytest can't compile it).
+  Confidence 0.85: the pure half and the CLI are pinned against fakes, the helper by one darwin test.
+Review: Kev + claude-opus-5-5, 2026-11-23 (merged with Diwali + Lunar New Year) — `check` skips the two specs
+  1.5 served (`SERVED_BY_1_5`): Diwali 2026 sits inside Flight Club 2026 under 1.6's order, but no one runs 1.6
+  before it's over. Replaces the UTC+13 carve-out. `next` notes a look another look cuts in two (it
+  takes the first piece). Confidence 0.8.
 """
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
+import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Iterator
+import tempfile
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import contextmanager
+from datetime import date, datetime, time, timedelta, timezone
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from asc import APP_ID, bail, call, paginate  # noqa: E402
+from asc import APP_ID, bail, call, paginate
 
 CARD_FILE = "event-card-1920x1080.jpg"  # EVENT_CARD, 16:9
 DETAILS_FILE = "event-details-1080x1920.jpg"  # EVENT_DETAILS_PAGE, 9:16
@@ -286,6 +310,179 @@ def localization_problems(spec: dict[str, Any]) -> list[str]:
     for locale, copy in spec.get("localizations", {}).items():
         out += [f"{locale}: {p}" for p in copy_problems(copy)]
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Yearly events: `next` re-dates a spec to the app's next window, `check` holds every spec to the rules
+# --------------------------------------------------------------------------- #
+# A spec with `looks` (SeasonalLook raw values) is a yearly event. Its dates come from the APP: the
+# looks' day map is read off SeasonalLook.swift itself (app_season_days), so nothing here knows a
+# calendar. A new kind of event is its spec's `looks` line, plus the look in SeasonalLook.
+
+MACOS = Path(__file__).resolve().parents[2]
+EVENTS_DIR = MACOS / "fastlane/events"
+# Every app file season_days.swift needs, compiled as-is. SeasonalLook.swift stands alone today;
+# if a look ever reads a type from another file (a date table, say), list that file here too.
+SEASON_SOURCES = (MACOS / "Sources/M1K3Avatar/SeasonalLook.swift",)
+SEASON_HELPER = Path(__file__).resolve().with_name("season_days.swift")
+EVENT_HOUR = time(10)                 # 10:00Z: local midnight in UTC−10 (start) and in UTC+14 (end)
+MAX_RUN = timedelta(days=31)          # Apple: an event runs at most 31 days
+CAP_MARGIN = timedelta(hours=1)       # a capped event ends an hour short of Apple's 31 days
+MAX_LEAD = timedelta(days=14)         # Apple: an event publishes at most 14 days before its start
+EDGE_ZONES = (("UTC-10", -10), ("UTC+14", 14))
+
+# Built for, and served by, 1.5: before the UTC+14 edge and the 1.6 looks (Diwali 2026 sits inside Flight Club 2026,
+# but no one runs 1.6 before it's over). `check` skips them; `next --write` renames them, so a re-dated spec meets
+# every rule. Mirrors SeasonalEventSpecTests.servedBy15.
+SERVED_BY_1_5 = frozenset({"halloween-2026", "offline-ai-flight-club-2026"})
+SCAN_DAYS = 500                       # past the current event: a year, plus the longest look
+
+
+def _when(stamp: str) -> datetime:
+    return datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+
+
+def _stamp(when: datetime) -> str:
+    return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _day_count(span: timedelta) -> str:
+    return f"{span / timedelta(days=1):g}"
+
+
+def look_runs(days: Mapping[date, str], lo: date, hi: date, looks: Collection[str]) -> list[tuple[date, date]]:
+    """(first, last) of every run of consecutive days in lo..hi whose look is one of `looks`.
+    A run that touches lo began before the scan, and one that touches hi may go on past it:
+    both are dropped, so every run returned is whole."""
+    runs: list[tuple[date, date]] = []
+    first: date | None = None
+    day = lo
+    while day <= hi:
+        inside = days.get(day) in looks
+        if inside and first is None:
+            first = day
+        elif not inside and first is not None:
+            runs.append((first, day - timedelta(days=1)))
+            first = None
+        day += timedelta(days=1)
+    return [(a, b) for a, b in runs if a != lo]
+
+
+def next_run(days: Mapping[date, str], lo: date, hi: date, looks: Collection[str],
+             year: int | None = None) -> tuple[date, date]:
+    """The first whole run, or the first that starts in `year` (2030 holds two Ramadans)."""
+    for first, last in look_runs(days, lo, hi, looks):
+        if year is None or first.year == year:
+            return first, last
+    when = f" starting in {year}" if year else ""
+    raise SystemExit(f"no whole {'/'.join(sorted(looks))} run{when} between {lo} and {hi}")
+
+
+SPLIT_GAP = timedelta(days=7)
+
+
+def split_note(days: Mapping[date, str], lo: date, hi: date, looks: Collection[str],
+               first: date, last: date) -> str | None:
+    """A note when another look cuts this one in two (Diwali inside Halloween 2027): `next` takes the first
+    piece, which may be far shorter than the event the copy describes. None when the run is whole."""
+    for a, b in look_runs(days, lo, hi, looks):
+        if last < a <= last + SPLIT_GAP:
+            return (f"another look holds the days between: the app wears it again {a} → {b}. This event covers "
+                    f"the first piece only ({first} → {last}); check the copy, or move the look order")
+    return None
+
+
+def event_window(first: date, last: date) -> tuple[datetime, datetime]:
+    """The event for a look worn on local days first..last: it starts at 10:00Z on the first day
+    (local midnight in UTC−10) and ends at 10:00Z on the last (local midnight in UTC+14), so from
+    UTC−10 to UTC+14 the card is never live on a day the app has no look; past 31 days it stops
+    an hour short of Apple's cap."""
+    if last <= first:
+        raise ValueError(f"a look of one day ({first}) has no instant when every zone is in it")
+    start = datetime.combine(first, EVENT_HOUR, tzinfo=timezone.utc)
+    end = datetime.combine(last, EVENT_HOUR, tzinfo=timezone.utc)
+    return start, min(end, start + MAX_RUN - CAP_MARGIN)
+
+
+def next_fields(spec: dict[str, Any], first: date, last: date) -> dict[str, str]:
+    """The spec's new referenceName and dates for the look's run first..last. The publish lead
+    is the spec's own, in whole days, 1 to 14; the year in the name follows the start."""
+    start, end = event_window(first, last)
+    old_start = _when(spec["eventStart"])
+    lead_days = round((old_start - _when(spec["publishStart"])) / timedelta(days=1))
+    lead = timedelta(days=min(max(lead_days, 1), MAX_LEAD.days))
+    name = re.sub(rf"(?<!\d){old_start.year}(?!\d)", str(start.year), spec["referenceName"])
+    return {"referenceName": name, "publishStart": _stamp(start - lead),
+            "eventStart": _stamp(start), "eventEnd": _stamp(end)}
+
+
+def rewrite_dates(text: str, fields: Mapping[str, str]) -> str:
+    """`text` with each field's value replaced in place, every other byte kept: the diff a
+    re-date leaves is the changed lines and nothing else."""
+    for key, value in fields.items():
+        pattern = re.compile(rf'("{re.escape(key)}"\s*:\s*)"(?:[^"\\]|\\.)*"')
+        found = len(pattern.findall(text))
+        if found != 1:
+            raise ValueError(f'{key}: expected one "{key}" in the spec, found {found}')
+        quoted = json.dumps(value, ensure_ascii=False)
+        text = pattern.sub(lambda m, q=quoted: m.group(1) + q, text, count=1)
+    return text
+
+
+def schedule_problems(spec: dict[str, Any]) -> list[str]:
+    """Apple's limits for every spec; a yearly one (with `looks`) also keeps the 10:00Z times."""
+    publish, start, end = (_when(spec[k]) for k in ("publishStart", "eventStart", "eventEnd"))
+    out = []
+    if publish >= start:
+        out.append("publishStart is not before eventStart")
+    elif start - publish > MAX_LEAD:
+        out.append(f"publishes {_day_count(start - publish)} days before the start (Apple's limit is 14)")
+    if end <= start:
+        out.append("eventEnd is not after eventStart")
+    elif end - start > MAX_RUN:
+        out.append(f"runs {_day_count(end - start)} days (Apple's limit is 31)")
+    if spec.get("looks"):
+        if start.time() != EVENT_HOUR:
+            out.append(f"eventStart {spec['eventStart']}: a yearly event starts at 10:00Z (local midnight in UTC-10)")
+        if end.time() > EVENT_HOUR:
+            out.append(f"eventEnd {spec['eventEnd']}: a yearly event ends by 10:00Z (local midnight in UTC+14)")
+    return out
+
+
+def coverage_problems(spec: dict[str, Any], days: Mapping[date, str]) -> list[str]:
+    """Every local day, in UTC−10 and UTC+14, on which the card is live and the app wears none
+    of the spec's looks: the event would show a look the app doesn't have."""
+    looks = set(spec["looks"])
+    start, end = _when(spec["eventStart"]), _when(spec["eventEnd"])
+    out = []
+    for zone, hours in EDGE_ZONES:
+        offset = timedelta(hours=hours)
+        day, last = (start + offset).date(), (end - timedelta(seconds=1) + offset).date()
+        while day <= last:
+            if (look := days.get(day)) not in looks:
+                out.append(f"{zone}: live on {day}, when the app shows {look or 'no look'}")
+            day += timedelta(days=1)
+    return out
+
+
+def copy_date_notes(spec: dict[str, Any], new_first: date) -> list[str]:
+    """The locales whose copy names the old start's day of the month, when the start moves to
+    another day (Nowruz: "From Mar 21" in 2027, Mar 20 in 2028). `next` re-dates, never re-words."""
+    old = _when(spec["eventStart"]).date()
+    if (old.month, old.day) == (new_first.month, new_first.day):
+        return []
+    token = re.compile(rf"(?<!\d){old.day}(?!\d)")
+    return [locale for locale, copy in localization_table(spec).items()
+            if any(token.search(str(v)) for v in copy.values())]
+
+
+def search_range(spec: dict[str, Any], year: int | None) -> tuple[date, date]:
+    """Where `next` looks: after the current event (its run is cut at lo, so never chosen), or
+    across `year` with room for a run that crosses into the next one."""
+    if year is not None:
+        return date(year - 1, 12, 31), date(year + 1, 3, 31)
+    lo = _when(spec["eventEnd"]).date()
+    return lo, lo + timedelta(days=SCAN_DAYS)
 
 
 # --------------------------------------------------------------------------- #
@@ -524,6 +721,118 @@ def list_events() -> int:
     return 0
 
 
+def app_season_days(lo: date, hi: date) -> tuple[set[str], dict[date, str]]:
+    """Every look the app has, and its look on each local day lo..hi: season_days.swift compiled
+    with the app's SeasonalLook.swift, so the answer is the app's own (about 2 s to compile)."""
+    swiftc = shutil.which("swiftc")
+    if not swiftc:
+        raise SystemExit("swiftc not found: `next` and `check` read the app's own SeasonalLook.swift (install Xcode)")
+    with tempfile.TemporaryDirectory(prefix="season-days-") as tmp:
+        exe = Path(tmp) / "season_days"
+        built = subprocess.run([swiftc, "-parse-as-library", "-module-name", "SeasonDays", str(SEASON_HELPER),
+                                *map(str, SEASON_SOURCES), "-o", str(exe)],
+                               capture_output=True, text=True, check=False, timeout=600)
+        if built.returncode:
+            raise SystemExit(f"season_days.swift did not compile with {', '.join(p.name for p in SEASON_SOURCES)}:\n"
+                             f"{built.stderr.strip()[-1200:]}\n(a look that reads another app file needs that "
+                             "file in events.py's SEASON_SOURCES)")
+        ran = subprocess.run([str(exe), lo.isoformat(), str((hi - lo).days + 1)],
+                             capture_output=True, text=True, check=False, timeout=120)
+    if ran.returncode:
+        raise SystemExit(f"season_days: {ran.stderr.strip()[:400]}")
+    data = json.loads(ran.stdout)
+    return set(data["looks"]), {date.fromisoformat(k): v for k, v in data["days"].items()}
+
+
+def spec_paths(names: list[str]) -> list[Path]:
+    """The named specs under EVENTS_DIR, or every one when none is named."""
+    if not names:
+        return sorted(EVENTS_DIR.glob("*/event.json"))
+    paths = [EVENTS_DIR / name / "event.json" for name in names]
+    if missing := [p.parent.name for p in paths if not p.is_file()]:
+        raise SystemExit(f"no spec {', '.join(missing)} in {EVENTS_DIR}")
+    return paths
+
+
+def _unknown_looks(name: str, spec: dict[str, Any], known: set[str]) -> None:
+    if unknown := [look for look in spec["looks"] if look not in known]:
+        raise SystemExit(f"{name}: the app has no look {unknown[0]!r} (SeasonalLook has {', '.join(sorted(known))})")
+
+
+def next_events(names: list[str], *, year: int | None, write: bool) -> int:
+    """Propose each yearly spec's next window as a diff; `write` saves it to the spec file only."""
+    yearly: list[tuple[Path, dict[str, Any]]] = []
+    for path in spec_paths(names):
+        spec = json.loads(path.read_text())
+        if spec.get("looks"):
+            yearly.append((path, spec))
+        else:
+            print(f"{path.parent.name}: no looks, not a yearly event, skipped")
+    if not yearly:
+        return 0
+    ranges = {path: search_range(spec, year) for path, spec in yearly}
+    known, days = app_season_days(min(lo for lo, _ in ranges.values()), max(hi for _, hi in ranges.values()))
+    failed = 0
+    for path, spec in yearly:
+        name = path.parent.name
+        _unknown_looks(name, spec, known)
+        first, last = next_run(days, *ranges[path], spec["looks"], year)
+        text = path.read_text()
+        new_text = rewrite_dates(text, next_fields(spec, first, last))
+        print(f"== {name}: the app wears {'/'.join(spec['looks'])} {first} → {last}")
+        if split := split_note(days, *ranges[path], spec["looks"], first, last):
+            print(f"  note: {split}")
+        sys.stdout.writelines(difflib.unified_diff(text.splitlines(keepends=True), new_text.splitlines(keepends=True),
+                                                   f"{name}/event.json", f"{name}/event.json (next)", n=0))
+        new_spec = json.loads(new_text)
+        if problems := schedule_problems(new_spec) + coverage_problems(new_spec, days):
+            failed += 1
+            print("\n".join(f"  ! {p}" for p in problems) + f"\n  {name}: not written")
+            continue
+        if notes := copy_date_notes(spec, first):
+            old_day = _when(spec["eventStart"]).day
+            print(f"  note: the copy names day {old_day} in {', '.join(notes)}, and the start moves to "
+                  f"{first:%b} {first.day}: re-word it before `update` (next re-dates, never re-words)")
+        if write:
+            path.write_text(new_text)
+            print(f"wrote {path}")
+    if not write:
+        print("dry run: nothing written (--write edits only these event.json files; "
+              "App Store Connect changes only through `update`)")
+    return 1 if failed else 0
+
+
+def check_events(names: list[str]) -> int:
+    """Every named spec (all by default) against Apple's limits, the yearly 10:00Z times and the
+    app's own look windows; 1 when anything breaks."""
+    specs = [(path, json.loads(path.read_text())) for path in spec_paths(names)]
+    yearly = [spec for _, spec in specs if spec.get("looks")]
+    known: set[str] = set()
+    days: dict[date, str] = {}
+    if yearly:
+        lo = min(_when(s["eventStart"]).date() for s in yearly) - timedelta(days=1)
+        hi = max(_when(s["eventEnd"]).date() for s in yearly) + timedelta(days=1)
+        known, days = app_season_days(lo, hi)
+    broken = 0
+    for path, spec in specs:
+        name = path.parent.name
+        problems = deep_link_problems(spec) + localization_problems({"localizations": localization_table(spec)})
+        if spec.get("referenceName") in SERVED_BY_1_5:
+            print(f"{name}: {spec['referenceName']} was served by 1.5; its dates aren't checked against 1.6")
+        elif spec.get("looks"):
+            problems += schedule_problems(spec)
+            _unknown_looks(name, spec, known)
+            problems += coverage_problems(spec, days)
+        for problem in problems:
+            print(f"{name}: {problem}")
+        broken += bool(problems)
+    if broken:
+        print(f"{broken} of {len(specs)} specs break a rule")
+        return 1
+    print(f"{len(specs)} specs, no problems")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -538,9 +847,22 @@ def main() -> int:
     u.add_argument("--event", required=True, help="appEvents id of a DRAFT")
     u.add_argument("--spec", required=True, type=Path)
     u.add_argument("--dry-run", action="store_true")
+    n = sub.add_parser("next", help="re-date yearly specs to the app's next look window (local files only)")
+    n.add_argument("names", nargs="*", help="spec folders under fastlane/events (christmas, ramadan, …)")
+    n.add_argument("--all", action="store_true", help="every spec with `looks`")
+    n.add_argument("--year", type=int, help="the run that starts in this year (default: the one after the spec's)")
+    n.add_argument("--write", action="store_true", help="save the new dates into the event.json files")
+    k = sub.add_parser("check", help="hold specs to Apple's limits and the app's look windows")
+    k.add_argument("names", nargs="*", help="spec folders (default: every one)")
     args = ap.parse_args()
     if args.cmd == "list":
         return list_events()
+    if args.cmd == "next":
+        if bool(args.names) == args.all:
+            raise SystemExit("next: name a spec or pass --all (not both)")
+        return next_events(args.names, year=args.year, write=args.write)
+    if args.cmd == "check":
+        return check_events(args.names)
     if args.cmd == "update":
         return update(args.event, args.spec, args.dry_run)
     return create(args.spec, args.art_dir, args.dry_run, args.event)

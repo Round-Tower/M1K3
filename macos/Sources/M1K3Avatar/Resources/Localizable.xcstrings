@@ -33,6 +33,9 @@
     "Eid Mubarak! Wishing you and yours a joyful Eid." : {
       "comment" : "Greeting shown Shawwal 2-4, when Eid al-Fitr has begun everywhere. Warm, respectful, NO villain play; 'Eid Mubarak' is customary. At most 70 characters."
     },
+    "Happy Diwali! May your home be full of light." : {
+      "comment" : "Greeting for the five days of Diwali (Deepavali in South India, Malaysia and Singapore), Dhanteras to Bhai Dooj. Warm, plain, NO villain play, at most 70 characters."
+    },
     "Happy Halloween! I carved the pumpkin; you bring the questions." : {
       "comment" : "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line.",
       "localizations" : {
@@ -61,6 +64,9 @@
           }
         }
       }
+    },
+    "Happy Lunar New Year! Wishing you luck and good health." : {
+      "comment" : "Greeting from Lunar New Year's Eve through the Lantern Festival (Spring Festival, Seollal, Tết). Say Lunar New Year or the local name, NEVER 'Chinese New Year'; name no zodiac animal. Warm, plain, NO villain play, at most 70 characters."
     },
     "Happy Nowruz! A new spring, a fresh start." : {
       "comment" : "Greeting for the first 7 days of Nowruz (Nauryz in Kazakhstan, Navruz in Uzbekistan); use the local name. Warm, family-safe, at most 70 characters."

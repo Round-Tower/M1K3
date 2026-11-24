@@ -29,6 +29,11 @@
 //  sun / sky / sabzeh green), St Patrick's (shamrock / gold / white / tricolour orange). Every state of every look
 //  clears the site Fox's 0.45 luminance floor and has four distinct states (SeasonalCalendarTests). Confidence 0.7
 //  (hues chosen on paper, not yet looked at; verify-by-launch with `-seasonalLook <look>`).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (Diwali + Lunar New Year looks) — two new palettes: `lunar*` (vermilion /
+//  firecracker gold / jade / tangerine) and `diya*` (marigold / flame white / rangoli magenta / toran green). Neither
+//  reuses `lantern*`; both clear the 0.45 luminance floor with four distinct states (SeasonalCalendarTests). Marigold
+//  rest sits near Halloween's pumpkin, a week apart in 2027 and 2030: magenta thinking and green listening carry the
+//  difference. Confidence 0.7 (chosen on paper; verify-by-launch with `-seasonalLook diwali|lunarnewyear`).
 
 import simd
 
@@ -105,6 +110,14 @@ public extension AvatarActivity {
         case (.stPatricks, .listening): .shamrockListening
         case (.stPatricks, .thinking), (.stPatricks, .generating): .shamrockThinking
         case (.stPatricks, .speaking): .shamrockSpeaking
+        case (.lunarNewYear, .idle), (.lunarNewYear, .error): .lunarCalm
+        case (.lunarNewYear, .listening): .lunarListening
+        case (.lunarNewYear, .thinking), (.lunarNewYear, .generating): .lunarThinking
+        case (.lunarNewYear, .speaking): .lunarSpeaking
+        case (.diwali, .idle), (.diwali, .error): .diyaCalm
+        case (.diwali, .listening): .diyaListening
+        case (.diwali, .thinking), (.diwali, .generating): .diyaThinking
+        case (.diwali, .speaking): .diyaSpeaking
         }
     }
 }
@@ -187,4 +200,34 @@ public extension PhosphorTreatment {
     static let shamrockThinking = PhosphorTreatment(red: 0.949, green: 1.0, blue: 0.961, fresnelPower: 4.0)
     /// TRICOLOUR ORANGE #FF8C2B — listening.
     static let shamrockListening = PhosphorTreatment(red: 1.0, green: 0.549, blue: 0.169, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Lunar New Year: red and gold. A vermilion rest (more orange than Christmas's candy red, which is a
+    // different month anyway: a deep red falls under the lattice floor), firecracker gold speaking, jade
+    // thinking, tangerine listening (the new-year fruit for luck).
+
+    /// VERMILION #FF5A3C — the resting phosphor.
+    static let lunarCalm = PhosphorTreatment(red: 1.0, green: 0.353, blue: 0.235, fresnelPower: 3.0)
+    /// FIRECRACKER GOLD #FFD700 — speaking.
+    static let lunarSpeaking = PhosphorTreatment(red: 1.0, green: 0.843, blue: 0.0, fresnelPower: 2.2)
+    /// JADE #3DDC97 — thinking.
+    static let lunarThinking = PhosphorTreatment(red: 0.239, green: 0.863, blue: 0.592, fresnelPower: 3.4)
+    /// TANGERINE #FF9A3C — listening.
+    static let lunarListening = PhosphorTreatment(red: 1.0, green: 0.604, blue: 0.235, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Diwali: lamp light. A marigold-gold lattice on the Fox's black body is the diya on a deep night; flame
+    // white speaking, rangoli magenta thinking, toran green (the mango-leaf door garland) listening. Its own
+    // palette, not the lantern one: Ramadan's gold is paler and its thinking is indigo.
+
+    /// MARIGOLD #FFA41B — the resting phosphor.
+    static let diyaCalm = PhosphorTreatment(red: 1.0, green: 0.643, blue: 0.106, fresnelPower: 3.0)
+    /// DIYA FLAME #FFE08A — speaking.
+    static let diyaSpeaking = PhosphorTreatment(red: 1.0, green: 0.878, blue: 0.541, fresnelPower: 2.2)
+    /// RANGOLI MAGENTA #FF5FD2 — thinking.
+    static let diyaThinking = PhosphorTreatment(red: 1.0, green: 0.373, blue: 0.824, fresnelPower: 3.4)
+    /// TORAN GREEN #5FD068 — listening.
+    static let diyaListening = PhosphorTreatment(red: 0.373, green: 0.816, blue: 0.408, fresnelPower: 2.6)
 }

@@ -158,6 +158,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-11-23 (#895 second pass) — staging deletes only its own Inbox copies (a batch
 //  AirDrop's siblings are still on their way; RootView sweeps leftovers on background), and a shared file also
 //  waits out a consented Private Cloud send still launching. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (1.6 follow-up: B meets C) — a shared .html/.md also opens beside the
+//  chat (read before the Inbox copy goes; 2 MB cap, asked by size before the read; UTF-8 else Latin-1). Confidence
+//  0.75 (device try owed).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: every code card's Open button (via the
 //  `openCodeBlock` environment) fills `core.artifact`, shown as a sheet in a compact window and a column beside the
 //  chat in a regular one (ArtifactPresentation). Device try owed. Confidence 0.7.
@@ -170,6 +173,14 @@
 //  their words merge, their files go through `attach` straight from the group container, and only then
 //  `ShareInbox.discard` deletes each drop, so a kill before staging keeps it for the next launch (the held tmp copy is
 //  gone). The drops' onChange has no `initial: true` on purpose: the `sharedFiles` handler covers launch. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (#898 review: a waiting share looked lost) — a plain caption over the
+//  composer while shared files wait out a reply or the Private Cloud sheet (`SharedFileIntake.waitingHint`), with
+//  `doc.badge.clock`, an accessibility label and one announcement when it shows. It only tells: staging is
+//  unchanged. Confidence 0.75 (compile-checked; device look owed).
+//  Review: Kev + claude-opus-5-5, 2026-11-23 (pre-push review fold) — the hint hangs from a zero-height anchor on the
+//  bar's top edge, on a fixed material capsule (an overlay, not a row: a row grew the bar mid-reply and jumped the
+//  transcript), and it is announced again for each new wait reason. Confidence 0.75 (compile-checked; device look
+//  owed).
 //
 
 import M1K3Avatar
@@ -417,6 +428,12 @@ struct ChatScreen: View {
             .onChange(of: sharedDrops) { _, _ in receiveSharedFiles() }
             .onChange(of: core.chat.isResponding || privateCloudPending != nil || privateCloudSending) { _, _ in
                 receiveSharedFiles()
+            }
+            // VoiceOver hears the waiting hint when it shows, and again each time the reason changes.
+            .onChange(of: sharedFileWaitReason, initial: true) { _, reason in
+                if reason != nil, let sharedFileHintText {
+                    AccessibilityNotification.Announcement(sharedFileHintText).post()
+                }
             }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
@@ -928,6 +945,26 @@ struct ChatScreen: View {
                 }
             }
         }
+        // A shared file waiting out a reply or the Private Cloud sheet says so, just above the bar it will land in.
+        // An overlay hung from the bar's top edge, not a row in it: a row would grow the bar mid-reply and shrink
+        // (jump) the transcript above it.
+        // A zero-height anchor on the bar's top edge; the hint hangs from it, upward (an `alignmentGuide` on the
+        // conditional child was not honoured on the Mac, where the hint drew inside the band).
+        .overlay(alignment: .top) {
+            Color.clear
+                .frame(height: 0)
+                .overlay(alignment: .bottom) {
+                    if let sharedFileHintText {
+                        sharedFileHint(sharedFileHintText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(.bottom, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .allowsHitTesting(false)
+        }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .frame(maxWidth: 760)
@@ -1388,6 +1425,10 @@ struct ChatScreen: View {
         sharedFiles = []
         if !urls.isEmpty {
             attach(urls)
+            // A page (html, markdown) also opens beside the chat, read now: iOS's copy goes below.
+            if let page = urls.lazy.compactMap(Self.sharedPageText).first {
+                core.openSharedPage(filename: page.filename, text: page.text)
+            }
         }
         // iOS's copy in Documents/Inbox has been read into the composer (text) or the attachment store (images), so
         // it goes. Only these: a batch's siblings may still be on their way (RootView sweeps leftovers on background).
@@ -1400,6 +1441,55 @@ struct ChatScreen: View {
             ShareInbox.discard(drop)
         }
     }
+
+    /// What the hint over the composer says while shared files wait, or nil when none do. The phone's `step` does
+    /// not wait on voice (the voice cover hides this screen), so `inVoice` is false; a consented send still
+    /// launching reads as the reply it starts.
+    private var sharedFileHintText: String? {
+        SharedFileIntake.waitingHint(count: sharedFiles.count, reason: sharedFileWaitReason)
+    }
+
+    /// Why shared files wait, or nil when none do. VoiceOver hears the hint again each time this changes.
+    private var sharedFileWaitReason: SharedFileIntake.WaitReason? {
+        guard !sharedFiles.isEmpty else { return nil }
+        return SharedFileIntake.waitReason(
+            isResponding: core.chat.isResponding || privateCloudSending,
+            inVoice: false,
+            consentPending: privateCloudPending != nil
+        )
+    }
+
+    /// A plain caption, not glass (the caller sets it on a fixed material capsule): it only tells, and nothing in it
+    /// ticks.
+    private func sharedFileHint(_ text: String) -> some View {
+        Label {
+            Text(text)
+        } icon: {
+            Image(systemName: "doc.badge.clock")
+        }
+        .font(.footnote)
+        .foregroundStyle(.readableSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+
+    /// A shared file's name and text when it could be a page (the policy decides), capped like the composer's read.
+    private static func sharedPageText(_ url: URL) -> (filename: String, text: String)? {
+        guard CodeArtifact.Language(fileExtension: url.pathExtension)?.isRenderable == true else { return nil }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        // The size is asked first: a huge page is never read on the main actor just to be refused.
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= sharedPageByteCap,
+              let data = try? Data(contentsOf: url)
+        else { return nil }
+        // Older pages are often Latin-1 / Windows-1252; Latin-1 decodes any bytes, so such a page still opens.
+        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else { return nil }
+        return (url.lastPathComponent, text)
+    }
+
+    /// The largest shared page opened beside the chat; a bigger one still stages in the composer, truncated.
+    private static let sharedPageByteCap = 2_000_000
 
     private static let attachmentStore = AppCore.attachmentStore
 }

@@ -1,0 +1,87 @@
+{
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "referenceName": "diwali-2028",
+  "publishStart": "2028-10-01T10:00:00Z",
+  "eventStart": "2028-10-15T10:00:00Z",
+  "eventEnd": "2028-10-19T10:00:00Z",
+  "deepLink": "m1k3://event/diwali",
+  "looks": [
+    "diwali"
+  ],
+  "copy": {
+    "name": "Diwali Lights",
+    "shortDescription": "A marigold glow and a warm hello.",
+    "longDescription": "For Diwali, the Phosphor Fox glows marigold gold like a diya and wishes your home full of light. All on your device."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Diwali Lights",
+      "shortDescription": "A marigold glow and a warm hello.",
+      "longDescription": "For Diwali, the Phosphor Fox glows marigold gold like a diya and wishes your home full of light. All on your device."
+    },
+    "en-GB": {
+      "name": "Diwali · Deepavali Lights",
+      "shortDescription": "A marigold glow and a warm hello.",
+      "longDescription": "For Diwali, the Phosphor Fox glows marigold gold like a diya and wishes your home full of light. All on your device."
+    },
+    "de-DE": {
+      "name": "Diwali-Lichter",
+      "shortDescription": "Ein goldenes Leuchten und ein warmer Gruß.",
+      "longDescription": "Zu Diwali leuchtet der Phosphorfuchs golden wie eine Öllampe und wünscht dir ein Zuhause voller Licht."
+    },
+    "es-ES": {
+      "name": "Luces de Diwali",
+      "shortDescription": "Un brillo dorado y un cálido saludo.",
+      "longDescription": "En Diwali, el zorro fosforescente brilla dorado como una lámpara diya y te desea un hogar lleno de luz."
+    },
+    "es-MX": {
+      "name": "Luces de Diwali",
+      "shortDescription": "Un brillo dorado y un cálido saludo.",
+      "longDescription": "En Diwali, el zorro fosforescente brilla dorado como una lámpara diya y te desea un hogar lleno de luz."
+    },
+    "fr-FR": {
+      "name": "Lumières de Diwali",
+      "shortDescription": "Une lueur dorée et des vœux de lumière.",
+      "longDescription": "Pour Diwali, le renard phosphorescent brille d'or comme une diya et vous souhaite un foyer plein de lumière."
+    },
+    "ja": {
+      "name": "ディワリの灯り",
+      "shortDescription": "マリーゴールドの金色と、あたたかなあいさつ。",
+      "longDescription": "ディワリの間、燐光のキツネがディヤの灯りのような金色に輝き、光あふれる家を願うあいさつをします。すべてデバイス上で。"
+    },
+    "ko": {
+      "name": "디왈리의 불빛",
+      "shortDescription": "금잔화 같은 금빛과 따뜻한 인사.",
+      "longDescription": "디왈리 동안 인광 여우가 디야 등불처럼 금빛으로 빛나며 집 안 가득 빛이 함께하길 바라는 인사를 건네요."
+    },
+    "pt-BR": {
+      "name": "Luzes do Diwali",
+      "shortDescription": "Um brilho dourado e um oi caloroso.",
+      "longDescription": "No Diwali, a raposa fosforescente brilha dourada como uma diya e deseja um lar cheio de luz. Tudo no seu aparelho."
+    },
+    "zh-Hans": {
+      "name": "排灯节之光",
+      "shortDescription": "万寿菊般的金光，温暖的问候。",
+      "longDescription": "排灯节期间，磷光狐狸像油灯一样闪耀金光，祝你家中充满光明。全部在设备上运行。"
+    },
+    "ru": {
+      "name": "Огни Дивали",
+      "shortDescription": "Золотое сияние и тёплый привет.",
+      "longDescription": "На Дивали Фосфорный лис светится золотом, как лампа дия, и желает, чтобы в доме было много света."
+    },
+    "ar-SA": {
+      "name": "أضواء ديوالي",
+      "shortDescription": "توهّج ذهبي وتحية دافئة.",
+      "longDescription": "في ديوالي، يتوهج Phosphor Fox بذهبي كالقنديل ويتمنى بيتًا مليئًا بالنور. كل ذلك على الجهاز."
+    },
+    "hi": {
+      "name": "दीवाली की रोशनी",
+      "shortDescription": "गेंदे-सी सुनहरी चमक और एक गर्मजोशी भरा नमस्ते।",
+      "longDescription": "दीवाली पर फॉस्फर फॉक्स दीये की तरह सुनहरा चमकता है और आपके घर में रोशनी की कामना करता है। सब कुछ आपके डिवाइस पर।"
+    }
+  }
+}

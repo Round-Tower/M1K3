@@ -16,3 +16,4 @@ never edit, accepted ones.
 | [0009](0009-mini-runs-read-only-tools-outside-the-model-loop.md) | Mini runs read-only tools outside the model loop | Accepted | 2026-09-26 |
 | [0010](0010-private-cloud-is-a-brain-pick-that-holds.md) | Private Cloud Compute is a brain you pick, and the pick holds | Accepted | 2026-10-01 |
 | [0011](0011-private-cloud-compute-lent-to-other-apps.md) | Private Cloud Compute can be lent to other apps on this Mac, behind its own switches | Accepted | 2026-11-12 |
+| [0012](0012-scripted-pages-run-only-when-asked-and-proven-sealed.md) | Scripted pages run only when asked, in a sandboxed frame, and only after a canary proves the seal | Proposed | 2026-11-23 |
