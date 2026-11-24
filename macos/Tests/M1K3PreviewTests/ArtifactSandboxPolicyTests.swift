@@ -160,6 +160,29 @@ struct ArtifactDNSPrefetchOffTests {
         }
     }
 
+    @Test("a page can't turn prefetch back on: its own prefetch-control metas and its dns-prefetch / preconnect links go")
+    func pageCannotReEnablePrefetch() {
+        let pages = [
+            "<meta http-equiv=\"x-dns-prefetch-control\" content=\"on\"><link rel=\"dns-prefetch\" href=\"//leak.example\">",
+            "<META HTTP-EQUIV='X-DNS-Prefetch-Control' CONTENT='on'><p>x</p>",
+            "<meta content=\"on\" http-equiv=x-dns-prefetch-control><a href=\"https://leak.example\">a</a>",
+            "<link href=\"https://leak.example\" rel=\"preconnect\"><LINK REL=DNS-PREFETCH HREF=//b.example>",
+            "<link rel=\"stylesheet preconnect\" href=\"https://leak.example\">",
+        ]
+        for page in pages {
+            for out in [ArtifactFormatter.injectCSPMeta(page), ArtifactFormatter.formatHTML(page)] {
+                let lower = out.lowercased()
+                #expect(lower.components(separatedBy: "x-dns-prefetch-control").count == 2, "only ours survives: \(page)")
+                #expect(!lower.contains("content=\"on\"") && !lower.contains("content='on'"), "\(page)")
+                #expect(!lower.contains("leak.example\" rel") && !lower.contains("dns-prefetch href"), "\(page)")
+                #expect(!lower.contains("rel=\"preconnect") && !lower.contains("stylesheet preconnect"), "\(page)")
+            }
+        }
+        // Ordinary content survives: a page's links and other metas are not touched.
+        let kept = ArtifactFormatter.injectCSPMeta("<meta name=\"author\" content=\"Kev\"><a href=\"#top\">top</a>")
+        #expect(kept.contains("<meta name=\"author\" content=\"Kev\">") && kept.contains("<a href=\"#top\">top</a>"))
+    }
+
     @Test("the prefetch switch is the exact http-equiv WebKit reads")
     func prefetchMetaIsWellFormed() {
         #expect(ArtifactSandboxPolicy.dnsPrefetchOffMetaTag == "<meta http-equiv=\"x-dns-prefetch-control\" content=\"off\">")
