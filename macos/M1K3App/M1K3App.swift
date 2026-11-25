@@ -33,6 +33,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-25 — a screengrab capture run pins NSApp.appearance dark
 //  (`ScreengrabHarness.pinsDarkAppearance`): a midday run on Auto shot a light plate. Inert outside the harness.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — the harness window pin is the first-launch 1280×800
+//  (`ScreengrabHarness.macWindowWidth`), was 1440×900: the frames show the window whole on the laptop now.
+//  Confidence 0.85.
 
 import AppKit
 import M1K3Avatar
@@ -131,13 +134,13 @@ struct M1K3App: App {
                         .frame(minWidth: 560, minHeight: 480)
                 }
             }
-            // Screengrab harness: pin the WINDOW to the capture plan's 1440×900 pt
-            // (2880×1800 px on Retina — native to the Mac frames). The hidden
-            // title bar's toolbar strip adds 52 pt above this content frame, and
+            // Screengrab harness: pin the WINDOW to the first-launch 1280×800 pt
+            // (2560×1600 px on Retina, a Mac store size). The hidden title bar's
+            // toolbar strip adds 52 pt above this content frame, and
             // `.windowResizability(.contentSize)` below makes the window follow.
             .frame(
-                width: ScreengrabHarness.current.isActive ? 1440 : nil,
-                height: ScreengrabHarness.current.isActive ? 848 : nil
+                width: ScreengrabHarness.current.isActive ? CGFloat(ScreengrabHarness.macWindowWidth) : nil,
+                height: ScreengrabHarness.current.isActive ? CGFloat(ScreengrabHarness.macContentHeight) : nil
             )
             // No forced colour scheme: M1K3 follows the system appearance. The
             // surface is pure adaptive Liquid Glass (GlassBackground) that refracts

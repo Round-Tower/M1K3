@@ -34,6 +34,9 @@
 # Approve rows by the app itself (the old brain-at-home plate lost them when Settings grew panes). The app now
 # pins dark itself under the harness (a midday run on Auto came out light; -AppleInterfaceStyle Dark never reached it).
 # PLATES=a,b shoots only those plates after the warm-up (a one-plate recapture was hand-sliced four times). Confidence 0.75.
+# Review: Kev + claude-opus-5-5, 2026-11-25 — `ask-documents` on the Mac (a real grounded answer for frame 05); the
+# Context senses and Spotlight launch at their shipped OFF (09 shows the Privacy pane whole); the app now pins the
+# window at its first-launch 1280×800, so plates are 2560×1600. Confidence 0.7.
 set -u
 here=${0:A:h}
 source ${here:h}/l10n-args.zsh   # l10n_args + l10n_suffix from PSEUDO / RTL / LOCALE (empty by default)
@@ -58,7 +61,10 @@ launch() { # plate companion hasChosen [extra args...]
   M1K3_SCREENGRAB=1 M1K3_SCREENGRAB_PLATE=$plate M1K3_SCREENGRAB_RUN=$RUN M1K3_SCREENGRAB_ALLOW_LIVE=1 \
     $APP -hasChosenBrain $chosen -selectedBrain lil -voiceMode.companion $comp -companion.shadingStyle off \
     -brainServe.enabled NO -notchHUD.enabled NO -mcpServer.enabled NO -memoryAutoCapture NO \
-    -ApplePersistenceIgnoreState YES -chatEgressAllowed NO -webSearchEnabled YES "$@" "${l10n_args[@]}" > $S/plate-$plate.log 2>&1 &
+    -ApplePersistenceIgnoreState YES -chatEgressAllowed NO -webSearchEnabled YES \
+    -contextTools.battery NO -contextTools.calendar NO -contextTools.location NO -contextTools.locationPrecise NO \
+    -spotlight.indexingEnabled NO -showGenerationStats NO -introduction.dismissed YES \
+    -chat.autoSpeak NO "$@" "${l10n_args[@]}" > $S/plate-$plate.log 2>&1 &
   local p=""; for i in {1..60}; do p=$(appPid); [[ -n $p ]] && [[ -n $(mainWin $p) ]] && break; sleep 1; done
   print -r -- $p
 }
@@ -77,6 +83,12 @@ want() { [[ -z ${PLATES:-} ]] || [[ ",$PLATES," == *",$1,"* ]]; }
 
 log "warm-up: fresh root + seed ($RUN)"
 p=$(launch chat PhosphorFox YES); sleep 75; quitApp
+
+# ask-documents: a NEW chat asks the lair notes about the roofline once the seed is indexed, and the real
+# brain answers with its source (Mac frame 05; the Documents list alone was an empty window). Up to 120 s
+# for the source chip ("Lair"), then 30 s for the stream to settle; a timeout is logged and the plate is
+# still shot, so read it, and re-run with PLATES=ask-documents if the answer is unfinished.
+want ask-documents && { p=$(launch ask-documents PhosphorFox YES); waitFor $p "Lair" 120; sleep 30; shoot $p ask-documents; quitApp; }
 
 for plate in chat documents memories; do
   want $plate || continue

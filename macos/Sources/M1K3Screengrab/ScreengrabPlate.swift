@@ -31,6 +31,10 @@
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-11-25 — the `agent-scripts` plate (Mac frame 09): Privacy scrolled to the
 //  scripts by the pane itself, hands switched on by argument. Confidence 0.8 (pinned; the scroll is verify-by-capture).
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — every recipe pins the Context senses and Spotlight off, as shipped
+//  (frame 09 now shows the Privacy pane whole), and the generation stats off + the introduction offer dismissed
+//  and chat auto-speak off (all three leaked from the owner's defaults into ask-documents). Confidence 0.85.
+//
 
 import Foundation
 
@@ -137,6 +141,19 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // Privacy plate (2026-09-23). PCC consent is off by default; web search on.
             ["-chatEgressAllowed", "NO"],
             ["-webSearchEnabled", "YES"],
+            // Context senses and Spotlight at their shipped OFF: the Mac frames show Settings ▸ Privacy
+            // whole since 2026-11-25, and a run showed the owner's own Battery and Calendar switches on.
+            ["-contextTools.battery", "NO"],
+            ["-contextTools.calendar", "NO"],
+            ["-contextTools.location", "NO"],
+            ["-contextTools.locationPrecise", "NO"],
+            ["-spotlight.indexingEnabled", "NO"],
+            // The owner's testing aid (per-turn generation stats, shipped OFF) and the earned
+            // "Introduce yourself" offer both landed in the first ask-documents plate (2026-11-25).
+            ["-showGenerationStats", "NO"],
+            ["-introduction.dismissed", "YES"],
+            // Chat auto-speak (shipped OFF): its karaoke caption sat over the composer.
+            ["-chat.autoSpeak", "NO"],
             // No auto-distillation of the seeded conversation: the Memories plate
             // shows the persona's dated facts, not "I noticed" rows stamped today.
             ["-memoryAutoCapture", "NO"],

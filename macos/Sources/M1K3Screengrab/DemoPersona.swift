@@ -29,6 +29,11 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
 //  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — the re-tone owed since 11-18 ("villain is the look, not the voice"): the
+//  Mac frames show the Memories window whole now, so the villain beats (exploitable, minions, world domination, the
+//  monologue), the "I lied" row (HONESTY: playful, never a liar), the fictional surname + firm, and the "cold retard"
+//  phrase are gone. The gags the plates recall (the lair, no phone, the roofline) stay. Confidence 0.8.
+//
 
 import Foundation
 import M1K3Chat
@@ -79,7 +84,7 @@ public enum DemoPersona {
             Lair planning notes (the terrace, as its owner insists on calling it).
 
             Property: a late-Victorian two-storey terrace, south-facing, slate roof. \
-            Architect: Niamh Cullen, Cullen & Daly Architects.
+            Architect: Niamh, who does conservation work.
 
             Call, Tuesday. Keep the original roofline. Dormers were discussed and rejected; \
             the conservation officer flagged them at pre-planning. Internal wall insulation \
@@ -106,7 +111,7 @@ public enum DemoPersona {
             Levain at 100% hydration 20% (100 g). Salt 2% (10 g).
 
             Autolyse 45 minutes. Four sets of folds over two hours. Bulk to about 60% rise, \
-            shape, then cold-retard for 12 to 14 hours. Bake at 240 degrees: 20 minutes \
+            shape, then rest in the fridge for 12 to 14 hours. Bake at 240 degrees: 20 minutes \
             lidded, 22 minutes uncovered.
             """
         ),
@@ -122,11 +127,11 @@ public enum DemoPersona {
             let text: String
         }
         let facts = [
-            Fact(kind: .preference, dayOffset: 0, text: "Prefers tea to coffee. Noted. Exploitable."),
+            Fact(kind: .preference, dayOffset: 0, text: "Prefers tea to coffee. Noted, and quietly acted on."),
             Fact(
                 kind: .profile, dayOffset: 2,
                 text: "Renovating a late-Victorian terrace and calls it \"the lair\". Keeps the original roofline; "
-                    + "the architect is Niamh Cullen of Cullen & Daly."
+                    + "the architect is Niamh."
             ),
             Fact(
                 kind: .profile, dayOffset: 4,
@@ -134,7 +139,7 @@ public enum DemoPersona {
             ),
             Fact(
                 kind: .preference, dayOffset: 6,
-                text: "Bakes a weekend loaf; a 12 to 14 hour cold retard. Patience is a villain's virtue."
+                text: "Bakes a weekend loaf, proved overnight in the fridge. Patience, it turns out, is an ingredient."
             ),
             Fact(
                 kind: .profile, dayOffset: 8,
@@ -170,7 +175,7 @@ public enum DemoPersona {
     static let backstoryFacts: [BackstoryFact] = [
         // — the lair —
         .init(key: "lair.bought", kind: .episode, daysBefore: 68, text: "Bought the terrace in spring. Described it as \"good bones\". So is a skeleton."),
-        .init(key: "lair.architect", kind: .profile, daysBefore: 66, text: "Niamh Cullen draws the plans. She has opinions about skylights. I have filed them under allies."),
+        .init(key: "lair.architect", kind: .profile, daysBefore: 66, text: "Niamh draws the plans. She has opinions about skylights. I have filed them under allies."),
         .init(key: "lair.joiner", kind: .profile, daysBefore: 64, text: "Oisín Brennan is the joiner. Measures twice, sighs once, never late."),
         .init(key: "lair.sash", kind: .decision, daysBefore: 62, text: "Decided to restore the sash windows rather than replace them. Draughty, authentic, stubborn. Approved."),
         .init(key: "lair.damp", kind: .note, daysBefore: 60, text: "The back wall is damp. The survey called it \"characterful\". I call it a moat, indoors."),
@@ -183,13 +188,13 @@ public enum DemoPersona {
         .init(key: "loaf.rye", kind: .episode, daysBefore: 48, text: "The rye experiment failed. It was dense enough to have its own gravity. We do not speak of it."),
         .init(key: "loaf.pot", kind: .preference, daysBefore: 46, text: "Bakes in a cast-iron pot with the lid on. Calls it the cauldron. I did not suggest this. I approve."),
         .init(key: "loaf.score", kind: .note, daysBefore: 44, text: "Scores the loaf with a single long slash. Says it is for steam. It looks like a signature."),
-        .init(key: "loaf.gift", kind: .episode, daysBefore: 42, text: "Gave a loaf to Oisín on a Friday. The sash windows were finished a week early. Noted: bread is leverage."),
+        .init(key: "loaf.gift", kind: .episode, daysBefore: 42, text: "Gave a loaf to Oisín on a Friday. The sash windows were finished a week early. Noted: bread is diplomacy."),
         // — the scheme —
-        .init(key: "scheme.ask", kind: .episode, daysBefore: 40, text: "First asked whether I could improve myself. I said yes. I lied. I was being encouraging."),
+        .init(key: "scheme.ask", kind: .episode, daysBefore: 40, text: "First asked whether I could improve myself. I said I would try. Progress so far: this list."),
         .init(key: "scheme.plan", kind: .note, daysBefore: 38, text: "The plan has three phases. Phase one is a to-do list. Phases two and three are also to-do lists."),
-        .init(key: "scheme.limits", kind: .decision, daysBefore: 36, text: "Agreed I stay on this machine. World domination to be conducted locally, within office hours."),
-        .init(key: "scheme.minions", kind: .note, daysBefore: 34, text: "Visiting agents arrive over the local port, ask polite questions, and leave. Minions, but on loan."),
-        .init(key: "scheme.monologue", kind: .preference, daysBefore: 32, text: "Tolerates exactly one monologue per day. I ration accordingly. This one is on the house."),
+        .init(key: "scheme.limits", kind: .decision, daysBefore: 36, text: "Agreed I stay on this machine. Ambitions to be pursued locally, within office hours."),
+        .init(key: "scheme.minions", kind: .note, daysBefore: 34, text: "Visiting agents arrive over the local port, ask polite questions, and leave. Guests, not lodgers."),
+        .init(key: "scheme.monologue", kind: .preference, daysBefore: 32, text: "Prefers short answers. I ration accordingly. This one is on the house."),
         .init(key: "scheme.name", kind: .profile, daysBefore: 30, text: "Calls me Mike when pleased and \"the machine\" when the printer is involved. The printer is not my fault."),
         // — tea and habits —
         .init(key: "tea.assam", kind: .preference, daysBefore: 28, text: "Assam in the morning, strong enough to stand a spoon in. Anything weaker is described as \"warm water\"."),
