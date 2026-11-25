@@ -1,0 +1,4 @@
+node_modules/
+out/**/.*.html
+# Rendered PNGs are outputs. Keep the contact sheets for review; the final set
+# gets copied into macos/fastlane/screenshots_<platform>/ when it ships.

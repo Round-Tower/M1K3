@@ -171,8 +171,17 @@ bundletool-all-*.jar
 # document this codebase's pipelines, so they travel with it.
 !/.claude/skills/
 !/.claude/skills/**
-# Private planning/marketing notes and scratch space never travel.
-/marketing/
+# Private planning/marketing notes and scratch space never travel. The store screenshot
+# pipeline's CODE does (Kev, 2026-11-25): marketing/app-store, minus its captures, renders,
+# node_modules and the one-off ASC upload scripts (hardcoded ids; macos/tools/asc is the home).
+/marketing/*
+!/marketing/app-store/
+/marketing/app-store/plates/
+/marketing/app-store/out/
+/marketing/app-store/node_modules/
+/marketing/app-store/tools/
+/marketing/app-store/__pycache__/
+/marketing/app-store/.pytest_cache/
 /scratch/
 # Nested per-surface session dirs (agent memory) stay local too.
 /macos/.claude/

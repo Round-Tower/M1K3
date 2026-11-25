@@ -1,0 +1,28 @@
+{
+  "name": "m1k3-app-store",
+  "private": true,
+  "description": "M1K3 \u2014 App Store Connect screenshot system (iPhone 6.9\", iPad 13\", Mac). Real captures in plates/, brand frames rendered by Playwright.",
+  "scripts": {
+    "setup": "npm i",
+    "setup:browser": "npx playwright install chromium",
+    "placeholders": "node placeholders.js",
+    "render": "node render.js",
+    "render:ios": "node render.js ios",
+    "render:ipad": "node render.js ipad",
+    "render:mac": "node render.js mac",
+    "contact": "./contact.py out/ios/en-US out/contact-ios.png && ./contact.py out/ipad/en-US out/contact-ipad.png && ./contact.py out/mac/en-US out/contact-mac.png",
+    "verify": "./verify.py out/ios/en-US --target ios --plates plates/ios && ./verify.py out/ipad/en-US --target ipad --plates plates/ipad && ./verify.py out/mac/en-US --target mac --plates plates/mac",
+    "ios": "node render.js ios en-US && ./contact.py out/ios/en-US out/contact-ios.png && ./verify.py out/ios/en-US --target ios --plates plates/ios",
+    "approve:ios": "./verify.py out/ios/en-US --target ios --plates plates/ios --approve",
+    "ipad": "node render.js ipad en-US && ./contact.py out/ipad/en-US out/contact-ipad.png && ./verify.py out/ipad/en-US --target ipad --plates plates/ipad",
+    "approve:ipad": "./verify.py out/ipad/en-US --target ipad --plates plates/ipad --approve",
+    "mac": "node render.js mac en-US && ./contact.py out/mac/en-US out/contact-mac.png && ./verify.py out/mac/en-US --target mac --plates plates/mac",
+    "approve:mac": "./verify.py out/mac/en-US --target mac --plates plates/mac --approve"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/vt323": "^5.3.0",
+    "playwright": "^1.49.1"
+  }
+}
