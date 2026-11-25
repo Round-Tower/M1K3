@@ -16,7 +16,9 @@ Plate drift: render.js writes out/<target>/<locale>/.plates.json (frame → the 
 Every run fails a frame whose plate changed since the last --approve, or was never approved,
 because a hand-tuned crop (focus, bands, lifts) is only right for the capture it was cut on.
 2026-11-24: the 1.6 Settings panes moved under two Mac crops and "spec OK" passed both.
---approve stamps plates.lock.json with the plates this set reads. Run it only after looking.
+--approve stamps plates.lock.json with the plates as this render drew them (raw bytes + mask
+retouch), and refuses a set that fails, is stale, or has frames the manifest doesn't cover.
+Run it only after looking.
 
 Exit 1 on any failure. Requires Pillow (uv supplies it); ffprobe for --video.
 """
@@ -81,51 +83,77 @@ def screenshots(root, target, plates):
                 fails.append(f"plate {os.path.basename(p)} looks like a placeholder ({dark:.0%} near-black) — drop a real capture in")
 
 
-def drift(manifest, lock, hashes):
-    """Problems for frames whose plates changed since the last look. `manifest`: frame → plate
-    ids ("mac/chat.png"); `lock`: plate id → approved hash; `hashes`: plate id → current hash
-    (absent when the file is missing)."""
+def file_hash(path):
+    return hashlib.sha256(open(path, "rb").read()).hexdigest()[:16]
+
+
+def drift(manifest, lock, current):
+    """Frames whose plates, AS RENDERED, differ from the last by-eye approval. `manifest`: frame →
+    {plate id → {"raw", "look"}} from render.js (`look` adds the PLATE_MASKS retouch); `lock`:
+    plate id → approved look; `current`: plate id → the file's hash now (absent if missing)."""
     problems = []
     for frame in sorted(manifest):
-        for plate in manifest[frame]:
-            now = hashes.get(plate)
-            if now is None:
-                problems.append(f"{frame}: plate {plate} is missing")
-            elif plate not in lock:
+        for plate, h in sorted(manifest[frame].items()):
+            if plate not in current:
+                continue  # stale() names it
+            if plate not in lock:
                 problems.append(f"{frame}: plate {plate} was never checked by eye — look, then --approve")
-            elif lock[plate] != now:
+            elif lock[plate] != h["look"]:
                 problems.append(f"{frame}: plate {plate} changed since its crop was checked — look, then --approve")
     return problems
 
 
-def approve(manifest, lock, hashes):
-    """The lock with this set's plates stamped at their current hashes; other stamps kept."""
+def stale(manifest, current):
+    """Frames rendered from a plate that is missing or has changed since the render."""
+    problems = []
+    for frame in sorted(manifest):
+        for plate, h in sorted(manifest[frame].items()):
+            if plate not in current:
+                problems.append(f"{frame}: plate {plate} is missing")
+            elif current[plate] != h["raw"]:
+                problems.append(f"{frame}: plate {plate} changed after this render — re-render first")
+    return problems
+
+
+def coverage(manifest, frames):
+    """Every rendered PNG (by frame id) needs a manifest entry; an empty set checks nothing."""
+    if not manifest:
+        return ["the render manifest lists no frames — re-render the set"]
+    return [f"{fr}: no render-manifest entry — re-render the set" for fr in sorted(frames) if fr not in manifest]
+
+
+def approve(manifest, lock):
+    """The lock with this set's rendered looks stamped; other stamps kept."""
     out = dict(lock)
     for plates in manifest.values():
-        for plate in plates:
-            if plate in hashes:
-                out[plate] = hashes[plate]
+        for plate, h in plates.items():
+            out[plate] = h["look"]
     return dict(sorted(out.items()))
 
 
-def check_drift(root, approve_now):
-    """Read root/.plates.json and the lock; stamp it when approve_now. Returns the problems."""
+def check_drift(root, approve_now, blocked=False):
+    """Read root/.plates.json and the lock; stamp it when approve_now and the set is otherwise
+    sound (`blocked`: the spec check already failed). Returns the problems."""
     path = os.path.join(root, ".plates.json")
     if not os.path.exists(path):
         return [f"{path} missing — render the set with render.js first"]
     manifest = json.load(open(path, encoding="utf-8"))
-    hashes = {}
+    current = {}
     for plate in {p for plates in manifest.values() for p in plates}:
         f = os.path.join(PLATES_ROOT, plate)
         if os.path.exists(f):
-            hashes[plate] = hashlib.sha256(open(f, "rb").read()).hexdigest()[:16]
+            current[plate] = file_hash(f)
+    frames = [os.path.splitext(os.path.basename(p))[0] for p in glob.glob(os.path.join(root, "*.png"))]
+    problems = coverage(manifest, frames) + stale(manifest, current)
     lock = json.load(open(LOCK, encoding="utf-8")) if os.path.exists(LOCK) else {}
-    if approve_now:
-        lock = approve(manifest, lock, hashes)
+    if approve_now and not problems and not blocked:
+        lock = approve(manifest, lock)
         with open(LOCK, "w", encoding="utf-8") as fh:
             json.dump(lock, fh, indent=1)
             fh.write("\n")
-    return drift(manifest, lock, hashes)
+    elif approve_now:
+        problems.append("not approved: fix the problems above first")
+    return problems + drift(manifest, lock, current)
 
 
 def video(path, target):
@@ -177,7 +205,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.root:
         screenshots(a.root, a.target, a.plates)
-        fails.extend(check_drift(a.root, a.approve))
+        fails.extend(check_drift(a.root, a.approve, blocked=bool(fails)))
     if a.video: video(a.video, a.target)
     if a.text: text(a.text)
     for w in warns: print(f"  ~ {w}")

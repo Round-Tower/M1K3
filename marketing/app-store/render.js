@@ -27,6 +27,7 @@ const LAUNCH = process.env.M1K3_CHROME
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const crypto = require("crypto");
 const { TARGETS, BRAND, OUT, PLATES, ROOT } = require("./config.js");
 const { lifeSVG } = require("./life.js");
 const { PORTRAIT, LANDSCAPE, PLATE_MASKS } = require("./frames.js");
@@ -494,6 +495,16 @@ const MASKED = path.join(OUT, ".plates");
 // verify.py fails a frame whose plate changed since its crop was last checked by eye (2026-11-24:
 // the 1.6 Settings panes moved under two hand-tuned Mac crops and "spec OK" passed both).
 let USED = null;
+// A plate's hash as this render draws it: `raw` = the capture's bytes, `look` = bytes + its
+// PLATE_MASKS retouch, so a mask edit alone is drift too. verify.py stamps `look` on approve and
+// compares the file now with `raw` (a plate recaptured after the render needs a re-render).
+function plateHashes(id) {
+  const [target, file] = id.split("/");
+  const bytes = fs.readFileSync(path.join(PLATES, target, file));
+  const h = (...parts) => { const d = crypto.createHash("sha256"); parts.forEach((p) => d.update(p)); return d.digest("hex").slice(0, 16); };
+  const mask = JSON.stringify(PLATE_MASKS[target]?.[file.replace(/\.png$/, "")] ?? null);
+  return { raw: h(bytes), look: h(bytes, mask) };
+}
 function platePath(target, name) {
   if (USED) USED.add(`${target}/${name}.png`);
   if (PLATE_MASKS[target]?.[name]) return path.join(MASKED, target, `${name}.png`);
@@ -800,6 +811,8 @@ async function main() {
       const written = [];
       const manifestFile = path.join(outDir, ".plates.json");
       const manifest = only && fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, "utf8")) : {};
+      // Gone until this locale finishes: a render that throws leaves no manifest (verify fails), never a stale one.
+      fs.rmSync(manifestFile, { force: true });
       for (const fr of frames) {
         if (only && !fr.id.startsWith(only)) continue;
         USED = new Set();
@@ -882,7 +895,7 @@ async function main() {
         const out = path.join(outDir, `${fr.id}.png`);
         await page.screenshot({ path: out, type: "png" });
         written.push(out);
-        manifest[fr.id] = [...USED].sort();
+        manifest[fr.id] = Object.fromEntries([...USED].sort().map((id) => [id, plateHashes(id)]));
         USED = null;
         if (!process.env.M1K3_KEEPHTML) fs.unlinkSync(tmp);
         console.log(`✓ ${target}/${locale}/${fr.id}.png  ${W}×${H}`);
