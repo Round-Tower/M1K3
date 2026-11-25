@@ -29,6 +29,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
 //  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — the `agent-scripts` plate (Mac frame 09): Privacy scrolled to the
+//  scripts by the pane itself, hands switched on by argument. Confidence 0.8 (pinned; the scroll is verify-by-capture).
 
 import Foundation
 
@@ -59,6 +61,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     /// Captured by `tools/screengrab/capture-look.sh`, not the XCUITest lane: a test install gives the app
     /// a new container, so a still placed for it is gone (measured 2026-11-11).
     case look
+    /// Mac frame 09 ("It proposes. You approve."): Settings ▸ Privacy scrolled to the scripts' Approve
+    /// rows. Since Settings grew panes (1.6) the brain-at-home plate no longer shows them, and nothing
+    /// outside the app can scroll the Form, so the pane scrolls itself (`ScreengrabHarness.settingsAnchor`).
+    /// Mac lane only. The rows are the owner's installed scripts, read, never written.
+    case agentScripts = "agent-scripts"
 
     /// The face every non-tile plate wears, so chat/voice/memories match each
     /// other across a run. The Phosphor Fox (white lattice) is the house default
@@ -137,6 +144,10 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // one with no visible window, and every later launch inherits it.
             ["-ApplePersistenceIgnoreState", "YES"],
         ]
+        if self == .agentScripts {
+            // The script rows render only with the hands on; read-only, like every other argument here.
+            arguments.append(["-scriptToolsEnabled", "YES"])
+        }
         if self == .onboarding {
             // A fresh Mac lands on HelloView, never the brain-only repick.
             arguments.append(["-onboarding.startAtBrain", "NO"])

@@ -57,6 +57,9 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the footers that were `Text("…" + "…")` joins (a
 //  verbatim String the catalog never sees) are single literals, so they extract as keys. English unchanged
 //  (a script compared every merged literal with its old join: 0 of 24 differ).
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — under the screengrab harness's agent-scripts plate the pane scrolls
+//  itself to the scripts (ScrollViewReader, after the rows load): the store's Mac frame 09 shows the Approve rows,
+//  and nothing outside the app could scroll the Form. Inert without the harness. Confidence 0.75 (proven by capture).
 
 import AppKit // NSApp — the age-range sheet's window
 #if canImport(DeclaredAgeRange)
@@ -66,6 +69,7 @@ import M1K3AgentTools
 import M1K3Chat // PrivateCloudTurn + AgeBand/AgeAppropriateness/PersistedAgeBandProvider
 import M1K3Inference // NetworkCrossings
 import M1K3LanguageModel // PrivateCloudRung / ChatEgressConsent
+import M1K3Screengrab // the agent-scripts plate scrolls to the scripts
 import SwiftUI
 
 struct PrivacySettingsPane: View {
@@ -90,6 +94,10 @@ struct PrivacySettingsPane: View {
     @State private var ageRangeFailure: AgeRangeRequestFailure?
 
     var body: some View {
+        ScrollViewReader { proxy in form(scrollingWith: proxy) }
+    }
+
+    private func form(scrollingWith proxy: ScrollViewProxy) -> some View {
         Form {
             contentControlsSection
 
@@ -127,9 +135,18 @@ struct PrivacySettingsPane: View {
             contextSection
 
             scriptsSection
+                .id(ScreengrabHarness.scriptsAnchor)
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+        // Screengrab only: nothing outside the app can scroll this Form (AXScrollToVisible returns 0 and
+        // moves nothing; wheel events missed too, 2026-11-24), so the plate's anchor is honoured here, once
+        // the script rows are in (they load async and change the section's height).
+        .task(id: scriptRows.count) {
+            guard let anchor = ScreengrabHarness.current.settingsAnchor else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            proxy.scrollTo(anchor, anchor: .bottom)
+        }
     }
 
     private var privateCloudSetting: PrivateCloudRung.Setting {
