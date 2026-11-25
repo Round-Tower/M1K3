@@ -30,6 +30,9 @@
 //  Open With, a Dock-icon drop and `open -a M1K3 file` to the delegate's SharedFileInbox (above the onboarding gate,
 //  so a cold launch or first run holds the file), ContentView stages it, and the menu-bar label summons a closed
 //  window (SharedFileSummons). Never sent. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — a screengrab capture run pins NSApp.appearance dark
+//  (`ScreengrabHarness.pinsDarkAppearance`): a midday run on Auto shot a light plate. Inert outside the harness.
+//  Confidence 0.85.
 
 import AppKit
 import M1K3Avatar
@@ -364,6 +367,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 // A capture run's first launch empties the screengrab sibling root
                 // before any store opens (no-op outside a capture run).
                 try ScreengrabHarness.current.prepareRoot(live: Self.liveDataRoot)
+                // A capture run is a dark set whatever the hour (the system's Auto flipped a midday plate light).
+                if ScreengrabHarness.current.pinsDarkAppearance { NSApp.appearance = NSAppearance(named: .darkAqua) }
                 let env = try AppEnvironment()
                 env.mainWindowOnScreen = mainWindowOnScreen // replay the pre-launch report
                 environment = env

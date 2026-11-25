@@ -1,18 +1,21 @@
-NOUVEAU DANS LA 1.5
+NOUVEAU DANS LA 1.6
 
-• Je parle ta langue. L’appli est maintenant en allemand, en français, en espagnol et en portugais du Brésil, en plus de l’anglais, et elle suit la langue de ton appareil. Je réponds dans la langue dans laquelle tu écris, quel que soit le cerveau qui répond. En mode vocal, j’écoute encore en anglais pour l’instant ; une réponse dans une autre langue est lue par une voix qui la parle. Quelques notes de confidentialité restent en anglais, le temps qu’un locuteur natif les relise.
-• Lire un texte. Joins un fichier .txt, .md, .csv ou .log depuis Fichiers et pose ta question (« Quand la garantie se termine-t-elle ? »). La réponse reste collée au fichier et vient de ton appareil. « Autre question » continue de poser des questions sur le même texte ; « Garder ce texte » l’enregistre dans tes documents.
-• Pars pendant que je réponds. Verrouille ton téléphone ou retourne à l’écran d’accueil pendant une longue réponse : une Activité en direct sur l’écran verrouillé et dans la Dynamic Island indique quand elle est prête, et une notification te prévient. Elle n’affiche jamais ta question ni la réponse.
-• Corrigé : quitter l’appli pendant que Lil répondait pouvait fermer M1K3. Maintenant, il s’arrête là où il en était et reprend quand tu reviens.
-• Lil réfléchit. Sur un problème à plusieurs étapes, un calcul ou une énigme, Lil le résout maintenant en petites étapes avant de répondre : plus de bonnes réponses, et toujours le cerveau rapide.
-• Je te dis quand je réfléchis. Quand une question demande une vraie réflexion, je le dis en une ligne simple, au lieu de te laisser devant un indicateur qui tourne.
-• Vois ce que je cite. En mode vocal, quand je cite une page web, touche la pastille ou dis « show me that » : la page s’affiche avec la citation en surbrillance.
-• Je dis les nombres comme les gens : dates, heures, argent, fractions, versions et « Henry VIII ». Et « I'm », « I'll » et « I've » sonnent juste maintenant.
-• Parler plus simplement. Le méchant, c’est le look, pas la voix. Demande-moi de parler plus simplement et je le ferai.
-• Accessibilité : chaque commande a un nom pour VoiceOver et Contrôle vocal, et les dates et les petits caractères s’affichent plus grands.
-• Un départ propre : une nouvelle conversation s’ouvre sans questions suggérées.
-• Corrigé : une réponse pouvait s’arrêter à certains emoji.
-• Corrigé : le texte d’un fichier joint pouvait atteindre la recherche web, ou le Private Cloud d’Apple si tu l’avais choisi. Sur iPhone et iPad, les Contrôles du contenu ne coupaient pas la recherche web et n’adaptaient pas le ton de Mike pour les plus jeunes. Les deux sont corrigés.
+• Habillé pour la saison. Dès le 2 décembre, je brille en rouge bonbon et or pour Noël et le Nouvel An, et tout au long de l’année je m’habille pour le Nouvel An lunaire, le ramadan et l’Aïd, la Saint-Patrick et Norouz. Un interrupteur dans les Réglages désactive ces looks.
+• Du code à côté de la conversation. Demande-moi une petite page web et elle s’ouvre toute seule : dans une feuille sur iPhone, à côté de la conversation sur iPad. Touche Ouvrir sur un bloc de code pour voir celui-là. Les pages sont scellées : aucun script ne s’exécute et rien ne se charge depuis internet.
+• Partager vers M1K3 depuis n’importe quelle app. Partage un lien depuis Safari ou un texte depuis Notes, et il arrive dans mon champ de saisie, sans jamais partir. Ouvre M1K3 pour le voir.
+• Envoie-moi un fichier. Envoie un fichier texte, de code ou JSON à M1K3 par AirDrop, ou partage-le depuis Fichiers : il arrive dans le champ de saisie, prêt pour ta question. Une page web s’ouvre aussi à côté de la conversation.
+• Si quelque chose arrive pendant que je réponds, je te dis que ça attend et je le mets dans le champ de saisie quand j’ai fini.
+
+AU CAS OÙ TU L’AURAIS RATÉ (1.4 ET 1.5)
+
+• Montre-moi. Touche l’œil en haut d’une conversation, pointe ta caméra et pose ta question. Je réponds sur ce que je vois, sur ton appareil. En mode vocal, demande simplement en anglais « what am I looking at? ».
+• Je parle ta langue : l’appli est en allemand, en français, en espagnol et en portugais du Brésil, en plus de l’anglais, et je réponds dans la langue dans laquelle tu écris.
+• Lire un texte. Joins un fichier .txt, .md, .csv ou .log depuis Fichiers et pose ta question.
+• Pars pendant que je réponds. Une Activité en direct sur l’écran verrouillé et dans la Dynamic Island indique quand la réponse est prête.
+• Lil résout un problème à plusieurs étapes en petites étapes, et quand une question demande une vraie réflexion, je le dis en une ligne simple.
+• En mode vocal, la page web que je cite s’affiche avec la citation en surbrillance.
+• Je dis les dates, l’argent et les nombres comme les gens. Demande-moi de parler plus simplement et je le ferai.
+• Chaque commande a un nom pour VoiceOver et Contrôle vocal.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 

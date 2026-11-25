@@ -195,13 +195,47 @@ struct ScreengrabHarnessTests {
         #expect(ScreengrabHarness(environment: ["M1K3_SCREENGRAB_LOOK_FRAME": "/tmp/still.jpg"]).lookFramePath == nil)
     }
 
+    /// Mac frame 09 ("It proposes. You approve."): the scripts' Approve rows sit at the foot of
+    /// Settings ▸ Privacy, which nothing outside the app can scroll (AXScrollToVisible returns 0 on the
+    /// SwiftUI Form and moves nothing; wheel events missed too, 2026-11-24). The pane scrolls itself.
+    @Test func agentScriptsPlateOpensPrivacyScrolledToTheScripts() {
+        let h = ScreengrabHarness(environment: ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": "agent-scripts"])
+        #expect(h.plate == .agentScripts)
+        #expect(h.opensSettings && h.settingsPane == "privacy")
+        #expect(h.settingsAnchor == ScreengrabHarness.scriptsAnchor)
+        #expect(h.phoneRoute.isEmpty, "Mac lane only: the phone has no scripts")
+        #expect(!h.entersVoiceMode)
+        // The rows only render with the hands switched on; the argument shadows the owner's choice read-only.
+        #expect(ScreengrabPlate.agentScripts.launchRecipe.arguments.contains(["-scriptToolsEnabled", "YES"]))
+        // Only this plate scrolls Settings, and only it switches the hands on.
+        for plate in ScreengrabPlate.allCases where plate != .agentScripts {
+            let env = ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": plate.rawValue]
+            let other = ScreengrabHarness(environment: env)
+            #expect(other.settingsAnchor == nil, "\(plate.rawValue)")
+            #expect(!plate.launchRecipe.arguments.contains(["-scriptToolsEnabled", "YES"]), "\(plate.rawValue)")
+        }
+        #expect(ScreengrabHarness(environment: [:]).settingsAnchor == nil)
+    }
+
+    /// The Mac plates are a dark set whatever the hour: on Auto appearance a midday capture came
+    /// out light beside fourteen night-shot plates, and `-AppleInterfaceStyle Dark` in the argument
+    /// domain did not reach the app (2026-11-25). The app pins it from the harness.
+    @Test func everyCaptureRunPinsDarkAppearanceAndNothingElseDoes() {
+        for plate in ScreengrabPlate.allCases {
+            let h = ScreengrabHarness(environment: ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": plate.rawValue])
+            #expect(h.pinsDarkAppearance, "\(plate.rawValue)")
+        }
+        #expect(!ScreengrabHarness(environment: [:]).pinsDarkAppearance, "the owner's appearance is never touched")
+        #expect(!ScreengrabHarness(environment: ["M1K3_SCREENGRAB_PLATE": "chat"]).pinsDarkAppearance)
+    }
+
     @Test func everyPlateInTheCapturePlanHasARawValueMatchingItsFilename() {
         // CAPTURE-PLAN.md §1 / §2 — the twelve plate files per target, plus the
         // Mac lane's constellation (2026-09-15).
         let plan = [
             "onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories",
             "brain-at-home", "companion-fox", "companion-gecko", "companion-inkfish",
-            "companion-colobus", "privacy-label", "constellation", "ask-documents", "look",
+            "companion-colobus", "privacy-label", "constellation", "ask-documents", "look", "agent-scripts",
         ]
         #expect(ScreengrabPlate.allCases.map(\.rawValue) == plan)
     }

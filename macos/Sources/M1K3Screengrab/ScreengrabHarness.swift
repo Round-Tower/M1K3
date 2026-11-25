@@ -26,6 +26,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
 //  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — `settingsAnchor`: the agent-scripts plate opens Privacy and the pane
+//  scrolls itself to the scripts; `pinsDarkAppearance` for every capture run. Confidence 0.85 (pure, pinned).
 
 import Foundation
 
@@ -158,14 +160,31 @@ public struct ScreengrabHarness: Sendable, Equatable {
     /// Mac: the Settings scene is the subject. Pairing lives in Settings ▸ Brain at Home
     /// (its own pane since 1.1), the privacy stand-in in Settings ▸ Privacy.
     public var opensSettings: Bool {
-        plate == .brainAtHome || plate == .privacyLabel
+        plate == .brainAtHome || plate == .privacyLabel || plate == .agentScripts
     }
+
+    /// Mac: a capture run is a dark set whatever the hour. On Auto appearance a midday run came out
+    /// light beside night-shot plates, and `-AppleInterfaceStyle Dark` never reached the app (2026-11-25),
+    /// so the app pins `NSApp.appearance` itself. Never outside a capture run.
+    public var pinsDarkAppearance: Bool {
+        isActive
+    }
+
+    /// Mac: the section the Settings pane scrolls to once it is up, nil to stay at the top.
+    /// Nothing outside the app can scroll the SwiftUI Form (AXScrollToVisible returns 0 and moves
+    /// nothing; wheel events missed too, 2026-11-24), so the pane does it.
+    public var settingsAnchor: String? {
+        plate == .agentScripts ? Self.scriptsAnchor : nil
+    }
+
+    /// The Privacy pane's Scripts section scroll id (the pane tags the section with it).
+    public static let scriptsAnchor = "scripts"
 
     /// Mac: the `SettingsView.Pane` raw value the plate opens on, nil when Settings is not the subject.
     public var settingsPane: String? {
         switch plate {
         case .brainAtHome: "brainAtHome"
-        case .privacyLabel: "privacy"
+        case .privacyLabel, .agentScripts: "privacy"
         default: nil
         }
     }

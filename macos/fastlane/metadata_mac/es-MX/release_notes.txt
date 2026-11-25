@@ -1,16 +1,19 @@
-NOVEDADES DE LA 1.5
+NOVEDADES DE LA 1.6
 
-• Hablo tu idioma. La app ya está en alemán, francés, español y portugués de Brasil, además de inglés, y sigue el idioma de tu Mac. Respondo en el idioma en que escribes, sea cual sea el cerebro que conteste. En el modo de voz, por ahora solo te escucho en inglés; una respuesta en otro idioma la lee una voz que lo habla. Algunas notas de privacidad siguen en inglés hasta que las revise un hablante nativo.
-• Leer un texto. Suelta un archivo .txt, .md, .csv o .log en el chat y pregunta por él (“¿cuándo termina la garantía?”). La respuesta se ciñe al archivo, y el archivo no va a ningún otro lado. Con “Preguntar más” sigues preguntando sobre el mismo texto; “Guardar este texto” lo guarda en tus documentos.
-• Lil lo resuelve. En un problema de varios pasos, una cuenta o un acertijo, Lil ahora lo trabaja en pasos cortos antes de responder: más respuestas correctas, y sigue siendo el cerebro rápido.
-• Te digo cuándo estoy pensando. Cuando una pregunta necesita pensarse de verdad, lo digo en una línea sencilla, en vez de dejarte con una rueda girando.
-• Mira lo que cito. En el modo de voz, cuando cito una página web, haz clic en el chip o di “show me that” y la página se abre a mi lado con la cita resaltada. “Scroll down”, “go back” y “close it” también funcionan. Una página nunca se abre sola.
-• Digo los números como los dicen las personas: fechas, horas, dinero, fracciones, versiones y “Henry VIII”. Y ya suenan bien “I'm”, “I'll” y “I've”.
-• Hablar más claro. El villano es el aspecto, no la voz. Pídeme que hable más claro y lo haré.
-• Accesibilidad: cada control tiene un nombre para VoiceOver y Control por voz, y el contraste está medido.
-• Un comienzo limpio: un chat nuevo se abre sin preguntas sugeridas.
-• Corregido: una respuesta podía detenerse en ciertos emoji.
-• Corregido: el texto de un archivo adjunto podía llegar a la búsqueda web, o a la Private Cloud de Apple si la habías elegido. En iPhone y iPad, los Controles de contenido no apagaban la búsqueda web ni adaptaban el tono de Mike para los más jóvenes. Ambos están corregidos.
+• Vestido para la ocasión. Desde el 2 de diciembre brillo en rojo caramelo y dorado por Navidad y Año Nuevo, y a lo largo del año me visto para el Año Nuevo Lunar, el Ramadán y el Eid, el Día de San Patricio y Nowruz. Un interruptor en Settings apaga los aspectos.
+• Código junto al chat. Pídeme una página web pequeña y se abre junto al chat, lista para verla, no solo para leerla. Haz clic en Abrir en cualquier bloque de código para ver ese. Las páginas están selladas: no se ejecuta ningún script y no se carga nada de internet. Comparte o guarda una página como archivo .html.
+• Abrir con M1K3. Haz clic derecho en un archivo de texto, de código o JSON en el Finder y elige Abrir con ▸ M1K3, o suéltalo sobre mí en el Dock. Llega al campo de mensaje, listo para preguntar, y nunca se envía solo.
+• Si llega un archivo mientras respondo, te aviso que está esperando y lo pongo en el campo de mensaje cuando termine.
+
+POR SI TE LO PERDISTE (1.4 Y 1.5)
+
+• Hablo tu idioma: la app está en alemán, francés, español y portugués de Brasil, además de inglés, y respondo en el idioma en que escribes.
+• Leer un texto. Suelta un archivo .txt, .md, .csv o .log en el chat y pregunta por él. El archivo no va a ningún otro lado.
+• Lil trabaja un problema de varios pasos en pasos cortos, y cuando una pregunta necesita pensarse de verdad, lo digo en una línea sencilla.
+• En el modo de voz, la página web que cito se abre a mi lado con la cita resaltada.
+• Digo las fechas, el dinero y los números como lo hacen las personas. Pídeme que hable más claro y lo haré.
+• Cada control tiene un nombre para VoiceOver y Control por voz.
+• La Local API: actívala en Settings > Server y cualquier app que hable la OpenAI API puede usar el cerebro que tengas cargado, solo en esta Mac. Desactivada por defecto, con su propia clave.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 
