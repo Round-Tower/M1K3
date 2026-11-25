@@ -17,19 +17,15 @@
 //   duo       a laptop (Mac plate) behind, the phone/pad in front, a dashed Wi-Fi pill
 // Landscape layouts (Mac):
 //   edge      type column left, laptop right (same geometry as split since 2026-09-23)
-//   split     type column left (~40%), laptop right, bleeding off
+//   split     type column left (~40%), laptop right, wholly on canvas (it bled off the edge until 2026-11-25)
 //   grid      type column left, 2×2 tiles right
 //   stat      giant number left, capture right
 //   duo       type column left, laptop + iPhone right, the pill between
 //
 // Frame keys: targets (only these targets render it), billboard (01-03 legibility: lighter
 // dim, 40px eyebrow), h1px (headline size in design px, times the locale's TYPE.h1),
-// focus (object-position, or a crop [x, y, w] in plate px for a laptop screen),
+// focus (object-position; a phone/pad screen may also take a crop or bands — a laptop never, 2026-11-25),
 // mac / phone / macFocus / phoneFocus (duo plates), lifts (see render.js lift()).
-
-// The Mac Brain at Home screen for both duos: window header + tabs, then the section header and
-// its row (no MCP picker above, no caveat paragraph below), full window width.
-const MAC_BRAIN_AT_HOME = { x: 690, w: 1500, fill: "#464748", bands: [[110, 330, 60], [1480, 180, 420]] };
 
 // The iPad onboarding cards a mask must never touch: [x0, y0, x1, y1, radius] in plate px.
 const IPAD_CARDS = [[552, 1005, 1512, 1210, 34], [552, 1234, 1512, 1471, 34], [552, 1495, 1512, 1668, 34]];
@@ -50,15 +46,8 @@ const BAH_SHEET = {
 // Retouches render.js applies to a COPY of a plate (mask.py → out/.plates); captures stay as
 // shot. Each removes a capture defect, never adds content. Recaptures retire them.
 const PLATE_MASKS = {
-  mac: {
-    // the stale v1.0.0 badge (1.2.1 ships), and the "Serve my brain" switch, captured OFF
-    "brain-at-home": [{ rect: [1955, 190, 160, 80], fill: "row" }, { rect: [2040, 1588, 100, 56], fill: [76, 77, 78] }],
-    "privacy-label": [{ rect: [1955, 190, 160, 80], fill: "row" }],
-    // the half-faded marquee "I kno…" behind the fox's tail (blue-grey pixels only; the mesh stays)
-    "voice-speaking": [{ rect: [1600, 725, 320, 75], key: "blue", fill: [13, 11, 24] }],
-    // the fox's ears and snout poking out left of the onboarding card (rows are flat: scanlines)
-    onboarding: [{ rect: [805, 500, 125, 390], fill: "left" }],
-  },
+  // mac: retired 2026-11-25 with the 1280×800 recapture (the badge reads v1.6.0, Serve is pinned off,
+  // the onboarding and voice defects did not recur). Re-derive in 2560×1600 plate px if one returns.
   // The wireframe fox showing in the gaps between the brain cards (re-derived 2026-10-22 on the
   // 1.2.1 recapture, four cards). iPhone: its ear in the Mini/Lil gap (y 1039-1073) and its legs
   // in the Lil/Home gap (y 1477-1512); the Home/PCC gap is clean. "left" keeps the backdrop's
@@ -128,13 +117,15 @@ const PORTRAIT = [
   // Recapture the Mac with the toggle ON (ideally a paired device listed) before 1.2.1.
   // QA r2: that band alone left ~80% of the screen flat grey. The screen now stacks the
   // window's own header + tabs (Privacy selected) over the Brain at Home header and row, at the
-  // window's full width; PLATE_MASKS paints out the OFF switch and the stale v1.0.0 badge.
+  // window's full width; PLATE_MASKS painted out the OFF switch and the stale v1.0.0 badge.
+  // 2026-11-25: the Mac screen is the whole Brain at Home pane (no band; a laptop never crops), and
+  // the 1280×800 recapture retired both masks (the badge reads v1.6.0, Serve is pinned off).
   {
     id: "02_your-devices",
     layout: "duo",
     mac: "brain-at-home",
     phone: "brain-at-home",
-    macFocus: MAC_BRAIN_AT_HOME,
+    macFocus: "50% 0%",
     // QA r5 (1.2.1 plates, 09:41): the status bar is clean, so the r3 status bands are retired.
     // The screen is the sheet's rows (BAH_SHEET); DUO_PORTRAIT sizes the device so the empty
     // black under the sheet runs off the canvas instead of reading as a blank slab.
@@ -237,7 +228,8 @@ const PORTRAIT = [
   },
   // 1.2.1 recapture: no row names a firm any more, so the iPhone band is retired (its screen
   // shows rows 1-7, none naming anyone). The iPad screen reaches row 12, "Niamh Cullen draws
-  // the plans…", a person's full name: its band drops that row (y 1716-1849, rows are 134 px
+  // the plans…", a person's full name (DemoPersona drops the surname since 2026-11-25; the band
+  // stays until the iPad recapture): its band drops that row (y 1716-1849, rows are 134 px
   // apart from the card top at 242) like a filtered list. The iPad lift is rows 1-3 (y 242-644).
   {
     id: "06_memories",
@@ -403,7 +395,7 @@ const LANDSCAPE = [
     layout: "duo",
     mac: "brain-at-home",
     phone: "brain-at-home",
-    macFocus: MAC_BRAIN_AT_HOME,
+    macFocus: "50% 0%",
     billboard: true,
     h1px: 144,
   },
@@ -415,8 +407,8 @@ const LANDSCAPE = [
     scrim: "bottom-left",
     billboard: true,
     // The caption card alone (no half bubble, no fox legs), anchored over itself and nudged
-    // up so it also covers the "I am Mike." / "I live entirely…" bubbles above it. The ghost
-    // marquee "I kno…" behind the tail is painted out in PLATE_MASKS (QA r2).
+    // up so it also covers the "I am Mike." / "I live entirely…" bubbles above it. 2026-11-25:
+    // the whole window on the laptop, a burst frame mid-sentence; the ghost marquee did not recur.
   },
   {
     id: "04_pick-a-brain",
@@ -429,25 +421,24 @@ const LANDSCAPE = [
   {
     id: "05_notes-pdfs",
     layout: "split",
-    plate: "documents",
-    // Two rows on an empty window. QA r2: the 1.8× zoom looked upscaled and cut the toolbar.
-    // The screen is now 1.2× (toolbar whole) and the rows are lifted over themselves.
-    // Recapture with a PDF and a grounded answer to fill it.
-    focus: [0, 0, 1500],
+    // 2026-11-25: a real grounded turn (the ask-documents plate, Mac lane since 11-25): the question,
+    // the answer from the lair notes and its source chip, whole window. Was the Documents list
+    // zoomed 1.9× onto an empty window (Kev: "stretched").
+    plate: "ask-documents",
+    focus: "50% 0%",
   },
   {
     id: "06_memories",
     layout: "edge",
     plate: "memories",
     scrim: "bottom-left",
-    // QA r2: the lift sat over the upper rows and repeated rows still on screen. The screen now
-    // drops the "cold retard" row (a baking term that reads as a slur at a glance) and the row
-    // naming a firm (bands, like a filtered list), and the lift of "The cat is called Professor"
-    // to "First asked if I send anything to a server" sits over its own source (third band).
-    focus: { x: 0, w: 2880, fill: "#464748", bands: [[0, 367, 0], [461, 94, 367], [649, 1151, 461]] },
+    // 2026-11-25: the whole Memories window, as captured (the old bands dropped two rows). A row the
+    // frame must not show is fixed in DemoPersona.memories, not cut out of the plate.
+    focus: "50% 0%",
   },
   // The memory field in its own window (Kev, 2026-09-15). v1's "05b", renamed "06b" so it
-  // sorts right after 06_memories ('_' < 'b'). The plate is 1280×1024 and cover-crops.
+  // sorts right after 06_memories ('_' < 'b'). Shot at 1280×748 pt content since 2026-11-25 (it was a
+  // 1280×1024 px plate blown up 2.2×); its title bar makes it 2560×1560, so the laptop trims ~2.5%.
   {
     id: "06b_constellation",
     layout: "edge",
@@ -470,25 +461,19 @@ const LANDSCAPE = [
     id: "08_data-not-collected",
     layout: "stat",
     plate: "privacy-label",
-    // QA r2: the old band led with Private Cloud Compute (a cloud send beside "Nothing phones
-    // home") and its lines ran off the canvas mid-word. The screen is now the window header
-    // ("everything stays on this Mac", v1.0.0 badge painted out) + tabs over the Spotlight
-    // section, narrow enough that every line ends on canvas. No DuckDuckGo row, no PCC.
-    // 2026-11-24: re-cut for the 1.6 Settings (sidebar panes): header + pane list down to the
-    // selected Privacy row + Content Controls' first row, then Spotlight. Still no DuckDuckGo, no PCC.
-    focus: { x: 652, w: 2100, fill: "#474747", bands: [[120, 520, 40], [1400, 250, 600]] },
+    // 2026-11-25: Settings ▸ Privacy whole, at the shipped defaults (PCC off, Context senses off),
+    // as a new owner sees it. Was two stitched bands at 1.4× (Kev: "cropping oddly").
+    focus: "50% 0%",
   },
   // The claim is the Scripts section's own caption ("only the exact approved bytes ever run").
   // 2026-11-25: the agent-scripts plate (Settings ▸ Privacy scrolled to the scripts by the harness;
-  // the brain-at-home plate stopped showing them when Settings grew panes). One band, the content
-  // column only: Scripts (switch, two scripts with Approve, the folder, the caption), sized so the
-  // switch and Uninstall stay on canvas where the laptop runs off the right edge. The Context
-  // switches above it are the owner's live choices, so they stay out.
+  // the brain-at-home plate stopped showing them when Settings grew panes). Since 11-25 the whole
+  // window: the Context switches above the scripts launch at their shipped OFF (the recipe).
   {
     id: "09_you-approve",
     layout: "split",
     plate: "agent-scripts",
-    focus: { x: 900, w: 1760, fill: "#474747", bands: [[1250, 550, 230]] },
+    focus: "50% 0%",
     targets: ["mac"],
   },
 ];

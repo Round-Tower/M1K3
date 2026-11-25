@@ -240,7 +240,7 @@ h1 dim{text-shadow:none}
 .device.foldwide .cam{position:absolute;z-index:6;top:calc(52*var(--u));right:calc(60*var(--u));width:calc(26*var(--u));height:calc(26*var(--u));
   border-radius:50%;background:radial-gradient(circle at 40% 35%,#1d2430,#05070a 65%)}
 /* MacBook Pro-class: black bezel with notch, aluminium lid, slim deck below */
-.device.laptop{transform:perspective(calc(6000*var(--u))) rotateY(-12deg) rotateX(4deg);transform-origin:50% 60%}
+.device.laptop{transform:perspective(calc(6000*var(--u))) rotateY(-5deg) rotateX(2deg);transform-origin:50% 60%}
 .device.laptop .lid{position:relative;width:100%;aspect-ratio:2880/1800;padding:calc(34*var(--u));
   background:linear-gradient(160deg,#dcdcdc,#8f8f8f 35%,#b5b5b5 65%,#707070);border-radius:calc(44*var(--u)) calc(44*var(--u)) calc(10*var(--u)) calc(10*var(--u));
   box-shadow:0 calc(80*var(--u)) calc(200*var(--u)) rgba(0,0,0,.92), inset 0 0 0 calc(1*var(--u)) rgba(255,255,255,.35)}
@@ -437,6 +437,11 @@ function device(kind, plate, style = "", extra = "", focus = "") {
     return `<div class="device ${kind} official" style="${style}"><div class="screen">${extra}${img(plate, focus)}</div><img class="bezel-img" src="file://${bez}"></div>`;
   }
   if (kind === "laptop") {
+    // A Mac screen is the whole window, as the Mac draws it: no crop, band or zoom inside the
+    // laptop (Kev, 2026-11-25: "cropping oddly, and stretched in places - don't look like they're
+    // running on a real device"; 05 was zoomed 1.9×, 08 stitched from two bands). Compose the shot
+    // in the app (ScreengrabHarness) instead; only an object-position may pick the cover's anchor.
+    if (focus && typeof focus !== "string") throw new Error(`${plate}: a laptop screen shows the whole window; crop focus refused`);
     return `<div class="device laptop" style="${style}"><div class="lid"><div class="bezel"><div class="notch"></div><div class="screen">${extra}${img(plate, focus)}</div></div><div class="sheen"></div><div class="edge"></div></div><div class="deck"></div></div>`;
   }
   const parts =
@@ -612,8 +617,8 @@ function portrait(target, fr, c, T, W, H, u) {
 // Duo geometry, design px: [x, y, width] for the Mac and the phone/pad, [x, y] for the pill.
 // Tuned by eye from the audit's start (2026-10-22): the laptop fully on canvas, the phone over
 // its lower-right corner, the pill under the laptop beside the phone. iPad's canvas is 1760 design px tall, so the pair shrinks.
-// 2026-10-22 QA round 1: the Mac screen now shows only the Brain at Home header + label
-// (frames.js macFocus band), so the phone/pad moves down over the laptop's lower-right
+// 2026-10-22 QA round 1: the Mac screen showed only the Brain at Home header + label
+// (a macFocus band, retired 2026-11-25: the whole pane now), so the phone/pad moves down over the laptop's lower-right
 // corner instead of over screen text, and the pill sits in the gap between the two.
 // QA r5 (1.2.1 brain-at-home plates): the pairing sheet is the top ~51% of the iPhone plate and
 // ~28% of the iPad's, so at the old sizes (470 / 400 wide, wholly on canvas) the device read as a
@@ -638,14 +643,14 @@ function landscape(target, fr, c, T, W, H, u) {
   switch (fr.layout) {
     case "edge":
     case "split":
-      inner = `${atmosphere}${col()}${device("laptop", platePath(target, fr.plate), "left:calc(1260*var(--u));top:calc(170*var(--u));width:calc(1900*var(--u))", "", fr.focus)}`;
+      inner = `${atmosphere}${col()}${device("laptop", platePath(target, fr.plate), "left:calc(1250*var(--u));top:calc(390*var(--u));width:calc(1540*var(--u))", "", fr.focus)}`;
       break;
     case "grid": {
       const tiles = fr.plates
         .map((p, i) => {
           const cx = i % 2,
             r = Math.floor(i / 2);
-          return `<div class="panel tile" style="left:calc(${1330 + cx * 760}*var(--u));top:calc(${150 + r * 760}*var(--u));width:calc(730*var(--u));height:calc(730*var(--u))">
+          return `<div class="panel tile" style="left:calc(${1380 + cx * 730}*var(--u));top:calc(${447 + r * 468}*var(--u));width:calc(700*var(--u));height:calc(438*var(--u))">
           <div class="tile-label"${dirAttr(T)}>${c.tiles[i]}</div><img src="file://${platePath(target, p)}"></div>`;
         })
         .join("");
@@ -666,7 +671,7 @@ function landscape(target, fr, c, T, W, H, u) {
           <div class="big" style="font-size:calc(460*var(--u))">${c.big}</div><div class="bigunit">${c.bigUnit}</div></div>
         <h1 style="font-size:calc(${TITLE === "pixel" ? 140 : 96}*var(--u))">${c.h1}</h1><p class="sub">${c.sub}</p>
         <div class="corner">${c.corner}</div></div>
-        ${device("laptop", platePath(target, fr.plate), "left:calc(1360*var(--u));top:calc(170*var(--u));width:calc(1900*var(--u))", "", fr.focus)}`;
+        ${device("laptop", platePath(target, fr.plate), "left:calc(1360*var(--u));top:calc(430*var(--u));width:calc(1430*var(--u))", "", fr.focus)}`;
       break;
     default:
       throw new Error(`unknown landscape layout ${fr.layout}`);
