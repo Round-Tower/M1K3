@@ -16,6 +16,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-17, Confidence 0.8 (pure and tested; the stale look itself is owed
 //  on a phone: kill the app from Xcode mid-turn in the background and wait two minutes).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — the voice phases (listening, speaking) are working phases: a conversation
+//  behind the lock rewrites its card each turn and ends after a minute of silence, so a card unwritten for two
+//  minutes means the app is gone. Confidence 0.8.
 //
 
 import Foundation
@@ -27,7 +30,7 @@ public enum TurnActivityStaleness {
     /// The brain is still at work on this card (as opposed to Ready or Paused, which are settled).
     public static func isWorking(_ phase: TurnActivityPhase) -> Bool {
         switch phase {
-        case .thinking, .reading, .answering: true
+        case .thinking, .reading, .answering, .listening, .speaking: true
         case .ready, .paused: false
         }
     }

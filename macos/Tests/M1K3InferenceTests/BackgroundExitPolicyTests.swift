@@ -84,9 +84,19 @@ struct BackgroundExitPolicyTests {
         #expect(app.components(separatedBy: "case .background:").count == 2, "one background case in the shell")
         let background = try #require(app.range(of: "case .background:"))
         let rest = app[background.upperBound...]
-        let stop = try #require(rest.range(of: "core?.stopForBackground()"))
+        let stop = try #require(rest.range(of: "core?.stopForBackground("))
         let shed = try #require(rest.range(of: "core?.releaseForBackground()"))
         #expect(stop.lowerBound < shed.lowerBound)
+    }
+
+    /// Voice behind the lock (2026-11-26): only a conversation the lock keeps, in the system voice, finishes its
+    /// sentence. Kokoro is GPU work, so its speech always stops at the exit.
+    @Test("the exit keeps the speech only for a kept conversation in the system voice")
+    func theExitKeepsOnlyTheSystemVoice() throws {
+        let app = try String(contentsOf: Self.shell.appendingPathComponent("M1K3iOSHarnessApp.swift"), encoding: .utf8)
+        #expect(app.contains("keptVoice != nil && core?.selectedVoiceTier == .builtin"))
+        let stop = try body(of: "func stopForBackground(", in: "AppCore.swift")
+        #expect(stop.contains("if !keepsSpeaking"))
     }
 
     /// The text of one function in the shell, from its declaration to the next one.
@@ -100,7 +110,7 @@ struct BackgroundExitPolicyTests {
 
     @Test("the stop asks the policy, with the brain that is loaded on this device")
     func theStopAsksThePolicy() throws {
-        let body = try body(of: "func stopForBackground()", in: "AppCore.swift")
+        let body = try body(of: "func stopForBackground(", in: "AppCore.swift")
         #expect(body.contains("BackgroundExitPolicy.stopsTurn("))
         #expect(body.contains("chat.stopResponding()"))
         #expect(body.contains("stopSpeakingAnswer()"))
@@ -118,7 +128,7 @@ struct BackgroundExitPolicyTests {
     func theShellReadsTheRoute() throws {
         let source = try String(contentsOf: Self.shell.appendingPathComponent("AppCore.swift"), encoding: .utf8)
         #expect(!source.contains("brainRunsOnThisDevicesGPU: currentMLX != nil"), "a Private Cloud turn with Lil loaded")
-        for function in ["func stopForBackground()", "func stopTurnForInactive()"] {
+        for function in ["func stopForBackground(", "func stopTurnForInactive()"] {
             let body = try body(of: function, in: "AppCore.swift")
             #expect(body.contains("brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU"), "\(function)")
         }

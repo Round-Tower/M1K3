@@ -14,6 +14,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.8 (shape pinned by test; the look
 //  on a real phone is verify-on-device), Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — two phases for a voice conversation behind the lock (`listening`,
+//  `speaking`, salvaged from the spike/bg-voice spike): still phase words only, nothing that was said.
+//  Confidence 0.8.
 
 import Foundation
 
@@ -30,6 +33,10 @@ public enum TurnActivityPhase: String, Codable, Sendable, CaseIterable {
     /// The answer was stopped when the app left (iOS refuses background GPU work, and the stop reads the
     /// loaded brain, not the turn's route, so the words stay route-neutral); opening M1K3 is the way back.
     case paused
+    /// A voice conversation behind the lock, waiting for the person to talk.
+    case listening
+    /// A voice conversation behind the lock: M1K3 is saying the answer aloud.
+    case speaking
 }
 
 /// The Live Activity's dynamic content: the phase, and no free text.

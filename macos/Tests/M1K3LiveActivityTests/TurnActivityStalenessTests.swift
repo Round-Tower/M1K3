@@ -8,7 +8,7 @@ struct TurnActivityStalenessTests {
     private let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
 
     @Test("a working card goes stale a fixed while after it was last written", arguments: [
-        TurnActivityPhase.thinking, .reading, .answering,
+        TurnActivityPhase.thinking, .reading, .answering, .listening, .speaking,
     ])
     func workingPhasesGoStale(phase: TurnActivityPhase) throws {
         let stale = try #require(TurnActivityStaleness.staleDate(for: TurnActivityState(phase: phase), now: now))
@@ -33,5 +33,13 @@ struct TurnActivityStalenessTests {
         #expect(TurnActivityStaleness.facePhase(.thinking, isStale: true) == .paused)
         #expect(TurnActivityStaleness.facePhase(.answering, isStale: false) == .answering)
         #expect(TurnActivityStaleness.facePhase(.ready, isStale: true) == .ready)
+    }
+
+    /// A voice conversation behind the lock rewrites its card at every turn and ends after a minute of silence,
+    /// so a card unwritten for the whole window means the app is gone: it must stop saying "listening".
+    @Test("a voice card that stops being written goes stale and shuts its eyes")
+    func voiceCardsGoStale() {
+        #expect(TurnActivityStaleness.facePhase(.listening, isStale: true) == .paused)
+        #expect(TurnActivityStaleness.facePhase(.speaking, isStale: true) == .paused)
     }
 }

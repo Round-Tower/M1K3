@@ -13,6 +13,8 @@
 //  Review: claude-opus-5-5, 2026-11-19 — localisation Phase 0: the compact words carry a translator comment (five
 //  letters at most). Bundle.main here is the extension's own bundle, so these resolve from
 //  M1K3LiveActivityExtension/Localizable.xcstrings. English unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — words for the voice phases behind the lock ("M1K3 is listening…",
+//  "M1K3 is speaking…", Hear / Talk). English only until the next localisation wave. Confidence 0.75.
 
 import M1K3LiveActivity
 import SwiftUI
@@ -41,6 +43,8 @@ struct TurnActivityCopy {
         case .answering: String(localized: "M1K3 is answering…")
         case .ready: String(localized: "Answer ready")
         case .paused: String(localized: "Paused — open M1K3 to finish")
+        case .listening: String(localized: "M1K3 is listening…")
+        case .speaking: String(localized: "M1K3 is speaking…")
         }
     }
 
@@ -51,6 +55,7 @@ struct TurnActivityCopy {
         case .thinking, .reading, .answering: String(localized: "Tap to open the chat.")
         case .ready: String(localized: "Tap to read it.")
         case .paused: String(localized: "Leaving M1K3 stopped this answer.")
+        case .listening, .speaking: String(localized: "Voice mode is on. Tap to open.")
         }
     }
 
@@ -64,6 +69,8 @@ struct TurnActivityCopy {
         case .answering: String(localized: "Reply", comment: "Dynamic Island word in the wide pixel font: five letters at most")
         case .ready: String(localized: "Ready", comment: "Dynamic Island word in the wide pixel font: five letters at most")
         case .paused: String(localized: "Pause", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .listening: String(localized: "Hear", comment: "Dynamic Island word in the wide pixel font: five letters at most")
+        case .speaking: String(localized: "Talk", comment: "Dynamic Island word in the wide pixel font: five letters at most")
         }
     }
 
@@ -71,7 +78,7 @@ struct TurnActivityCopy {
     var titleColor: Color {
         if stopped { return TurnBrand.mark }
         return switch phase {
-        case .thinking, .reading, .answering: TurnBrand.phosphor
+        case .thinking, .reading, .answering, .listening, .speaking: TurnBrand.phosphor
         case .ready, .paused: TurnBrand.mark
         }
     }

@@ -44,4 +44,18 @@ struct TurnFaceTests {
         // Nothing lit in the eye rows outside the two lines (no open pupil beside them).
         #expect(cells.filter { $0.row == TurnFace.leftEye.row }.count == 6)
     }
+
+    @Test("listening looks up, mouth closed: waiting for the person to talk")
+    func listeningLooksUp() {
+        let cells = TurnFace.cells(for: .listening)
+        #expect(cells.contains(TurnFace.Cell(col: TurnFace.leftEye.col, row: TurnFace.leftEye.row - 1)))
+        #expect(cells.contains(TurnFace.Cell(col: TurnFace.rightEye.col, row: TurnFace.rightEye.row - 1)))
+        #expect(cells.filter { $0.row > TurnFace.mouthRow }.isEmpty)
+    }
+
+    @Test("speaking opens wider than answering: the words are out loud, not on screen")
+    func speakingOpensWide() {
+        let mouth = { (phase: TurnActivityPhase) in TurnFace.cells(for: phase).filter { $0.row >= TurnFace.mouthRow } }
+        #expect(mouth(.speaking).isStrictSuperset(of: mouth(.answering)))
+    }
 }
