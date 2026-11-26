@@ -13,10 +13,14 @@
 //  - answering: eyes open, mouth open (talking)
 //  - ready: the resting face, exactly the screensaver's
 //  - paused: eyes shut, a flat mouth
+//  - listening: eyes up, a flat mouth (a voice conversation behind the lock, waiting)
+//  - speaking: eyes open, the mouth wide (saying the answer aloud)
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.75 (cells pinned by test against PixelFace;
 //  how each expression reads at Island size is verify-on-device), Prior: PixelFace (M1K3ScreensaverCore,
 //  Kev + claude-opus-4-8, 2026-08-20), copied.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — listening and speaking, for voice behind the lock. Confidence 0.75 (the look
+//  at Island size is on the phone check).
 
 import Foundation
 
@@ -44,6 +48,8 @@ public enum TurnFace {
         case .answering: eyesOpen(dx: 0, dy: 0).union(openMouth)
         case .ready: eyesOpen(dx: 0, dy: 0).union(restingSmile)
         case .paused: eyesShut.union(flatMouth)
+        case .listening: eyesOpen(dx: 0, dy: -1).union(flatMouth)
+        case .speaking: eyesOpen(dx: 0, dy: 0).union(wideMouth)
         }
     }
 
@@ -72,6 +78,17 @@ public enum TurnFace {
         var cells = Set<Cell>()
         for row in mouthRow ... mouthRow + 1 {
             for col in 5 ... 7 {
+                cells.insert(Cell(col: col, row: row))
+            }
+        }
+        return cells
+    }
+
+    /// Wider than `openMouth` by a column each side: speaking out loud, not words arriving on screen.
+    private static var wideMouth: Set<Cell> {
+        var cells = Set<Cell>()
+        for row in mouthRow ... mouthRow + 1 {
+            for col in 4 ... 8 {
                 cells.insert(Cell(col: col, row: row))
             }
         }

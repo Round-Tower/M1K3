@@ -19,7 +19,7 @@ struct TurnActivityStateTests {
         let labels = Mirror(reflecting: TurnActivityState(phase: .thinking)).children.map(\.label)
         #expect(labels == ["phase"])
         #expect(Set(TurnActivityPhase.allCases.map(\.rawValue))
-            == ["thinking", "reading", "answering", "ready", "paused"])
+            == ["thinking", "reading", "answering", "ready", "paused", "listening", "speaking"])
     }
 
     @Test("every phase round-trips", arguments: TurnActivityPhase.allCases)
