@@ -37,6 +37,7 @@
 //  button and the branch's auto-speak met in the merge): a tap while an answer is being auto-spoken stops the whole
 //  answer, where it used to skip one sentence or queue a second reading over it. Confidence 0.8 (verify on the phone).
 //  Review: claude-opus-5-5, 2026-11-20 — a non-English answer is spoken by the best installed on-device voice, not Kokoro's English G2P: the language is decided once per answer (SpokenAnswerLanguage) and rides the utterance. English is byte-identical. Confidence 0.7; verify-by-launch owed.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — an M1K3 Voice download that finishes behind the lock does not put Kokoro (GPU) on the voice; the return does (voiceBehindLockReturning). Confidence 0.8.
 //
 
 import AVFoundation
@@ -105,7 +106,8 @@ extension AppCore {
                 // A Built-in pick landed while the bytes were still coming: it
                 // already reset the state; the finished download must not win.
                 guard !Task.isCancelled else { return }
-                speech.setProvider(kokoro)
+                // Behind the lock Kokoro (GPU) can't speak: the return puts it on (voiceBehindLockReturning).
+                if !voiceBehindLock.isBehindLock { speech.setProvider(kokoro) }
                 selectedVoiceTier = .m1k3Voice
                 UserDefaults.standard.set(VoiceTier.m1k3Voice.rawValue, forKey: Self.selectedVoiceTierKey)
                 voiceLoad = .ready

@@ -625,6 +625,11 @@ targets:
         # The Live Activity for a long answer or read (M1K3LiveActivityExtension): started and updated locally,
         # phase words only, never a push token. Without this key ActivityKit refuses every request.
         NSSupportsLiveActivities: true
+        # Voice behind the lock (VoiceBehindLockPolicy, 2026-11-26): a voice conversation goes on when the phone
+        # locks, the way a call does. The mic keeps running and the answers are spoken aloud (audible content, the
+        # mode's purpose); a minute of silence ends it, and Settings ▸ Voice turns it off.
+        UIBackgroundModes:
+          - audio
         # In-app events deep-link here: Open on the Halloween card is m1k3://event/halloween
         # (fastlane/events/*/event.json). App Store Connect won't add an event for review
         # without a deep link. No handler yet: the link opens M1K3, and the event (the

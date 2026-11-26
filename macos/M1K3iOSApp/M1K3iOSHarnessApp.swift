@@ -35,6 +35,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (review fold) — the notification delegate installs in `init`, and the
 //  leaving-card starts only when the previous phase was .active (not on the return path).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — `.inactive` stops an on-device answer before the background lands, while the GPU is still allowed. Confidence 0.7; owes a phone check (see BackgroundExitPolicy).
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — voice behind the lock: `.background` keeps a live conversation
+//  (VoiceBehindLockPolicy) instead of leaving voice mode, `.inactive` puts its face on the Lock Screen, `.active`
+//  brings the slot, mic and voice back before the re-warm. Confidence 0.7: the phone run is the proof.
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -91,6 +94,9 @@ struct M1K3iOSApp: App {
                     // from .active: the way BACK (.background → .inactive → .active) must not start a card. A system
                     // sheet mid-turn can still start one that the next .active takes down: accepted.
                     if previous == .active { core?.turnActivityGoingInactive() }
+                    // A voice conversation about to go behind the lock puts its face on the Lock Screen, for the
+                    // same reason: no card can start once we are gone.
+                    if previous == .active { core?.voiceBehindLockGoingInactive() }
                     // (2) Then the on-device stop, before the background so a generation step drains while the GPU
                     // is still allowed (#858). It tells the card "Paused" first, then stops (AppCore). Unconditional
                     // on `previous`: on the way back nothing is running (it was stopped), so it is a no-op.
@@ -99,16 +105,21 @@ struct M1K3iOSApp: App {
                     // What iOS does to a backgrounded app is no snag (#750). First, so a
                     // memory kill while the brain is shed below is not one either.
                     sessionGuard.end()
-                    // Voice mode can't survive a true background (the mic engine
-                    // and audio session are torn down by the OS) — leave cleanly
-                    // BEFORE shedding the brain, so the loop never sees a dead mic.
-                    core?.exitVoiceMode()
-                    // No background audio and no background GPU: the speech stops, and an answer being
-                    // made on this device stops with it, BEFORE the shed, or the turn keeps the brain
-                    // alive and the return loads a second copy (BackgroundExitPolicy).
-                    core?.stopForBackground()
+                    // A voice conversation keeps going behind the lock (VoiceBehindLockPolicy: the switch is on and
+                    // someone off the GPU can answer). Otherwise voice mode is left cleanly BEFORE the shed, so the
+                    // loop never sees a dead mic. Decided first, while the chosen brain is still what it was.
+                    let keptVoice = core?.voiceBehindLockBrain
+                    if keptVoice == nil { core?.exitVoiceMode() }
+                    // No background GPU: an answer being made on this device stops, BEFORE the shed, or the turn
+                    // keeps the brain alive and the return loads a second copy (BackgroundExitPolicy). The speech
+                    // stops too, unless a conversation goes behind the lock in the system voice, which can finish.
+                    let keepsSpeaking = keptVoice != nil && core?.selectedVoiceTier == .builtin
+                    core?.stopForBackground(keepsSpeaking: keepsSpeaking)
                     core?.releaseForBackground()
+                    if let keptVoice { core?.enterVoiceBehindLock(keptVoice) }
                 case .active:
+                    // Back from behind the lock: the slot, the mic and the voice come back BEFORE the re-warm.
+                    core?.voiceBehindLockReturning()
                     markSessionActive()
                     core?.turnActivity.appBecameActive()
                     core?.warmForForeground()

@@ -219,6 +219,11 @@
 //  neither. Confidence 0.8 (IOSAgeWiringScanTests; device try owed).
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — 1.6 code beside the chat: `artifact` (what ChatScreen shows) and the
 //  landed-answer hook after a typed send (AppCore+Artifact). Device try owed. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — voice behind the lock (AppCore+VoiceBehindLock): the slot points at
+//  the brain that answers there (`pointSlotBehindLock`, after the shed, never persisted) and comes back on the
+//  return (`restoreSlotAfterLock`). `chosenBrainRunsOnThisGPU` reads the choice, not the load. A warm that lands
+//  behind the lock is let go like a shed (no GPU work there, its persona prefix included), and the background stop
+//  lets the system voice finish its sentence when a conversation stays. Confidence 0.75: the phone run is the proof.
 
 import AVFoundation
 #if os(iOS)
@@ -308,6 +313,8 @@ final class AppCore {
     let speech: SwappableSpeechProvider
     let builtinSpeech = AVSpeechProvider()
     let kokoro: KokoroSpeechProvider
+    /// A voice conversation's life behind the lock (AppCore+VoiceBehindLock).
+    let voiceBehindLock = VoiceBehindLock()
     /// Live on-device dictation (SFSpeechRecognizer + AVAudioEngine). On-device
     /// recognition is REQUIRED by the provider — no server fallback, by design.
     /// Under the screengrab harness the voice plates get the open mic instead
@@ -1258,6 +1265,17 @@ final class AppCore {
                     if mlx !== currentMLX { mlx.releaseMemory() }
                     return
                 }
+                // Landed behind the lock (a download iOS carried, a warm the return started before a re-lock):
+                // no GPU work there, its persona prefix included. Let it go the way the shed does; the files are
+                // on disk, and the return re-warms (or takes it back, if something still holds it).
+                guard !voiceBehindLock.isBehindLock else {
+                    mlx.releaseMemory()
+                    shedMLX = mlx
+                    if currentMLX === mlx { currentMLX = nil }
+                    brainLoad = .idle
+                    Self.log.notice("brain warm landed behind the lock: released, the return re-warms")
+                    return
+                }
                 currentMLX = mlx
                 activeProvider.setProvider(mlx)
                 brainLoad = .ready
@@ -1541,9 +1559,13 @@ final class AppCore {
         )
     }
 
-    func stopForBackground() {
-        cancelAutoSpeak()
-        Task { await stopSpeakingAnswer() }
+    /// `keepsSpeaking`: a conversation going behind the lock in the system voice, which can finish its sentence
+    /// there (Kokoro can't: it is GPU work, so its speech always stops).
+    func stopForBackground(keepsSpeaking: Bool = false) {
+        if !keepsSpeaking {
+            cancelAutoSpeak()
+            Task { await stopSpeakingAnswer() }
+        }
         // The Live Activity first: it says Paused for the turn about to be stopped, and holds a background
         // task for one that runs elsewhere (BackgroundExitPolicy decides both, from the same inputs).
         turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU)
@@ -1563,6 +1585,50 @@ final class AppCore {
             turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU
         ) {
             chat.stopResponding()
+        }
+    }
+
+    // MARK: - Voice behind the lock (VoiceBehindLockPolicy)
+
+    /// The chosen brain is an on-device MLX tier (Lil, Big): what iOS refuses to run behind the lock. Read off the
+    /// choice, not the load, so a brain still warming counts.
+    var chosenBrainRunsOnThisGPU: Bool {
+        selectedBrain.mlxModelID != nil && !homeBrainActive && !privateCloudArming.isOn
+    }
+
+    /// A Mac is paired and its key is in the Keychain (`activateHomeBrain`'s own guard).
+    var homeBrainPaired: Bool {
+        homeBrain != nil && brainLinkStore.credential() != nil
+    }
+
+    var miniAvailableNow: Bool {
+        afm.availabilityState == .available
+    }
+
+    /// Point the slot at the brain that answers behind the lock. Persists nothing: `restoreSlotAfterLock` undoes it.
+    /// Runs after the background shed, which may still be waiting on a stopped turn's last GPU step (#858): Home's
+    /// activation releases weights too, so it waits its turn. A warm still in flight is left alone: if it lands
+    /// behind the lock, the warm itself lets it go (`warmSelectedBrain`).
+    func pointSlotBehindLock(_ brain: VoiceBehindLockPolicy.Brain, epoch: Int) async {
+        await shedWaitTask?.value
+        // Back in front (or locked again) while the shed waited: that return already ran, and must not be undone.
+        guard !Task.isCancelled, voiceBehindLock.epoch == epoch, brain != .asChosen else { return }
+        switch brain {
+        case .asChosen: break
+        case .mini: activeProvider.setProvider(afm)
+        case .home: activateHomeBrain()
+        }
+    }
+
+    /// The return from behind the lock: leave Home if only the lock put it there, then `warmForForeground` (which
+    /// runs next) re-warms the chosen MLX tier.
+    func restoreSlotAfterLock(_ brain: VoiceBehindLockPolicy.Brain) {
+        switch brain {
+        case .asChosen, .mini:
+            break
+        case .home:
+            homeBrainActive = false
+            activeProvider.setProvider(afm)
         }
     }
 

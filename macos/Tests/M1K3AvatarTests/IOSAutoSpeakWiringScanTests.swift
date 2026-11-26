@@ -148,8 +148,8 @@ struct IOSAutoSpeakWiringScanTests {
         // Leaving the app goes through `stopForBackground`, which ends the auto-speak session first (2026-11-11:
         // it also stops an on-device turn before the brain is shed, BackgroundExitPolicy).
         let app = try Self.code("M1K3iOSApp/M1K3iOSHarnessApp.swift")
-        #expect(app.contains("core?.stopForBackground()"))
-        let leave = core.components(separatedBy: "func stopForBackground()").dropFirst().first ?? ""
+        #expect(app.contains("core?.stopForBackground("))
+        let leave = core.components(separatedBy: "func stopForBackground(").dropFirst().first ?? ""
         #expect(leave.prefix(200).contains("cancelAutoSpeak()"))
         let section = try Self.code("M1K3iOSApp/VoiceOutputSection.swift")
         #expect(section.contains("@AppStorage(VoiceModeDefaults.autoSpeakKey)"))

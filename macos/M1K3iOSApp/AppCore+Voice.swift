@@ -103,6 +103,10 @@
 //  Review: claude-opus-5-5, 2026-11-20 (pre-push review fold) — the streaming turn begins the answer latch
 //  before anything awaits again; a page command re-begins it with the interface's language. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-11-23 — a landed voice turn opens its page (`surfaceLandedAnswerArtifact`, AppCore+Artifact; only the answer its own send produced). Device try owed. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — voice behind the lock: the loop's beats (listen, speech heard, turn
+//  sent and ended, speaking) feed `voiceBehindLock` (silence and the Lock Screen face), an interruption that ends
+//  behind the lock resumes the listen, and every exit stops the mic engine the lock kept running. Confidence 0.7:
+//  the phone run is the proof.
 
 import AVFoundation
 import Foundation
@@ -128,6 +132,7 @@ extension AppCore {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 avatar.setActivity(.speaking)
+                voiceBehindLock.speakingStarted()
                 // Same latency mark as the Mac shell — mobile is the surface
                 // where the wait is felt most, so it must not be the one
                 // surface that goes unmeasured.
@@ -138,6 +143,7 @@ extension AppCore {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 speechHighlight.clear()
+                voiceBehindLock.speakingEnded()
                 // Let the loop's drainer queue the next sentence the moment
                 // this one ends (natural finish or a stop's didCancel).
                 resumePendingSpeech()
@@ -210,7 +216,12 @@ extension AppCore {
     func exitVoiceMode() {
         guard let controller = voiceLoop else { return }
         soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
+        // Behind the lock the mic engine runs between listens; an exit must stop it whether or not a listen is
+        // live (the listen's own teardown stops it only once this is off; the release covers the gaps between).
+        let mic = transcriber as? AppleSpeechTranscriber
+        mic?.keepsMicRunningBetweenListens = false
         controller.exit()
+        mic?.releaseAudioHardware()
         voiceLoop = nil
         closeVoicePage()
         lookCamera.close() // the eye never outlives the mode (#768)
@@ -318,7 +329,12 @@ extension AppCore {
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
             let lastBeforeSend = chat.messages.last?.id
+            // Behind the lock the slot may still be on its way off Lil (the shed waits on a stopped GPU step):
+            // a quick next question waits for it, so it never starts on the GPU.
+            await voiceBehindLock.slotPointed()
+            voiceBehindLock.turnSent()
             await chat.send(prepared.question)
+            voiceBehindLock.turnEnded()
             if let token { Self.voiceTurnClause.clear(token) }
             surfaceLandedAnswerArtifact(after: lastBeforeSend)
         }
@@ -333,6 +349,7 @@ extension AppCore {
                 lastHeard = nil // this listen's room, not the last one's
                 lastAudio = nil
                 avatar.setActivity(.listening)
+                voiceBehindLock.listening()
                 let firstListen = voiceFirstListenPending
                 voiceFirstListenPending = false
                 if let tick = VoiceModeEarcons.listenStart(isFirstListen: firstListen) {
@@ -349,6 +366,9 @@ extension AppCore {
                         var sawSegments = false
                         for await segment in upstream {
                             sawSegments = true
+                            if !segment.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Task { @MainActor in self?.voiceBehindLock.heardSpeech() }
+                            }
                             continuation.yield(segment)
                         }
                         if !sawSegments, !Task.isCancelled,
@@ -646,6 +666,9 @@ extension AppCore {
 
     private func applyAudioSessionEvent(_ event: AudioInterruptionPolicy.Event, note: String) {
         guard let voiceLoop else { return }
+        if case let .interruptionEnded(shouldResume) = event {
+            voiceBehindLockInterruptionEnded(shouldResume: shouldResume)
+        }
         switch AudioInterruptionPolicy.action(for: event, in: voiceLoop.state) {
         case .none:
             break

@@ -25,6 +25,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the voice rows draw SettingsChoiceRow: the whole row takes the touch.
 //  Review: claude-opus-5-5, 2026-11-19 — localisation: the rows show `VoiceTier.localizedName` ("Built-in" from
 //  M1K3Voice's catalog; the iPhone pseudo pass showed it single). English unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 — "Keep talking when locked" (VoiceBehindLock.switchKey, on by default,
+//  Kev): a voice conversation goes on behind the lock (iPhone only). Confidence 0.8.
 //
 
 import M1K3Inference
@@ -37,6 +39,8 @@ struct VoiceOutputSection: View {
     @AppStorage(AppCore.soundEffectsEnabledKey) private var soundEffectsEnabled = true
     /// Chat auto-speak (the Mac's key): answers read aloud as they stream, in the voice above.
     @AppStorage(VoiceModeDefaults.autoSpeakKey) private var autoSpeak = false
+    /// Voice behind the lock (VoiceBehindLockPolicy): read as the app leaves, so a change applies at the next lock.
+    @AppStorage(VoiceBehindLock.switchKey) private var keepsTalkingWhenLocked = VoiceBehindLockPolicy.onByDefault
 
     private var tiers: [VoiceTier] {
         AppCore.neuralVoiceAvailable ? VoiceTier.allCases : [.builtin]
@@ -71,6 +75,20 @@ struct VoiceOutputSection: View {
                 }
             Toggle("Sound effects", isOn: $soundEffectsEnabled)
                 .onChange(of: soundEffectsEnabled) { _, enabled in core.soundEffects.isEnabled = enabled }
+            #if os(iOS)
+                Toggle(isOn: $keepsTalkingWhenLocked) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Keep talking when locked")
+                        Text("""
+                        Lock your phone mid-conversation and M1K3 keeps listening and answering out loud. Lil and Big \
+                        can't run behind the lock, so your paired Mac answers, or Apple's model if there isn't one. \
+                        A minute of silence ends it.
+                        """)
+                        .font(.caption)
+                        .foregroundStyle(.readableSecondary)
+                    }
+                }
+            #endif
         } header: {
             Text("Voice")
         } footer: {
