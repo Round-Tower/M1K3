@@ -1,7 +1,7 @@
 # Plan — the 3D Phosphor Fox companion (Android)
 
-> Status: **planned, not started.** Scoped 2026-08-23 after the chat-UI redesign
-> session. Kev's call: minimal real Filament, just the Fox (+ maybe a slimmed
+> Status: **shipped** the same day (`f825a378`, `Companion3DView.kt`). Scoped
+> 2026-08-23 after the chat-UI redesign session. Kev's call: minimal real Filament, just the Fox (+ maybe a slimmed
 > iOS spread later), models compressed for Android, Blender MCP in play. Do it
 > as a dedicated pass — it has two landmines (below), so it's not an
 > end-of-session bolt-on.
@@ -19,12 +19,19 @@ picker, not the debug lab — all of which the reduction (`b3d4c461`, "one face
 
 ## Why not just restore SceneView
 
-The reduction removed `io.github.sceneview:sceneview` (2.3.0). SceneView tops
-out at **2.3.0** — 2024-era, built against Kotlin ~1.9 / Compose ~1.6. This
-app's toolchain is now **Kotlin 2.4.10, AGP 9.3.1, Compose Multiplatform
-1.11.1, compileSdk 36**. SceneView won't resolve/compile cleanly against that,
-and there is no newer release tracking it (verified against Maven Central
-2026-08-23: latest is 2.3.0).
+The reduction removed `io.github.sceneview:sceneview` (2.3.0). This plan
+first said SceneView topped out at 2.3.0. **That was wrong:** the 2026-08-23
+check read the search.maven.org index, which stopped updating (it still says
+2.3.0, and Filament at 1.71.5). Maven Central itself
+(`repo1.maven.org/maven2/io/github/sceneview/sceneview/maven-metadata.xml`)
+lists 4.x releases: 4.73.0's pom pins Filament 1.77.3 and Kotlin 2.4.21, and
+its maintainer says it needs compileSdk 37 and AGP 9.4+. This app is on **Kotlin 2.4.10, AGP 9.3.1, Compose
+Multiplatform 1.11.1, compileSdk 36**, one step behind. Read a library's
+version off repo1's `maven-metadata.xml`, never the search index. (Corrected
+2026-11-26, after a note from SceneView's maintainer.)
+
+So SceneView is alive. The reason to skip it is simpler: the fox needs one
+model and its animator, and Filament core does that without a wrapper.
 
 **Approach instead: Filament core directly.** `com.google.android.filament`
 + `com.google.android.filament:gltfio-android` are actively maintained,
@@ -98,3 +105,10 @@ Guards for the Fox:
 
 The 38-creature gallery, the model picker, the debug lab, the THREE.js WebView
 avatar — all cut in `b3d4c461` and staying cut. One companion, done well.
+
+<!--
+Signed: Kev + claude-opus-5.5, 2026-11-26 — the "Why not just restore SceneView"
+correction and the Status line only. Read repo1 metadata and the 4.73.0 pom.
+compileSdk 37 / AGP 9.4+ are the maintainer's word, unchecked.
+Prior: Unknown. Confidence: 0.9.
+-->
