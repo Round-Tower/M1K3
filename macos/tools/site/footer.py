@@ -16,6 +16,10 @@ a footer (vr.html, a full-screen scene) are left alone.
 Signed: Kev + claude-fable-5.2, 2026-11-16, Confidence 0.8. Prior: none (new file).
 Context: Kev, 2026-11-16: "the footer needs some love" and "Grouped collumes please
 for the footer amigo".
+
+Review: Kev + claude-opus-5.5, 2026-11-26 — the home page footer carries the iPip badge
+under TAAFT's (Kev: "Please add the badge"). A plain followed link, which is what iPip
+requires for a free launch day; the SVG is self-hosted. Confidence 0.9.
 """
 
 from __future__ import annotations
@@ -88,6 +92,14 @@ FEATURED = (
     'target="_blank" rel="nofollow noopener"><img width="300" height="63" src="/featured-on-taaft.png" '
     'alt="Featured on There\'s An AI For That"></a></p>\n'
 )
+# iPip counts only a plain link (no nofollow/ugc/sponsored) and checks the home page
+# daily; the badge unlocks M1K3's free launch day. Self-hosted like TAAFT's, so the
+# page still makes zero external requests. Their dark SVG, verbatim (2026-11-26).
+IPIP = (
+    '  <p class="foot-extra featured"><a href="https://ipip.fyi/apps/m1k3?ref=badge" '
+    'target="_blank" rel="noopener"><img width="220" height="56" src="/on-ipip.svg" '
+    'alt="M1K3 on iPip"></a></p>\n'
+)
 
 FOOTER = re.compile(r"<footer>.*?</footer>", re.DOTALL)
 
@@ -108,7 +120,7 @@ def render(slug: str) -> str:
     out.append("  </div>")
     body = "\n".join(out) + "\n"
     if slug == "index":
-        body += SHARE + FEATURED
+        body += SHARE + FEATURED + IPIP
     body += (
         '  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. '
         "No tracking on this page, obviously.</p>\n"

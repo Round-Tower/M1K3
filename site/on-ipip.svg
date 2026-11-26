@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="56" viewBox="0 0 220 56" role="img" aria-label="On iPip: M1K3">
+<rect x="1" y="1" width="218" height="54" rx="10" fill="#1b1b22" stroke="#fdfcf7" stroke-width="2"/><rect x="212" y="4" width="4" height="8" fill="#4fb06a"/><rect x="212" y="12" width="4" height="8" fill="#f3c63f"/><rect x="212" y="20" width="4" height="8" fill="#f08a2c"/><rect x="212" y="28" width="4" height="8" fill="#e5534b"/><rect x="212" y="36" width="4" height="8" fill="#8a5bb8"/><rect x="212" y="44" width="4" height="8" fill="#3e8fd6"/>
+<rect x="12" y="9" width="22" height="38" rx="5" fill="#fdfcf7"/><rect x="14" y="11" width="18" height="34" rx="3.5" fill="#fdfcf7"/>
+<rect x="19.5" y="12.5" width="7" height="2" rx="1" fill="#1b1b22"/>
+<g fill="#1b1b22"><rect x="18" y="21" width="2" height="3"/><rect x="26" y="21" width="2" height="3"/><rect x="18" y="31" width="2" height="2"/><rect x="26" y="31" width="2" height="2"/><rect x="20" y="33" width="6" height="2"/></g>
+<text x="44" y="20" font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif" font-size="8.5" font-weight="700" letter-spacing="1.2" fill="#b9b8c2">ON IPIP</text>
+<text x="44" y="36" font-family="Georgia,'Times New Roman',serif" font-size="16" fill="#fdfcf7">M1K3</text>
+<text x="44" y="48" font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif" font-size="8.5" fill="#b9b8c2">iPhone and iPad apps</text>
+</svg>

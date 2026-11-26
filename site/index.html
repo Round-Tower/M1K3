@@ -736,6 +736,7 @@ the action list?<br />
   </div>
   <p class="foot-extra"><button class="share-link" id="shareBtn" type="button" aria-label="Share M1K3">Share M1K3</button></p>
   <p class="foot-extra featured"><a href="https://theresanaiforthat.com/ai/m1k3/?ref=featured&amp;v=13348798" target="_blank" rel="nofollow noopener"><img width="300" height="63" src="/featured-on-taaft.png" alt="Featured on There's An AI For That"></a></p>
+  <p class="foot-extra featured"><a href="https://ipip.fyi/apps/m1k3?ref=badge" target="_blank" rel="noopener"><img width="220" height="56" src="/on-ipip.svg" alt="M1K3 on iPip"></a></p>
   <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
   <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc. Fox model: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PixelMannen and tomkranis, CC-BY 4.0</a>.</p>
 </footer>
@@ -1212,6 +1213,10 @@ tick();
      Review: Kev + claude-opus-5.5, 2026-11-21 — the stat decode's settle() builds its .z spans with DOM nodes instead of
      writing data-num back through innerHTML (CodeQL #57, js/xss-through-dom; not exploitable while data-num is
      author-written, closed so it never becomes so). Same rendered markup for 0 / 100% / 1 / ∞; guarded by
-     tools/site/test_stat_decode_dom.py. Confidence 0.85. -->
+     tools/site/test_stat_decode_dom.py. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-11-26 — the footer carries the iPip badge under TAAFT's (Kev: "Please add
+     the badge"): a plain followed link to ipip.fyi/apps/m1k3, which iPip needs for a free launch day; the SVG
+     is iPip's dark badge, self-hosted (site/on-ipip.svg) so the page keeps zero external requests. Stamped by
+     tools/site/footer.py. Confidence 0.9. -->
 </body>
 </html>
