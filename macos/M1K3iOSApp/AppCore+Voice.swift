@@ -106,7 +106,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-26 — voice behind the lock: the loop's beats (listen, speech heard, turn
 //  sent and ended, speaking) feed `voiceBehindLock` (silence and the Lock Screen face), an interruption that ends
 //  behind the lock resumes the listen, and every exit stops the mic engine the lock kept running. Confidence 0.7:
-//  the phone run is the proof.
+//  the phone run is the proof. #909 second pass: the flag clears before the guard and the card ends with the
+//  conversation (VoiceBehindLockWiringScanTests pins both).
 
 import AVFoundation
 import Foundation
@@ -214,12 +215,15 @@ extension AppCore {
     /// Leave the mode: tears down mic + speech. An in-flight turn is NOT
     /// cancelled — its answer still lands in the chat transcript, unspoken.
     func exitVoiceMode() {
-        guard let controller = voiceLoop else { return }
-        soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
-        // Behind the lock the mic engine runs between listens; an exit must stop it whether or not a listen is
-        // live (the listen's own teardown stops it only once this is off; the release covers the gaps between).
+        // Behind the lock (or ahead of it) the mic engine runs between listens; an exit must stop it whether or
+        // not a listen is live (the listen's own teardown stops it only once this is off; the release covers the
+        // gaps between). Cleared before the guard, so no path can leave the flag on.
         let mic = transcriber as? AppleSpeechTranscriber
         mic?.keepsMicRunningBetweenListens = false
+        // The Lock Screen face comes down with the conversation: never "listening" with the mic off.
+        voiceBehindLock.conversationEnded()
+        guard let controller = voiceLoop else { return }
+        soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         mic?.releaseAudioHardware()
         voiceLoop = nil

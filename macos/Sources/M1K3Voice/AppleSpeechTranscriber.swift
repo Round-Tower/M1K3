@@ -151,6 +151,8 @@
 //  leaves a running one alone, so while the shell holds this on, a listen's end drops only the tap and the next
 //  listen reuses the running engine. `releaseAudioHardware` still stops it (the end of voice mode). Spike: 8/8
 //  background re-listens, 0 errors. Confidence 0.75: verify-by-launch, per this file's convention.
+//  #909 second pass: `startKeepingMicRunning()` also STARTS the engine when no listen holds it, called at `.inactive`
+//  (still in front), so a lock that lands while M1K3 thinks or speaks still finds a running engine to listen on.
 
 import AVFoundation
 import Foundation
@@ -306,6 +308,24 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     public var keepsMicRunningBetweenListens: Bool {
         get { engineLock.withLock { keepsEngineRunningStored } }
         set { engineLock.withLock { keepsEngineRunningStored = newValue } }
+    }
+
+    /// Turn `keepsMicRunningBetweenListens` on AND make sure the engine is running now, while the app is still in
+    /// front: called as the app goes inactive, so a lock that lands while M1K3 is thinking or speaking (no listen,
+    /// engine stopped) still leaves a running engine for the next listen, which iOS would refuse to start behind
+    /// the lock. A listen that holds the engine already has it running. `releaseAudioHardware` undoes it.
+    public func startKeepingMicRunning() {
+        engineLock.withLock {
+            keepsEngineRunningStored = true
+            guard engineOwner == nil, !audioEngine.isRunning else { return }
+            audioEngine.prepare()
+            do {
+                try audioEngine.start()
+                Self.log.notice("stt engine started ahead of the lock (no listen held it)")
+            } catch {
+                Self.log.error("stt engine would not start ahead of the lock: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     public init(locale: Locale = .current) {

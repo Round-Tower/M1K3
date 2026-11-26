@@ -20,6 +20,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-26, Confidence 0.7 (the rules are tested in VoiceBehindLockPolicyTests;
 //  this wiring is the phone run: lock mid-conversation, unpaired and paired). Prior: the spike's
 //  AppCore+BGVoiceSpike.swift and SpikeVoiceCard.swift (Kev + claude-opus-5.5, 2026-11-16/17).
+//  Review: Kev + claude-opus-5.5, 2026-11-26 (#909 second pass) — the engine starts at `.inactive` (a lock mid-answer
+//  found no engine and iOS refuses to start one behind the lock), every exit ends the card at once, a cut-off
+//  `speaking` can't hold the conversation open, and a three-minute busy cap bounds the mic (the policy). Pinned in
+//  VoiceBehindLockWiringScanTests. Confidence 0.75: "ask, then lock at once" is the phone check.
 //
 
 import Foundation
@@ -107,12 +111,14 @@ final class VoiceBehindLock {
     }
 
     /// A return to the front that never went behind the lock: the lock's own `.active` blip comes just before the
-    /// background, so wait a moment and end the card only if the app is really still in front.
-    func endCardIfStillInFront() {
+    /// background, so wait a moment and stand down (the card, the mic started ahead of the lock) only if the app
+    /// is really still in front.
+    func standDownIfStillInFront(_ standDown: @escaping @MainActor () -> Void) {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(1))
             guard let self, !isBehindLock, Self.appIsInFront else { return }
             card.end()
+            standDown()
         }
     }
 
@@ -124,9 +130,12 @@ final class VoiceBehindLock {
         #endif
     }
 
-    /// The conversation ended behind the lock (silence): the face comes down, and the brain stays recorded so
-    /// the return still undoes the slot.
-    func endCard() {
+    /// The conversation ended (any exit from voice mode): the face comes down at once, so the Lock Screen never
+    /// says "listening" with the mic off, and the silence watch stops. Behind the lock the brain stays recorded so
+    /// the return still undoes the slot (and a Kokoro download that lands meanwhile still waits for it).
+    func conversationEnded() {
+        silenceWatch?.cancel()
+        silenceWatch = nil
         card.end()
     }
 
@@ -134,6 +143,9 @@ final class VoiceBehindLock {
         self.brain = brain
         epoch += 1
         lastSpeech = .now
+        // The exit stopped the speech (the system voice may finish its sentence, and says so when it does): a
+        // `speaking` left over from an M1K3 Voice sentence the swap cut off must not hold the conversation open.
+        speaking = false
         silenceWatch?.cancel()
         silenceWatch = Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -141,7 +153,7 @@ final class VoiceBehindLock {
                 guard let self, !Task.isCancelled, isBehindLock else { return }
                 let busy = turnRunning || speaking
                 if VoiceBehindLockPolicy.endsForSilence(silentFor: lastSpeech.duration(to: .now), turnRunning: busy) {
-                    Self.log.notice("voice behind the lock: a minute of silence, conversation ended")
+                    Self.log.notice("voice behind the lock: silence (or the busy cap), conversation ended")
                     onSilence()
                     return
                 }
@@ -184,6 +196,9 @@ extension AppCore {
     func voiceBehindLockGoingInactive() {
         guard voiceBehindLockBrain != nil else { return }
         voiceBehindLock.showCard()
+        // Still in front, so iOS allows an engine start: a lock landing while M1K3 thinks or speaks (no listen, the
+        // engine stopped) would otherwise leave the next listen to start one behind the lock, which iOS refuses.
+        (transcriber as? AppleSpeechTranscriber)?.startKeepingMicRunning()
     }
 
     /// `.background`, AFTER `stopForBackground` and `releaseForBackground`, for a conversation that stays.
@@ -199,10 +214,9 @@ extension AppCore {
         let neural = kokoro
         Task { await neural.stop() }
         lookCamera.close() // the camera can't run behind the lock
-        let epoch = voiceBehindLock.entered(brain) { [weak self] in
-            self?.voiceBehindLock.endCard()
-            self?.exitVoiceMode()
-        }
+        // No GPU work behind the lock: retrieval here is the hashing embedder (AppCore's iOS composition), not MLX.
+        // An MLX embedder on iOS would need the same treatment as Lil.
+        let epoch = voiceBehindLock.entered(brain) { [weak self] in self?.exitVoiceMode() }
         voiceBehindLock.pointTask = Task { [weak self] in await self?.pointSlotBehindLock(brain, epoch: epoch) }
     }
 
@@ -212,7 +226,13 @@ extension AppCore {
         // background as the phone locks; the phone run on 2026-11-26 lost its card to that `.active`). The card
         // comes down only if the app is still in front a moment later.
         guard voiceBehindLock.isBehindLock else {
-            voiceBehindLock.endCardIfStillInFront()
+            voiceBehindLock.standDownIfStillInFront { [weak self] in
+                // The engine `.inactive` started ahead of the lock: back to the in-front rule (each listen's end
+                // stops it). A live listen keeps its hardware; its own teardown stops it now the flag is off.
+                let mic = self?.transcriber as? AppleSpeechTranscriber
+                mic?.keepsMicRunningBetweenListens = false
+                mic?.releaseAudioHardware()
+            }
             return
         }
         guard let brain = voiceBehindLock.left() else { return }

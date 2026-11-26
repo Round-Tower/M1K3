@@ -56,9 +56,18 @@ struct VoiceBehindLockPolicyTests {
     }
 
     /// Spike run 2 (11-17): a 60 s web-search timeout ended the conversation mid-turn.
-    @Test("a turn still running is not silence, however long it takes")
+    @Test("a turn still running is not silence, up to the busy cap")
     func runningTurnIsNotSilence() {
-        #expect(!VoiceBehindLockPolicy.endsForSilence(silentFor: .seconds(600), turnRunning: true))
+        #expect(!VoiceBehindLockPolicy.endsForSilence(silentFor: .seconds(120), turnRunning: true))
+    }
+
+    /// Second review pass on #909: the silence rule leans on two busy flags; if either sticks, the mic would run
+    /// behind the lock for ever. A hard cap bounds it whatever the flags say.
+    @Test("however busy, nothing behind the lock for three minutes ends the conversation")
+    func busyIsCapped() {
+        #expect(VoiceBehindLockPolicy.busyLimit == .seconds(180))
+        #expect(!VoiceBehindLockPolicy.endsForSilence(silentFor: .seconds(179), turnRunning: true))
+        #expect(VoiceBehindLockPolicy.endsForSilence(silentFor: .seconds(180), turnRunning: true))
     }
 
     /// In front, an interruption parks the loop until a tap. Behind the lock nobody can tap.

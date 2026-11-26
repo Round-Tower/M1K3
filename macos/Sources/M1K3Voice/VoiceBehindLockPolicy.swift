@@ -16,6 +16,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-26, Confidence 0.8 (pure and tested; the shell wiring is the phone
 //  check). Prior: the spike's AppCore+BGVoiceSpike.swift (Kev + claude-opus-5.5, 2026-11-16/17), reduced to rules.
+//  Review: Kev + claude-opus-5.5, 2026-11-26 (#909 second pass) — `busyLimit`: three minutes with nothing heard,
+//  sent or spoken ends it even while "busy", so a stuck flag can't hold the mic open. Confidence 0.85.
 //
 
 import Foundation
@@ -48,10 +50,14 @@ public enum VoiceBehindLockPolicy {
     /// Silence behind the lock that ends the conversation.
     public static let silenceLimit: Duration = .seconds(60)
 
+    /// The hard bound: nothing heard, sent or spoken behind the lock for this long ends the conversation, however
+    /// busy it claims to be (a stuck flag must never keep the mic open).
+    public static let busyLimit: Duration = .seconds(180)
+
     /// A turn still running (a slow tool, a long answer) is not silence: the spike's run 2 ended a conversation
-    /// mid-turn on a 60 s web-search timeout.
+    /// mid-turn on a 60 s web-search timeout. Up to `busyLimit`.
     public static func endsForSilence(silentFor: Duration, turnRunning: Bool) -> Bool {
-        !turnRunning && silentFor >= silenceLimit
+        silentFor >= busyLimit || (!turnRunning && silentFor >= silenceLimit)
     }
 
     /// In front, an interruption (a call, Siri) parks the loop until a tap. Behind the lock nobody can tap, so an
