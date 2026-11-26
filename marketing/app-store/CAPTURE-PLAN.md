@@ -69,7 +69,9 @@ shells, driven by `macos/tools/screengrab/capture.sh` (in the repo; this
 
 ```bash
 # Mac — quit the live M1K3 app first (same bundle id). Window-only captures at
-# 1440×900 pt land in plates/mac/, then verify.py runs.
+# 1280×800 pt (the first-launch size, since 2026-11-25) land in plates/mac/, then verify.py runs.
+# The Mac set's own lane is tools/screengrab/direct/capture-direct.sh (no XCUITest; it alone shoots
+# ask-documents and agent-scripts on the Mac): PLATES=a,b for a subset.
 macos/tools/screengrab/capture.sh mac                 # all twelve
 macos/tools/screengrab/capture.sh mac chat memories   # a subset
 
@@ -132,8 +134,9 @@ Capture **the window, not the screen**. That sidesteps the whole desktop-clutter
 problem that bit the first Cartogram set (folder names, Dock, a live 2FA code),
 and the frame system does the rest.
 
-Set the M1K3 window to exactly **1440×900 points** (2880×1800 px on Retina —
-native to the `edge` layout, no scaling). Then:
+Set the M1K3 window to exactly **1280×800 points** (2560×1600 px on Retina — the
+app's first-launch size; the harness pins it). The laptop shows the window whole: no crops
+inside a Mac screen (render.js refuses them, 2026-11-25). Then:
 
 ```bash
 # click the M1K3 window when the crosshair appears; -o drops the shadow, -x the sound

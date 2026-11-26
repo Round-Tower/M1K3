@@ -41,6 +41,10 @@ was cut on. `render.js` writes `out/<target>/<locale>/.plates.json` (frame → p
 recapture can never ship an unseen crop (2026-11-24: the 1.6 Settings panes moved under two Mac
 crops and the old "spec OK" passed both). Look, fix the crop, then approve.
 
+**A laptop shows the whole window.** No crop, band or zoom inside a Mac screen: `render.js`
+refuses one. Compose the shot in the app instead (`ScreengrabHarness`: the plate's recipe, an
+anchor the pane scrolls to, a real turn), so every Mac frame is the window a new owner sees.
+
 `macos/tools/screengrab/capture.sh mac|ios` fills `plates/` from the app itself
 (CAPTURE-PLAN.md §0b). Or drop a capture in `plates/ios/chat.png` by hand, re-run
 `node render.js ios 01`, look at it. Plates are `object-fit: cover`, top-anchored, so any iPhone's screenshot
@@ -288,3 +292,20 @@ whose plate changed since the last by-eye `approve`. Mac 1.6 set: no lifts (Kev,
 brain-picker plate; 08 re-cut for the Settings panes; 09 on the new agent-scripts plate (the pane
 scrolls itself under the harness, and capture runs pin dark). Confidence 0.8: the drift check is
 unit-tested, and the rest was run once end to end.
+
+Review: Kev + claude-opus-5.5, 2026-11-25 (the Mac set looks like a real Mac)
+Kev on the shipped 1.6 Mac set: "cropping oddly, and stretched in places - don't look like they're
+running on a real device". Three causes: the laptop ran 280u off the right edge by design; 05, 06, 08
+and 09 put zoomed (1.4–1.9×) or stitched crops of a window on the screen; the constellation plate was
+1280×1024 blown up 2.2×. Now the whole laptop sits on the canvas at a gentle turn (-5°, was -12°), a
+Mac screen is always the whole window (render.js refuses a crop), and plates are shot at the app's
+first-launch 1280×800 (2560×1600 px), so the UI reads larger. Composition moved into the app: 05 is a
+real grounded turn (ask-documents on the Mac), the recipe launches at shipped defaults (Context senses,
+Spotlight, generation stats and chat auto-speak off; the introduction offer dismissed: each leaked from
+the owner's defaults into a plate), and 07's companions are whole 16:10 windows. The Mac masks are
+retired (the recapture cleared every defect they patched). The demo persona lost its villain beats and
+its "I lied" row. Confidence 0.8: approved by eye; the UI is still small at store size, the honest cost.
+Closes the 10-23 Open on the iPhone answer naming "Architect Niamh Cullen": the seeded notes give a first
+name only now (the iPhone set's own recapture is still owed). Not mirrored: site/vr.html and demo-corpus/
+keep the old persona text (demo-corpus/ is the hand-capture import, CAPTURE-PLAN §0; neither feeds
+the harness plates). Re-tone both with the next hand capture.

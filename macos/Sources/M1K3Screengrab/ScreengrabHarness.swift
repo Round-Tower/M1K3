@@ -28,6 +28,10 @@
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-11-25 — `settingsAnchor`: the agent-scripts plate opens Privacy and the pane
 //  scrolls itself to the scripts; `pinsDarkAppearance` for every capture run. Confidence 0.85 (pure, pinned).
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — the Mac capture window is the first-launch 1280×800
+//  (`macWindowWidth`), and `chatQuestion` drives the Mac too. Kev: "don't look like a real device",
+//  so the Mac frames show whole windows. Confidence 0.8.
+//
 
 import Foundation
 
@@ -124,8 +128,8 @@ public struct ScreengrabHarness: Sendable, Equatable {
         }
     }
 
-    /// iOS: a question the shell types into a NEW chat once the seeded documents
-    /// are indexed — the ask-documents plate's real turn. Nil for every other plate.
+    /// A question the shell types into a NEW chat once the seeded documents are indexed — the
+    /// ask-documents plate's real turn (iOS since 2026-10-23, the Mac since 11-25). Nil for every other plate.
     public var chatQuestion: String? {
         plate == .askDocuments ? DemoPersona.documentQuestion : nil
     }
@@ -179,6 +183,13 @@ public struct ScreengrabHarness: Sendable, Equatable {
 
     /// The Privacy pane's Scripts section scroll id (the pane tags the section with it).
     public static let scriptsAnchor = "scripts"
+
+    /// The Mac capture window, in points: the app's own first-launch size (`defaultSize` 1280×800), so a
+    /// plate is the window a new owner sees, and shown whole on a laptop its UI reads larger than the
+    /// 1440×900 it was (2026-11-25). The hidden title bar's toolbar strip takes 52 pt of the height.
+    public static let macWindowWidth = 1280
+    public static let macWindowHeight = 800
+    public static let macContentHeight = macWindowHeight - 52
 
     /// Mac: the `SettingsView.Pane` raw value the plate opens on, nil when Settings is not the subject.
     public var settingsPane: String? {

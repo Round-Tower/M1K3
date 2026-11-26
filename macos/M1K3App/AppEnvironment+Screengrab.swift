@@ -11,6 +11,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.8 (seed pinned in
 //  M1K3ScreengrabTests; the launch beats are verify-by-launch through the
 //  M1K3ScreengrabUITests suite), Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — the ask-documents beat on the Mac (iOS's since 10-23):
+//  Mac frame 05 shows a real grounded answer, not an empty Documents list. TDD_SKIP: launch beat,
+//  verified by capture. Confidence 0.75.
 //
 
 import Foundation
@@ -98,8 +101,28 @@ extension AppEnvironment {
             // The speaking plate needs no beat of its own: the open mic submits
             // the hero question and the loop speaks the answer (karaoke and all).
             enterVoiceMode()
+        } else if let question = harness.chatQuestion {
+            await askScreengrabQuestion(question)
         }
         // brain-at-home: the suite opens Settings ▸ M1K3 ▸ Brain at Home, whose
         // section starts the pairing ceremony itself — no beat needed here.
+    }
+
+    /// The ask-documents plate (Mac frame 05, as on iOS): wait for the seeded documents to reach the
+    /// corpus (the seed is a detached launch task, so a turn sent at ready retrieves nothing), then
+    /// type the question into a NEW chat, so the frame is a real grounded answer and its source.
+    private func askScreengrabQuestion(_ question: String) async {
+        let seeded = DemoPersona.documents.count
+        func indexed() -> Bool {
+            ((try? store.itemCount()) ?? 0) >= seeded
+        }
+        var waited = 0
+        while !indexed(), waited < 180 {
+            try? await Task.sleep(for: .seconds(1))
+            waited += 1
+        }
+        if !indexed() { Self.screengrabLog.error("ask-documents: the seed never landed; asking anyway") }
+        chat.startNewConversation()
+        await send(question)
     }
 }

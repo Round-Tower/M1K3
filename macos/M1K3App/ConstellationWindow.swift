@@ -23,11 +23,16 @@
 //  iPhone's (Kev: no emoji in the placeholder); the copy is unchanged.
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — `backdrop`: as a companion (voice hero, main window) an empty
 //  or still-mapping field is an empty sky, as on the iPhone; the window keeps the message.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — under the screengrab harness the window is pinned at
+//  1280×748 pt content (`ScreengrabHarness.macWindowWidth`), so the constellation plate is 2560×1560,
+//  not 1280×1024. TDD_SKIP: window chrome. Confidence 0.8.
+//
 
 import M1K3Avatar
 import M1K3Knowledge
 import M1K3Memory
 import M1K3MemoryViz
+import M1K3Screengrab
 import SwiftUI
 
 extension M1K3App {
@@ -190,6 +195,13 @@ struct ConstellationWindowContent: View {
             )
         )
         .frame(minWidth: 640, minHeight: 480)
+        // Screengrab: the plate is shot 1280 pt wide at the main window's content height (a saved
+        // 640×512 frame made a 1280×1024 px plate the Mac frame blew up 2.2×, 2026-11-25). This window
+        // keeps its 32 pt title bar, so the plate is 2560×1560 and the laptop trims ~2.5%.
+        .frame(
+            width: ScreengrabHarness.current.isActive ? CGFloat(ScreengrabHarness.macWindowWidth) : nil,
+            height: ScreengrabHarness.current.isActive ? CGFloat(ScreengrabHarness.macContentHeight) : nil
+        )
         .navigationTitle("Memory Constellation")
     }
 }

@@ -17,6 +17,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
 //  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-25 — Kev: the Mac set looks "stretched", not "a real device". Pins the
+//  1280×800 capture window and the shipped-default argv (Context senses, Spotlight, generation stats, auto-speak,
+//  the introduction offer), each seen leaking from the owner's defaults into a plate. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Screengrab
@@ -307,5 +310,49 @@ struct ScreengrabPrivacyDefaultsTests {
             #expect(arguments.contains(["-chatEgressAllowed", "NO"]), "\(plate.rawValue)")
             #expect(arguments.contains(["-webSearchEnabled", "YES"]), "\(plate.rawValue)")
         }
+    }
+
+    /// Frame 09 shows Settings ▸ Privacy whole (no crop since 2026-11-25), so the Context and Spotlight
+    /// switches above the scripts are in the frame: they show the shipped OFF, not the owner's Battery/Calendar.
+    @Test("every plate pins the Context senses and Spotlight off, as shipped")
+    func pinsContextAndSpotlightOff() {
+        let keys = [
+            "contextTools.battery", "contextTools.calendar", "contextTools.location",
+            "contextTools.locationPrecise", "spotlight.indexingEnabled",
+        ]
+        for plate in ScreengrabPlate.allCases {
+            for key in keys {
+                #expect(plate.launchRecipe.arguments.contains(["-\(key)", "NO"]), "\(plate.rawValue) \(key)")
+            }
+        }
+    }
+}
+
+/// The first Mac ask-documents plate (2026-11-25) carried two of the owner's own states: the per-turn
+/// generation stats (a testing aid, shipped OFF) under the answer, and the "Introduce yourself" card (an
+/// earned first-run offer) over the composer. Neither is what a new owner sees on that screen.
+struct ScreengrabOwnerStateTests {
+    @Test("every plate hides the generation stats, the introduction offer and chat auto-speak")
+    func pinsTestingAidsAndNudgesOff() {
+        for plate in ScreengrabPlate.allCases {
+            let arguments = plate.launchRecipe.arguments
+            #expect(arguments.contains(["-showGenerationStats", "NO"]), "\(plate.rawValue)")
+            #expect(arguments.contains(["-introduction.dismissed", "YES"]), "\(plate.rawValue)")
+            // Chat auto-speak (shipped OFF) captioned the answer over the composer in run two.
+            #expect(arguments.contains(["-chat.autoSpeak", "NO"]), "\(plate.rawValue)")
+        }
+    }
+}
+
+/// The Mac window the plates are shot in: the app's own first-launch size (1280×800 pt, `defaultSize` in
+/// M1K3App), not the 1440×900 it was. Shown whole on the frames' laptop, the UI reads about 12% larger,
+/// and it is the window a new owner actually sees (Kev, 2026-11-25: "don't look like a real device").
+struct ScreengrabMacWindowTests {
+    @Test("the capture window is the first-launch 1280×800, 16:10, with the 52 pt toolbar strip on top")
+    func captureWindowIsTheFirstLaunchSize() {
+        #expect(ScreengrabHarness.macWindowWidth == 1280)
+        #expect(ScreengrabHarness.macWindowHeight == 800)
+        #expect(ScreengrabHarness.macContentHeight == 748)
+        #expect(ScreengrabHarness.macWindowWidth * 10 == ScreengrabHarness.macWindowHeight * 16)
     }
 }
