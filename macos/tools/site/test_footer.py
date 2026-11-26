@@ -55,6 +55,20 @@ def test_stamping_a_page_twice_changes_nothing():
     assert footer.FOOTER.sub(lambda _: footer.render("agents"), once, count=1) == once
 
 
+def test_the_home_page_carries_a_followed_ipip_badge_hosted_here():
+    # iPip counts only a plain link: nofollow/ugc/sponsored disqualifies it, and the
+    # badge is what unlocks a free launch day. The image is ours, like TAAFT's, so
+    # the page still makes zero external requests.
+    html = footer.render("index")
+    link = re.search(r'<a href="https://ipip\.fyi/apps/m1k3\?ref=badge"([^>]*)>(.*?)</a>', html, re.DOTALL)
+    assert link, "the home page footer has no link to M1K3 on iPip"
+    rel = re.search(r'rel="([^"]*)"', link.group(1))
+    assert not rel or not {"nofollow", "ugc", "sponsored"} & set(rel.group(1).split())
+    src = re.search(r'<img [^>]*src="(/[^"]+)"', link.group(2))
+    assert src and (SITE / src.group(1).lstrip("/")).exists()
+    assert "ipip.fyi" not in footer.render("privacy")
+
+
 def test_no_page_has_two_footers():
     # stamped() replaces the first only; a second would be left stale without a word.
     for page in footer.pages():
