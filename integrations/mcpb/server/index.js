@@ -60,8 +60,12 @@ const MESSAGES = {
 /** What the bridge answers by itself while M1K3 can't be reached. */
 const LOCAL_METHODS = new Set(['initialize', 'tools/list', 'ping']);
 const HANDSHAKE_ID = 'm1k3-bridge-handshake';
-/** A replay waits no longer than this, so a hung M1K3 cannot double a call's wait. */
-const HANDSHAKE_TIMEOUT_MS = 30 * 1000;
+/** How long the handshake, the list and a replay wait for M1K3 before the bridge answers
+ * them itself: well inside a client's own start-up deadline. */
+const LOCAL_TIMEOUT_MS = 8 * 1000;
+/** The MCP versions the bridge will echo when it answers a handshake itself. */
+const KNOWN_PROTOCOL_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05']);
+const FALLBACK_PROTOCOL_VERSION = '2025-06-18';
 
 let catalogCache = null;
 /** M1K3's tools as the app declares them (tools.json, generated from the Swift kit). */
@@ -107,17 +111,17 @@ function parseEventStream(text) {
   return out;
 }
 
-/** The bridge's own answer to a LOCAL_METHODS request. */
-function answerLocally(message) {
+/** The bridge's own answer to a LOCAL_METHODS request; `reason` is why M1K3 didn't answer. */
+function answerLocally(message, reason) {
   const reply = (result) => ({ jsonrpc: '2.0', id: message.id, result });
   if (message.method === 'tools/list') return reply({ tools: catalog() });
   if (message.method === 'ping') return reply({});
   const params = message.params || {};
   return reply({
-    protocolVersion: typeof params.protocolVersion === 'string' ? params.protocolVersion : '2025-06-18',
+    protocolVersion: KNOWN_PROTOCOL_VERSIONS.has(params.protocolVersion) ? params.protocolVersion : FALLBACK_PROTOCOL_VERSION,
     capabilities: { tools: {} },
     serverInfo: { name: 'm1k3', title: 'M1K3', version: BRIDGE_VERSION },
-    instructions: MESSAGES.offline,
+    instructions: `${MESSAGES.offline} Right now: ${reason}`,
   });
 }
 
@@ -126,6 +130,8 @@ function answerLocally(message) {
  * `state.protocolVersion` is filled from M1K3's initialize result and sent thereafter.
  * `state.pendingHandshake` holds the client's initialize params while the bridge
  * answered it alone; it is replayed to M1K3 before the first message M1K3 answers.
+ * The bridge answers alone only when M1K3 is out of reach (no token, nothing listening,
+ * no answer in time, the token refused); an M1K3 that answers with an error says so.
  */
 async function relay(message, deps) {
   const { state } = deps;
@@ -140,33 +146,43 @@ async function relay(message, deps) {
     await replayHandshake(deps);
   }
 
-  const { ok, replies } = await forward(message, deps);
-  if (ok || !wantsReply || !LOCAL_METHODS.has(method)) return replies;
+  const local = wantsReply && LOCAL_METHODS.has(method);
+  const { ok, replies, unreachable, reason } = await forward(message, local ? shortWait(deps) : deps);
+  if (ok || !local || !unreachable) return replies;
   if (method === 'initialize') state.pendingHandshake = message.params || {};
-  return [answerLocally(message)];
+  return [answerLocally(message, reason)];
+}
+
+function shortWait(deps) {
+  const cap = deps.localTimeoutMs ?? LOCAL_TIMEOUT_MS;
+  return { ...deps, timeoutMs: Math.min(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS, cap) };
 }
 
 /** Introduce the client to M1K3, now that it answers. A failure leaves it pending. */
 async function replayHandshake(deps) {
   const init = { jsonrpc: '2.0', id: HANDSHAKE_ID, method: 'initialize', params: deps.state.pendingHandshake };
-  const timeoutMs = Math.min(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS, HANDSHAKE_TIMEOUT_MS);
-  const { ok } = await forward(init, { ...deps, timeoutMs });
-  if (!ok) return;
-  deps.state.pendingHandshake = null;
-  await forward({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps);
+  const { ok, replies } = await forward(init, shortWait(deps));
+  if (!ok || !replies.some((r) => r && r.id === HANDSHAKE_ID && r.result)) return;
+  const { ok: sent } = await forward({ jsonrpc: '2.0', method: 'notifications/initialized' }, shortWait(deps));
+  if (sent) deps.state.pendingHandshake = null;
 }
 
-/** Send one message to M1K3. `ok` is false when M1K3 could not be reached or refused it. */
+/**
+ * Send one message to M1K3. `ok` is false when it failed; `unreachable` says M1K3 was out of
+ * reach (as opposed to answering with an error), and `reason` is the sentence for the user.
+ */
 async function forward(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const id = message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : undefined;
   const wantsReply = id !== undefined && id !== null && typeof message.method === 'string';
-  const fail = (text) => ({ ok: false, replies: wantsReply ? [errorFor(id, text)] : [] });
+  const failWith = (unreachable) => (text) => ({ ok: false, unreachable, reason: text, replies: wantsReply ? [errorFor(id, text)] : [] });
+  const outOfReach = failWith(true);
+  const fail = failWith(false);
   const done = (replies) => ({ ok: true, replies });
 
   const url = endpoint(env);
-  if (!url) return fail(MESSAGES.badPort);
+  if (!url) return outOfReach(MESSAGES.badPort);
   const token = readToken(env);
-  if (!token) return fail(MESSAGES.noToken);
+  if (!token) return outOfReach(MESSAGES.noToken);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -187,11 +203,11 @@ async function forward(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIM
       redirect: 'error',
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (response.status === 401) return fail(MESSAGES.badToken);
+    if (response.status === 401) return outOfReach(MESSAGES.badToken);
     if (response.status === 202 || response.status === 204) return done([]);
     body = await response.text();
   } catch (error) {
-    return fail(error && error.name === 'TimeoutError' ? MESSAGES.timedOut : MESSAGES.notRunning);
+    return outOfReach(error && error.name === 'TimeoutError' ? MESSAGES.timedOut : MESSAGES.notRunning);
   }
   if (!response.ok) {
     return fail(`M1K3 answered with an error (HTTP ${response.status}).`);

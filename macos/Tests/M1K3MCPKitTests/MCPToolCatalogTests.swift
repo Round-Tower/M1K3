@@ -6,7 +6,8 @@
 //  from a checked-in catalog while the M1K3 app is closed: that is what Claude
 //  Desktop shows before the app is open, and what Glama introspects in Docker. This
 //  pins the catalog to the kit, declaration for declaration (name, title, description,
-//  input schema, annotations), so the offline list is the one the app serves.
+//  input schema, annotations), sorted by name. It is the App Store build's surface, so
+//  a superset of the DMG's: the DMG never serves ask_private_cloud (no PCC in that lane).
 //
 //  Regenerate after changing a tool:
 //    M1K3_WRITE_TOOL_CATALOG=1 macos/tools/dev/tdd.sh M1K3MCPKitTests MCPToolCatalogTests
@@ -48,7 +49,9 @@ struct MCPToolCatalogTests {
     @Test("Every tool in the catalog carries a title, a description and an object schema")
     func everyToolIsDescribed() throws {
         let tools = try Self.allTools()
-        #expect(tools.count >= 19)
+        // A new tool changes this on purpose: regenerate tools.json and add it to the
+        // bundle's manifest.json, whose test holds the same names.
+        #expect(tools.count == 19)
         for tool in tools {
             #expect(tool.title?.isEmpty == false, "\(tool.name) has no title")
             #expect(tool.description?.isEmpty == false, "\(tool.name) has no description")
@@ -89,7 +92,7 @@ struct MCPToolCatalogTests {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(tools)
-        return String(decoding: data, as: UTF8.self) + "\n"
+        return (String(bytes: data, encoding: .utf8) ?? "") + "\n"
     }
 
     private struct Unused: Error {}

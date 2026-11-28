@@ -1,0 +1,5 @@
+# The build context for integrations/mcpb/Dockerfile (BuildKit reads <Dockerfile>.dockerignore):
+# only the two files the image copies, not the whole repository.
+*
+!integrations/mcpb/server/index.js
+!integrations/mcpb/server/tools.json

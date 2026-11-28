@@ -1,5 +1,6 @@
 # The M1K3 bridge in a container, for directories that introspect MCP servers in
-# Docker (Glama). Build from the repository root:
+# Docker (Glama). Build from the repository root (Dockerfile.dockerignore keeps the
+# context to the two files it copies):
 #   docker build -f integrations/mcpb/Dockerfile -t m1k3-bridge .
 #   docker run -i --rm m1k3-bridge
 #

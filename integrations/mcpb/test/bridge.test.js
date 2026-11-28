@@ -279,7 +279,7 @@ test('M1K3 opens later: the bridge replays the handshake once, then relays the c
   const fetchImpl = async (_, init) => {
     if (!up) throw new TypeError('fetch failed');
     const body = JSON.parse(init.body);
-    sent.push({ method: body.method, version: init.headers['MCP-Protocol-Version'] });
+    sent.push({ method: body.method, version: init.headers['MCP-Protocol-Version'], params: body.params });
     if (body.id === undefined) return new Response(null, { status: 202 });
     const result = body.method === 'initialize' ? { protocolVersion: '2025-03-26', capabilities: { tools: {} } } : { ok: body.method };
     return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result }), { headers: { 'Content-Type': 'application/json' } });
@@ -294,6 +294,7 @@ test('M1K3 opens later: the bridge replays the handshake once, then relays the c
   const [second] = await relay(call(3, 'tools/list'), deps);
   assert.deepEqual(second.result, { ok: 'tools/list' }, 'the live list, once M1K3 answers');
   assert.deepEqual(sent.map((s) => s.method), ['initialize', 'notifications/initialized', 'tools/call', 'tools/list']);
+  assert.deepEqual(sent[0].params, { protocolVersion: '2025-06-18', clientInfo: { name: 'c' } }, 'the client\'s own handshake');
   assert.equal(sent[2].version, '2025-03-26', 'M1K3\'s own version rides the relayed calls');
   assert.equal(state.pendingHandshake, null);
 });
@@ -311,4 +312,76 @@ test('M1K3 answers at the start: nothing is held back or replayed', async () => 
   await relay({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps);
   await relay(call(2, 'tools/call'), deps);
   assert.deepEqual(methods, ['initialize', 'notifications/initialized', 'tools/call']);
+});
+
+test('a refused token still lists the tools, and the handshake says why calls will fail', async () => {
+  const deny = async () => new Response('', { status: 401 });
+  const deps = { env: { M1K3_MCP_TOKEN: 'stale' }, fetchImpl: deny, state: {} };
+  const [hello] = await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  assert.ok(hello.result.instructions.includes(MESSAGES.badToken));
+  assert.equal((await relay(call(2, 'tools/list'), deps))[0].result.tools.length, catalog().length);
+  assert.equal((await relay(call(3, 'tools/call'), deps))[0].error.message, MESSAGES.badToken);
+});
+
+test('M1K3 up but broken (HTTP 500): the list is an error, never the catalog', async () => {
+  const broken = async () => new Response('boom', { status: 500 });
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: broken, state: {} };
+  const [list] = await relay(call(1, 'tools/list'), deps);
+  assert.match(list.error.message, /HTTP 500/);
+  const [hello] = await relay(call(2, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  assert.match(hello.error.message, /HTTP 500/);
+  assert.equal(deps.state.pendingHandshake ?? null, null);
+});
+
+test('a protocol version the bridge does not know is answered with one it does', async () => {
+  const deps = { env: {}, fetchImpl: refused, state: {} };
+  const [hello] = await relay(call(1, 'initialize', { protocolVersion: '2099-01-01' }), deps);
+  assert.equal(hello.result.protocolVersion, '2025-06-18');
+});
+
+test('a hung M1K3 cannot stall the handshake: the bridge answers once the short wait ends', async () => {
+  const hangs = (_, init) => new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)));
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: hangs, state: {}, timeoutMs: 600000, localTimeoutMs: 50 };
+  const [hello] = await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  assert.ok(hello.result.instructions.includes(MESSAGES.timedOut));
+  assert.equal((await relay(call(2, 'tools/list'), deps))[0].result.tools.length, catalog().length);
+});
+
+test('a replay M1K3 answers with an error stays pending and is tried again', async () => {
+  let initErrors = 1;
+  const methods = [];
+  const fetchImpl = async (_, init) => {
+    const body = JSON.parse(init.body);
+    methods.push(body.method);
+    if (body.id === undefined) return new Response(null, { status: 202 });
+    if (body.method === 'initialize' && body.id === 1) throw new TypeError('fetch failed');
+    if (body.method === 'initialize' && initErrors-- > 0) {
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, error: { code: -32603, message: 'not yet' } }), { headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result: { protocolVersion: '2025-06-18' } }), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state: {} };
+  await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  await relay(call(2, 'tools/call'), deps);
+  assert.ok(deps.state.pendingHandshake, 'the refused replay is still owed');
+  await relay(call(3, 'tools/call'), deps);
+  assert.equal(deps.state.pendingHandshake, null);
+  assert.deepEqual(methods, ['initialize', 'initialize', 'tools/call', 'initialize', 'notifications/initialized', 'tools/call']);
+});
+
+test('a client that says initialize again is introduced directly, with no stale replay', async () => {
+  let up = false;
+  const methods = [];
+  const fetchImpl = async (_, init) => {
+    if (!up) throw new TypeError('fetch failed');
+    const body = JSON.parse(init.body);
+    methods.push([body.method, body.params && body.params.clientInfo && body.params.clientInfo.name]);
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result: { protocolVersion: '2025-06-18' } }), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state: {} };
+  await relay(call(1, 'initialize', { clientInfo: { name: 'old' } }), deps);
+  up = true;
+  await relay(call(2, 'initialize', { clientInfo: { name: 'new' } }), deps);
+  assert.deepEqual(methods, [['initialize', 'new']]);
+  assert.equal(deps.state.pendingHandshake, null);
 });
