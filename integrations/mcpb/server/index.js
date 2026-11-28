@@ -19,7 +19,23 @@
 // Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
 // M1K3's full server lives inside the app behind a token; a listing needs
 // something a client can launch.
+// Review: Kev + claude-opus-5.5, 2026-11-28. While M1K3 can't be reached (closed, no
+// token yet, or the token refused), the bridge answers initialize, tools/list and ping
+// itself, from tools.json (pinned to the app's kit by MCPToolCatalogTests), so a client
+// lists M1K3's tools before the app is open and Glama can introspect it in Docker.
+// Calls still answer with what to do. When M1K3 answers later, the client's handshake
+// is replayed once before the first relayed call. Confidence 0.8 (pinned by the
+// bridge tests against fakes, and introspected in Docker: initialize, 19 tools, a call).
+// Open: the replay has not met the live app (closed at start, opened mid-session).
+// Context: Kev, 2026-11-28, on the awesome-mcp-servers listing, which needs a Glama
+// quality grade: "Build it".
 'use strict';
+
+const path = require('node:path');
+const fs = require('node:fs');
+
+/** The bundle's version (manifest.json), named to clients that the bridge answers itself. */
+const BRIDGE_VERSION = '0.2.0';
 
 const DEFAULT_PORT = '4242';
 // A local brain can take minutes over a long answer; ten is a hang, not an answer.
@@ -35,7 +51,24 @@ const MESSAGES = {
   badPort: 'The M1K3 port must be a number between 1 and 65535.',
   timedOut: 'M1K3 took too long to answer, so this call was dropped. Check the M1K3 app and try again.',
   bridgeFault: 'The M1K3 bridge hit a fault relaying this call. Try again.',
+  offline:
+    "This is M1K3's tool list, answered by the bridge because it can't reach the M1K3 app on this Mac yet. "
+    + 'To use the tools, open the M1K3 app, switch on Settings > Server > MCP server, and paste its access token '
+    + "into this extension's settings. Until then, each call says what is missing.",
 };
+
+/** What the bridge answers by itself while M1K3 can't be reached. */
+const LOCAL_METHODS = new Set(['initialize', 'tools/list', 'ping']);
+const HANDSHAKE_ID = 'm1k3-bridge-handshake';
+/** A replay waits no longer than this, so a hung M1K3 cannot double a call's wait. */
+const HANDSHAKE_TIMEOUT_MS = 30 * 1000;
+
+let catalogCache = null;
+/** M1K3's tools as the app declares them (tools.json, generated from the Swift kit). */
+function catalog() {
+  if (!catalogCache) catalogCache = JSON.parse(fs.readFileSync(path.join(__dirname, 'tools.json'), 'utf8'));
+  return catalogCache;
+}
 
 /** The token as configured; a placeholder the host never filled in counts as none. */
 function readToken(env) {
@@ -74,14 +107,61 @@ function parseEventStream(text) {
   return out;
 }
 
+/** The bridge's own answer to a LOCAL_METHODS request. */
+function answerLocally(message) {
+  const reply = (result) => ({ jsonrpc: '2.0', id: message.id, result });
+  if (message.method === 'tools/list') return reply({ tools: catalog() });
+  if (message.method === 'ping') return reply({});
+  const params = message.params || {};
+  return reply({
+    protocolVersion: typeof params.protocolVersion === 'string' ? params.protocolVersion : '2025-06-18',
+    capabilities: { tools: {} },
+    serverInfo: { name: 'm1k3', title: 'M1K3', version: BRIDGE_VERSION },
+    instructions: MESSAGES.offline,
+  });
+}
+
 /**
  * Relay one parsed message. Returns the messages to write back (possibly none).
- * `state.protocolVersion` is filled from the initialize result and sent thereafter.
+ * `state.protocolVersion` is filled from M1K3's initialize result and sent thereafter.
+ * `state.pendingHandshake` holds the client's initialize params while the bridge
+ * answered it alone; it is replayed to M1K3 before the first message M1K3 answers.
  */
-async function relay(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+async function relay(message, deps) {
+  const { state } = deps;
   const id = message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : undefined;
   const wantsReply = id !== undefined && id !== null && typeof message.method === 'string';
-  const fail = (text) => (wantsReply ? [errorFor(id, text)] : []);
+  const method = message && message.method;
+
+  if (method === 'initialize') state.pendingHandshake = null;
+  if (state.pendingHandshake) {
+    // The replay sends its own `initialized`; the client's one is spent on the bridge.
+    if (method === 'notifications/initialized') return [];
+    await replayHandshake(deps);
+  }
+
+  const { ok, replies } = await forward(message, deps);
+  if (ok || !wantsReply || !LOCAL_METHODS.has(method)) return replies;
+  if (method === 'initialize') state.pendingHandshake = message.params || {};
+  return [answerLocally(message)];
+}
+
+/** Introduce the client to M1K3, now that it answers. A failure leaves it pending. */
+async function replayHandshake(deps) {
+  const init = { jsonrpc: '2.0', id: HANDSHAKE_ID, method: 'initialize', params: deps.state.pendingHandshake };
+  const timeoutMs = Math.min(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS, HANDSHAKE_TIMEOUT_MS);
+  const { ok } = await forward(init, { ...deps, timeoutMs });
+  if (!ok) return;
+  deps.state.pendingHandshake = null;
+  await forward({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps);
+}
+
+/** Send one message to M1K3. `ok` is false when M1K3 could not be reached or refused it. */
+async function forward(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  const id = message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : undefined;
+  const wantsReply = id !== undefined && id !== null && typeof message.method === 'string';
+  const fail = (text) => ({ ok: false, replies: wantsReply ? [errorFor(id, text)] : [] });
+  const done = (replies) => ({ ok: true, replies });
 
   const url = endpoint(env);
   if (!url) return fail(MESSAGES.badPort);
@@ -108,7 +188,7 @@ async function relay(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEO
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status === 401) return fail(MESSAGES.badToken);
-    if (response.status === 202 || response.status === 204) return [];
+    if (response.status === 202 || response.status === 204) return done([]);
     body = await response.text();
   } catch (error) {
     return fail(error && error.name === 'TimeoutError' ? MESSAGES.timedOut : MESSAGES.notRunning);
@@ -137,12 +217,12 @@ async function relay(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEO
     const version = replies.find((r) => r && r.result && r.result.protocolVersion);
     if (version) state.protocolVersion = String(version.result.protocolVersion);
   }
-  return replies;
+  return done(replies);
 }
 
 /** Read lines from `input`, relay each in order, write replies to `output`. */
 function serve({ input, output, env, fetchImpl }) {
-  const state = { protocolVersion: null };
+  const state = { protocolVersion: null, pendingHandshake: null };
   let buffer = '';
   let chain = Promise.resolve();
 
@@ -187,7 +267,7 @@ function serve({ input, output, env, fetchImpl }) {
   });
 }
 
-module.exports = { MESSAGES, readToken, endpoint, parseEventStream, relay, serve };
+module.exports = { BRIDGE_VERSION, MESSAGES, catalog, readToken, endpoint, parseEventStream, relay, serve };
 
 if (require.main === module) {
   serve({ input: process.stdin, output: process.stdout, env: process.env, fetchImpl: fetch }).then(() => process.exit(0));

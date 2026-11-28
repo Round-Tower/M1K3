@@ -102,7 +102,7 @@ test('M1K3 not running: the request gets a plain sentence, a notification gets s
     throw new TypeError('fetch failed');
   };
   const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: refuse, state: {} };
-  const [reply] = await relay(call(9, 'tools/list'), deps);
+  const [reply] = await relay(call(9, 'tools/call'), deps);
   assert.equal(reply.id, 9);
   assert.equal(reply.error.message, MESSAGES.notRunning);
   assert.deepEqual(await relay({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps), []);
@@ -114,12 +114,12 @@ test('no token, a refused token and a bad port each say what to do, and never di
     dialled += 1;
     return new Response('', { status: 401 });
   };
-  const none = await relay(call(1, 'initialize'), { env: {}, fetchImpl: count, state: {} });
+  const none = await relay(call(1, 'tools/call'), { env: {}, fetchImpl: count, state: {} });
   assert.equal(none[0].error.message, MESSAGES.noToken);
-  const port = await relay(call(1, 'initialize'), { env: { M1K3_MCP_TOKEN: 't', M1K3_MCP_PORT: 'evil.example' }, fetchImpl: count, state: {} });
+  const port = await relay(call(1, 'tools/call'), { env: { M1K3_MCP_TOKEN: 't', M1K3_MCP_PORT: 'evil.example' }, fetchImpl: count, state: {} });
   assert.equal(port[0].error.message, MESSAGES.badPort);
   assert.equal(dialled, 0);
-  const refused = await relay(call(1, 'initialize'), { env: { M1K3_MCP_TOKEN: 'wrong' }, fetchImpl: count, state: {} });
+  const refused = await relay(call(1, 'tools/call'), { env: { M1K3_MCP_TOKEN: 'wrong' }, fetchImpl: count, state: {} });
   assert.equal(refused[0].error.message, MESSAGES.badToken);
   assert.ok(!JSON.stringify(refused).includes('wrong'), 'the token is never echoed');
 });
@@ -204,7 +204,7 @@ test('a redirect is refused, so the token cannot follow one off this Mac', async
   });
   try {
     const deps = { env: { M1K3_MCP_TOKEN: 'tok', M1K3_MCP_PORT: m1k3.port }, fetchImpl: fetch, state: {} };
-    const [reply] = await relay(call(1, 'tools/list'), deps);
+    const [reply] = await relay(call(1, 'tools/call'), deps);
     assert.equal(reply.error.message, MESSAGES.notRunning);
     assert.deepEqual(m1k3.seen, ['/mcp']);
   } finally {
@@ -225,4 +225,90 @@ test('a call M1K3 never answers ends with a plain sentence instead of blocking t
     for (const s of sockets) s.destroy();
     silent.close();
   }
+});
+
+// --- While M1K3 can't be reached: the bridge answers the handshake and the tool list
+// itself, from server/tools.json (pinned to the app's kit by MCPToolCatalogTests), so a
+// client sees M1K3's tools before the app is open and Glama can introspect the bridge
+// in Docker. Calls still say what to do. Kev, 2026-11-28: "Build it".
+
+const { BRIDGE_VERSION, catalog } = require('../server/index.js');
+const refused = async () => {
+  throw new TypeError('fetch failed');
+};
+
+test('no app: initialize is answered by the bridge, in the client\'s protocol version', async () => {
+  const state = {};
+  const params = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'glama', version: '1' } };
+  const [reply] = await relay(call(1, 'initialize', params), { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: refused, state });
+  assert.equal(reply.id, 1);
+  assert.equal(reply.result.protocolVersion, '2025-06-18');
+  assert.deepEqual(reply.result.capabilities, { tools: {} });
+  assert.deepEqual(reply.result.serverInfo, { name: 'm1k3', title: 'M1K3', version: BRIDGE_VERSION });
+  assert.match(reply.result.instructions, /open the M1K3 app/i);
+  assert.deepEqual(state.pendingHandshake, params, 'kept, to replay to M1K3 once it answers');
+});
+
+test('no app: tools/list is the catalog, and ping is answered', async () => {
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: refused, state: {} };
+  const [list] = await relay(call(2, 'tools/list'), deps);
+  assert.deepEqual(list.result, { tools: catalog() });
+  assert.ok(catalog().length >= 19);
+  assert.ok(catalog().every((t) => t.name && t.title && t.description && t.inputSchema.type === 'object'));
+  const [pong] = await relay(call(3, 'ping'), deps);
+  assert.deepEqual(pong, { jsonrpc: '2.0', id: 3, result: {} });
+});
+
+test('no token at all (Glama\'s Docker check): the handshake and the list work, and nothing dials out', async () => {
+  let dialled = 0;
+  const count = async () => {
+    dialled += 1;
+    throw new TypeError('unreachable');
+  };
+  const deps = { env: {}, fetchImpl: count, state: {} };
+  assert.ok((await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps))[0].result.serverInfo);
+  assert.deepEqual(await relay({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps), []);
+  assert.equal((await relay(call(2, 'tools/list'), deps))[0].result.tools.length, catalog().length);
+  assert.equal((await relay(call(3, 'tools/call', { name: 'get_status' }), deps))[0].error.message, MESSAGES.noToken);
+  assert.equal(dialled, 0);
+});
+
+test('M1K3 opens later: the bridge replays the handshake once, then relays the call', async () => {
+  let up = false;
+  const sent = [];
+  const fetchImpl = async (_, init) => {
+    if (!up) throw new TypeError('fetch failed');
+    const body = JSON.parse(init.body);
+    sent.push({ method: body.method, version: init.headers['MCP-Protocol-Version'] });
+    if (body.id === undefined) return new Response(null, { status: 202 });
+    const result = body.method === 'initialize' ? { protocolVersion: '2025-03-26', capabilities: { tools: {} } } : { ok: body.method };
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result }), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const state = {};
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state };
+  await relay(call(1, 'initialize', { protocolVersion: '2025-06-18', clientInfo: { name: 'c' } }), deps);
+  assert.deepEqual(await relay({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps), [], 'held back for the replay');
+  up = true;
+  const [first] = await relay(call(2, 'tools/call', { name: 'get_status' }), deps);
+  assert.deepEqual(first, { jsonrpc: '2.0', id: 2, result: { ok: 'tools/call' } });
+  const [second] = await relay(call(3, 'tools/list'), deps);
+  assert.deepEqual(second.result, { ok: 'tools/list' }, 'the live list, once M1K3 answers');
+  assert.deepEqual(sent.map((s) => s.method), ['initialize', 'notifications/initialized', 'tools/call', 'tools/list']);
+  assert.equal(sent[2].version, '2025-03-26', 'M1K3\'s own version rides the relayed calls');
+  assert.equal(state.pendingHandshake, null);
+});
+
+test('M1K3 answers at the start: nothing is held back or replayed', async () => {
+  const methods = [];
+  const fetchImpl = async (_, init) => {
+    const body = JSON.parse(init.body);
+    methods.push(body.method);
+    if (body.id === undefined) return new Response(null, { status: 202 });
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result: { protocolVersion: '2025-06-18' } }), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state: {} };
+  await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  await relay({ jsonrpc: '2.0', method: 'notifications/initialized' }, deps);
+  await relay(call(2, 'tools/call'), deps);
+  assert.deepEqual(methods, ['initialize', 'notifications/initialized', 'tools/call']);
 });

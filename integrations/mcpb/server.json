@@ -3,7 +3,7 @@
   "name": "app.m1k3/m1k3",
   "title": "M1K3",
   "description": "Private memory, documents, voice and a local LLM for your agents, served by a Mac app on-device.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "websiteUrl": "https://m1k3.app/agents",
   "repository": {
     "url": "https://github.com/Round-Tower/M1K3",
@@ -16,8 +16,8 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb",
-      "version": "0.1.0",
+      "identifier": "https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.2.0/m1k3.mcpb",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       }

@@ -48,6 +48,15 @@ test('it is a Mac extension with a privacy policy and a plain statement of what 
   assert.ok(manifest.description.length <= 100, 'the registry caps a description at 100 characters');
 });
 
+test('the bridge names the bundle\'s version, and the bundle ships its offline catalog', () => {
+  const { BRIDGE_VERSION, catalog } = require('../server/index.js');
+  assert.equal(BRIDGE_VERSION, manifest.version);
+  const build = fs.readFileSync(path.join(root, 'build.sh'), 'utf8');
+  assert.match(build, /zip [^\n]*server\/tools\.json/);
+  // The catalog is the app's list (MCPToolCatalogTests); the manifest names the same tools.
+  assert.deepEqual(catalog().map((t) => t.name).sort(), manifest.tools.map((t) => t.name).sort());
+});
+
 test('the tool list is the app\'s: the same names as the MCP kit serves', () => {
   const kit = path.join(root, '..', '..', 'macos', 'Sources', 'M1K3MCPKit');
   const declared = new Set(['ask_private_cloud']); // names itself through a constant

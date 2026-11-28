@@ -36,12 +36,16 @@ and each tool group stay off until you turn them on in M1K3.
 
 ## Limits
 
-- **macOS only**, and only while the M1K3 app is running. If it is not, each call
-  answers with a sentence saying so.
+- **macOS only**, and only while the M1K3 app is running. If it is not (or no
+  token is set yet), the bridge still answers the handshake and lists M1K3's tools
+  from `server/tools.json`, so your client shows them; each call answers with a
+  sentence saying what is missing. Once M1K3 answers, the bridge introduces your
+  client to it and relays from then on.
 - **One client at a time.** M1K3 serves one connected MCP client; a second one
   connecting ends the first one's session.
-- The tools are M1K3's own (19 today). The bundle's list is checked against the
-  app's in CI.
+- The tools are M1K3's own (19 today). `server/tools.json` is generated from the
+  app's Swift kit, and CI fails when it drifts (`MCPToolCatalogTests`); regenerate
+  it with `M1K3_WRITE_TOOL_CATALOG=1 macos/tools/dev/tdd.sh M1K3MCPKitTests MCPToolCatalogTests`.
 
 ## Build and test
 
@@ -51,7 +55,20 @@ integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 ```
 
 A bundle is a zip of `manifest.json`, `icon.png` (the site's icon, copied in by the
-build) and `server/index.js`.
+build), `server/index.js` and `server/tools.json`.
+
+### In Docker (for directories)
+
+Glama grades an MCP server by starting it in Docker and asking for its tools.
+`Dockerfile` here does that for the bridge, from the repository root:
+
+```sh
+docker build -f integrations/mcpb/Dockerfile -t m1k3-bridge .
+docker run -i --rm m1k3-bridge
+```
+
+There is no M1K3 inside a container, so the image only ever lists the tools and
+answers each call with "open M1K3". It is for introspection, not a way to run M1K3.
 
 The Claude Code plugin in `integrations/claude-plugin` does not carry the
 bridge: Claude Code speaks HTTP, so the plugin is one loopback server entry.
@@ -105,3 +122,7 @@ the registry reads the duplicate as deprecated; the job is deleted. The script's
 `--confirm` path has still not run._
 _Review: Kev + claude-fable-5.2, 2026-11-16. Kev restricted the `mcp-registry`
 environment (read back over the API); Publishing says so._
+_Review: Kev + claude-opus-5.5, 2026-11-28. Bundle 0.2.0 (listing 1.2.0): the bridge
+answers the handshake and the tool list from `server/tools.json` while M1K3 can't be
+reached, and a Dockerfile lets Glama grade it (Kev: "Build it"). Confidence 0.8. Open:
+0.2.0 is not released yet; the workflow run and `publish-listing.sh --confirm` are Kev's._

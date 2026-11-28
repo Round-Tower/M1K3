@@ -1,0 +1,449 @@
+[
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Ask M1K3"
+    },
+    "description" : "Ask M1K3's local brain a question. The answer is grounded in M1K3's private knowledge store with section-level citations, and may use web search if the user has it enabled in M1K3's settings. Fully local inference. Fast answers return inline; a long turn (web search on a larger brain) instead returns a job id — redeem it in a few seconds via get_answer, or by calling this tool again with just the job_id. Check get_status for which brain is active.",
+    "inputSchema" : {
+      "properties" : {
+        "job_id" : {
+          "description" : "a job id a previous ask_m1k3 call returned — fetches that result instead of asking a new question",
+          "type" : "string"
+        },
+        "question" : {
+          "description" : "the question to ask (omit when redeeming a job_id)",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "type" : "object"
+    },
+    "name" : "ask_m1k3",
+    "title" : "Ask M1K3"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Ask Private Cloud Compute"
+    },
+    "description" : "Ask Apple's Private Cloud Compute, a larger model than the ones on this Mac. NOT local: your prompt and instructions are sent to Apple's Private Cloud Compute (Apple states it keeps nothing), under Apple's acceptable use requirements. Only what you pass is sent, behind one fixed line saying so: nothing from M1K3's memory or knowledge is added, so include any context the answer needs, and send nothing the user would not want to leave this Mac. Each call counts against the user's daily Private Cloud Compute limit. For a private, local answer use ask_m1k3.",
+    "inputSchema" : {
+      "properties" : {
+        "instructions" : {
+          "description" : "optional system instructions for this one call",
+          "type" : "string"
+        },
+        "prompt" : {
+          "description" : "the question or task, with any context it needs",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "prompt"
+      ],
+      "type" : "object"
+    },
+    "name" : "ask_private_cloud",
+    "title" : "Ask Private Cloud Compute"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Forget a memory"
+    },
+    "description" : "Permanently forget a fact M1K3 remembers — the consent primitive, the counterpart to remember. Finds the single best-matching memory for the query and HARD-DELETES it from BOTH the memory graph AND the document corpus (no residue). Irreversible: when no memory is a confident match it deletes NOTHING and tells you the closest, so a vague query can't erase the wrong fact. Repeat the remembered FACT's text word-for-word (as recall_memory returned it) — not your search query.",
+    "inputSchema" : {
+      "properties" : {
+        "query" : {
+          "description" : "the fact to forget — repeat the remembered fact's text word-for-word (not your search query) for precision",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "type" : "object"
+    },
+    "name" : "forget_memory",
+    "title" : "Forget a memory"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Get an answer"
+    },
+    "description" : "Fetch the result of an ask_m1k3 call that returned a job id because it was taking a while. Returns the grounded answer once ready, or asks you to poll again if M1K3 is still working. Only needed when ask_m1k3 handed back a job id.",
+    "inputSchema" : {
+      "properties" : {
+        "job_id" : {
+          "description" : "the job id ask_m1k3 returned",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "get_answer",
+    "title" : "Get an answer"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Read a document"
+    },
+    "description" : "Fetch the text of one indexed item by its id (from list_documents). Returns up to ~6000 characters per call; for longer items, a footer gives the offset to resume from — call again with that offset to page through.",
+    "inputSchema" : {
+      "properties" : {
+        "id" : {
+          "description" : "the document id (UUID)",
+          "type" : "string"
+        },
+        "offset" : {
+          "description" : "character offset to start from (default 0; see the resume footer)",
+          "type" : "integer"
+        }
+      },
+      "required" : [
+        "id"
+      ],
+      "type" : "object"
+    },
+    "name" : "get_document",
+    "title" : "Read a document"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "M1K3 status"
+    },
+    "description" : "M1K3's overall status: active brain tier, TTS provider, voice tier, and the busy flags — whether M1K3 is speaking, in a conversation, using its mic, or already answering an ask_m1k3 call. Poll this before speak/listen/ask_m1k3.",
+    "inputSchema" : {
+      "properties" : {
+
+      },
+      "type" : "object"
+    },
+    "name" : "get_status",
+    "title" : "M1K3 status"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List documents"
+    },
+    "description" : "List the items M1K3 has indexed, with their ids, kinds, and titles.",
+    "inputSchema" : {
+      "properties" : {
+        "limit" : {
+          "description" : "max items (default 100)",
+          "type" : "integer"
+        }
+      },
+      "type" : "object"
+    },
+    "name" : "list_documents",
+    "title" : "List documents"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List questions asked"
+    },
+    "description" : "List recent ask_m1k3 jobs — id, state (running/done/error), and age in seconds. Use this to recover a job id you lost; redeem a done job via get_answer. Never contains answer text.",
+    "inputSchema" : {
+      "properties" : {
+
+      },
+      "type" : "object"
+    },
+    "name" : "list_jobs",
+    "title" : "List questions asked"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "List todos"
+    },
+    "description" : "The user's todo list as M1K3 holds it. `open` (default) is what is on the list; `pending` is what M1K3 or a visiting agent has proposed and the user has not yet accepted; `all` includes done and dismissed. Read-only.",
+    "inputSchema" : {
+      "properties" : {
+        "state" : {
+          "description" : "which items to list (default open)",
+          "enum" : [
+            "open",
+            "pending",
+            "all"
+          ],
+          "type" : "string"
+        }
+      },
+      "type" : "object"
+    },
+    "name" : "list_todos",
+    "title" : "List todos"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Listen"
+    },
+    "description" : "Listen on M1K3's microphone and return the transcript once the speaker pauses (or the timeout passes). Waits for any in-progress speech to finish before opening the mic — that wait comes OUT of timeout_s (at least 5s of real listening is always kept), so the call is bounded by roughly timeout_s overall. This is how you hear the user. When nobody speaks it says so (\"Heard nothing\") rather than returning words.",
+    "inputSchema" : {
+      "properties" : {
+        "timeout_s" : {
+          "description" : "max seconds to listen (default 30, clamped 5-120)",
+          "type" : "number"
+        }
+      },
+      "type" : "object"
+    },
+    "name" : "listen",
+    "title" : "Listen"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Memory stats"
+    },
+    "description" : "How many atomic facts M1K3 currently remembers (the live, non-superseded count). Handy for watching the memory graph grow as facts are remembered.",
+    "inputSchema" : {
+      "properties" : {
+
+      },
+      "type" : "object"
+    },
+    "name" : "memory_stats",
+    "title" : "Memory stats"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : true,
+      "readOnlyHint" : false,
+      "title" : "Open a link"
+    },
+    "description" : "Open a web link in M1K3's review panel on the user's screen, beside the conversation, so they can see the page. Local-first — the page opens in M1K3, nothing is sent anywhere. Argument: an http(s) URL.",
+    "inputSchema" : {
+      "properties" : {
+        "url" : {
+          "description" : "the http(s) URL to open",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "url"
+      ],
+      "type" : "object"
+    },
+    "name" : "open_link",
+    "title" : "Open a link"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Propose a todo"
+    },
+    "description" : "PROPOSE a todo for the user. It lands in their inbox as pending, stamped with your client name; only the user can accept, complete, or dismiss it. This never opens a todo, never marks anything done, and is refused when the user has turned suggestions off, the inbox is full, the title names no task, or the user already has the same one. Use it for something the user said they still need to do — not for your own work.",
+    "inputSchema" : {
+      "properties" : {
+        "due" : {
+          "description" : "optional ISO-8601 date (2026-09-14) or date-time",
+          "type" : "string"
+        },
+        "note" : {
+          "description" : "optional context — why, or where it came from",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "the task, in the user's terms, one line",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "title"
+      ],
+      "type" : "object"
+    },
+    "name" : "propose_todo",
+    "title" : "Propose a todo"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Recall memories"
+    },
+    "description" : "Recall atomic facts M1K3 remembers about the user — the temporal memory GRAPH, separate from the document corpus search_knowledge reads. Returns the matching facts (with a similarity hint) or says so honestly when nothing is recalled. Use it to check what M1K3 has stored about a person, preference, or decision.",
+    "inputSchema" : {
+      "properties" : {
+        "query" : {
+          "description" : "what to recall (a name, topic, or question)",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "type" : "object"
+    },
+    "name" : "recall_memory",
+    "title" : "Recall memories"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Related memories"
+    },
+    "description" : "Recall the single best matching fact for the query, then walk M1K3's memory GRAPH one step out to its neighbours (linked or superseded facts). Use it to see how a memory connects to others — not just flat recall. Says so when there is no matching fact to anchor from.",
+    "inputSchema" : {
+      "properties" : {
+        "query" : {
+          "description" : "what to anchor the graph walk on",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "type" : "object"
+    },
+    "name" : "related_memory",
+    "title" : "Related memories"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Remember"
+    },
+    "description" : "Store text in M1K3's memory — it becomes part of what M1K3 knows, searchable in every future conversation (the same store search_knowledge reads). Use it for durable facts, notes, summaries, decisions. Survives every session.",
+    "inputSchema" : {
+      "properties" : {
+        "kind" : {
+          "description" : "what kind of fact this is: profile (a stable fact about the user), preference (a standing preference), decision (a decision and why), episode (something that happened), or note (anything else — the default when omitted)",
+          "enum" : [
+            "profile",
+            "preference",
+            "decision",
+            "episode",
+            "note"
+          ],
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "the content to index",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "a short title for the entry",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "title",
+        "text"
+      ],
+      "type" : "object"
+    },
+    "name" : "remember",
+    "title" : "Remember"
+  },
+  {
+    "annotations" : {
+      "openWorldHint" : false,
+      "readOnlyHint" : true,
+      "title" : "Search knowledge"
+    },
+    "description" : "Search M1K3's stored knowledge (documents, calls, notes; hybrid retrieval when available). Returns ranked matching chunks.",
+    "inputSchema" : {
+      "properties" : {
+        "limit" : {
+          "description" : "max results (default 5)",
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "the text to search for",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "type" : "object"
+    },
+    "name" : "search_knowledge",
+    "title" : "Search knowledge"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Speak aloud"
+    },
+    "description" : "Speak text aloud through M1K3's voice (and animate the avatar). Optional emotion, which sets the face and the voice's pace (and pitch where the voice allows): happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. Pass wait:true to return once playback finishes, or after ~25s with a still-speaking note for a long read (poll get_status); default returns as speech starts. If another visitor is already speaking, this call queues behind it (bounded — beyond that it's refused) rather than cutting the utterance in flight; poll get_status.queued to see how many are waiting.",
+    "inputSchema" : {
+      "properties" : {
+        "emotion" : {
+          "description" : "face and voice mood while speaking (optional)",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "what to say",
+          "type" : "string"
+        },
+        "wait" : {
+          "description" : "return after playback completes, bounded at ~25s (default false)",
+          "type" : "boolean"
+        }
+      },
+      "required" : [
+        "text"
+      ],
+      "type" : "object"
+    },
+    "name" : "speak",
+    "title" : "Speak aloud"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false,
+      "title" : "Stop speaking"
+    },
+    "description" : "Stop any in-progress speech immediately.",
+    "inputSchema" : {
+      "properties" : {
+
+      },
+      "type" : "object"
+    },
+    "name" : "stop_speaking",
+    "title" : "Stop speaking"
+  }
+]
