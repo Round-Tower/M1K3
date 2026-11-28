@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Build dist/m1k3.mcpb: an MCP Bundle is a zip of the manifest, the server and the icon.
+# Build dist/m1k3.mcpb: an MCP Bundle is a zip of the manifest, the server (with its
+# offline tool catalog, tools.json) and the icon.
 #   integrations/mcpb/build.sh
 # The icon is the site's (site/icon-512.png), copied in at build time: one source.
 # Prints the file's SHA-256, which the MCP Registry's server.json must carry.
@@ -12,8 +13,9 @@ node --test $here/test/bridge.test.js $here/test/manifest.test.js > /dev/null ||
 rm -rf $stage $out; mkdir -p $stage/server
 cp $here/manifest.json $stage/manifest.json
 cp $here/server/index.js $stage/server/index.js
+cp $here/server/tools.json $stage/server/tools.json
 cp $repo/site/icon-512.png $stage/icon.png
-(cd $stage && /usr/bin/zip -q -X -r $out manifest.json icon.png server/index.js)
+(cd $stage && /usr/bin/zip -q -X -r $out manifest.json icon.png server/index.js server/tools.json)
 rm -rf $stage
 print "built $out"
 print "sha256 $(/usr/bin/shasum -a 256 $out | cut -d' ' -f1)"

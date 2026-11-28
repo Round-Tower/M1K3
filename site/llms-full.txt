@@ -381,6 +381,8 @@ Nineteen tools are listed on the App Store build (eighteen on the DMG, which has
 
 The consent gates are deliberate and asymmetric: an agent can remember and it can forget_memory, but it can only ever propose a todo — accepting, completing and dismissing stay with the person.
 
+M1K3 is listed on the official MCP Registry (https://registry.modelcontextprotocol.io/v0/servers?search=app.m1k3) as app.m1k3/m1k3, and on Glama (https://glama.ai/mcp/servers/Round-Tower/M1K3).
+
 ### What it will not do
 
 - It will not answer another machine. The listener is pinned to 127.0.0.1 at the socket, never an interface address, so nothing on your network can reach it.

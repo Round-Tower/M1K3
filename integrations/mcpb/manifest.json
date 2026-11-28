@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "m1k3",
   "display_name": "M1K3",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac.",
   "long_description": "M1K3 is a free, private AI assistant that runs on your Mac. This extension connects Claude to the M1K3 app you already have running: Claude can search your documents and notes, save and recall memories, ask M1K3's local brain, and speak aloud in M1K3's voice.\n\nIt needs the M1K3 app (free on the Mac App Store) open, with Settings > Server > MCP server switched on, and the access token from that screen.\n\nWhat leaves your Mac: this extension talks only to M1K3 on this Mac. But whatever a tool returns to Claude (a memory, a document excerpt, a transcript) becomes part of your conversation with Claude, like anything else you share with it. M1K3 serves one connected client at a time.",
   "author": {
