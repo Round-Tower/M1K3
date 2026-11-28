@@ -40,7 +40,8 @@ and each tool group stay off until you turn them on in M1K3.
   token is set yet), the bridge still answers the handshake and lists M1K3's tools
   from `server/tools.json`, so your client shows them; each call answers with a
   sentence saying what is missing. Once M1K3 answers, the bridge introduces your
-  client to it and relays from then on.
+  client to it and relays from then on. (A client introduced this way keeps the
+  bridge's short instructions, not the app's longer ones, until it reconnects.)
 - **One client at a time.** M1K3 serves one connected MCP client; a second one
   connecting ends the first one's session.
 - The tools are M1K3's own (19 today). `server/tools.json` is generated from the

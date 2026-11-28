@@ -340,7 +340,15 @@ test('a protocol version the bridge does not know is answered with one it does',
 });
 
 test('a hung M1K3 cannot stall the handshake: the bridge answers once the short wait ends', async () => {
-  const hangs = (_, init) => new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)));
+  // A real hung socket keeps Node's event loop alive; AbortSignal.timeout's timer does not,
+  // so the fake holds a timer of its own until the abort (CI's Node ended the run without it).
+  const hangs = (_, init) => new Promise((_, reject) => {
+    const hold = setInterval(() => {}, 1000);
+    init.signal.addEventListener('abort', () => {
+      clearInterval(hold);
+      reject(init.signal.reason);
+    });
+  });
   const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: hangs, state: {}, timeoutMs: 600000, localTimeoutMs: 50 };
   const [hello] = await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
   assert.ok(hello.result.instructions.includes(MESSAGES.timedOut));
@@ -348,7 +356,7 @@ test('a hung M1K3 cannot stall the handshake: the bridge answers once the short 
 });
 
 test('a replay M1K3 answers with an error stays pending and is tried again', async () => {
-  let initErrors = 1;
+  let initErrors = 2;
   const methods = [];
   const fetchImpl = async (_, init) => {
     const body = JSON.parse(init.body);
@@ -362,11 +370,28 @@ test('a replay M1K3 answers with an error stays pending and is tried again', asy
   };
   const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state: {} };
   await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
-  await relay(call(2, 'tools/call'), deps);
+  const [refusedCall] = await relay(call(2, 'tools/call'), deps);
+  assert.equal(refusedCall.error.message, MESSAGES.handshakeRefused, 'never sent to a session that was not introduced');
   assert.ok(deps.state.pendingHandshake, 'the refused replay is still owed');
-  await relay(call(3, 'tools/call'), deps);
+  const [listed] = await relay(call(3, 'tools/list'), deps);
+  assert.equal(listed.error.message, MESSAGES.handshakeRefused, 'M1K3 answered, so its refusal shows, not the catalog');
+  await relay(call(4, 'tools/call'), deps);
   assert.equal(deps.state.pendingHandshake, null);
-  assert.deepEqual(methods, ['initialize', 'initialize', 'tools/call', 'initialize', 'notifications/initialized', 'tools/call']);
+  assert.deepEqual(methods, ['initialize', 'initialize', 'initialize', 'initialize', 'notifications/initialized', 'tools/call']);
+});
+
+test('while M1K3 is out of reach, a failed replay is the only dial: the message is not sent again', async () => {
+  let dials = 0;
+  const fetchImpl = async () => {
+    dials += 1;
+    throw new TypeError('fetch failed');
+  };
+  const deps = { env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl, state: {} };
+  await relay(call(1, 'initialize', { protocolVersion: '2025-06-18' }), deps);
+  dials = 0;
+  assert.equal((await relay(call(2, 'tools/list'), deps))[0].result.tools.length, catalog().length);
+  assert.equal((await relay(call(3, 'tools/call'), deps))[0].error.message, MESSAGES.notRunning);
+  assert.equal(dials, 2, 'one replay attempt per message, nothing more');
 });
 
 test('a client that says initialize again is introduced directly, with no stale replay', async () => {

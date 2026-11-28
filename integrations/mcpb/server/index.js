@@ -27,6 +27,9 @@
 // is replayed once before the first relayed call. Confidence 0.8 (pinned by the
 // bridge tests against fakes, and introspected in Docker: initialize, 19 tools, a call).
 // Open: the replay has not met the live app (closed at start, opened mid-session).
+// Review: Kev + claude-opus-5.5, 2026-11-28 (#910 passes). A message waits behind a
+// pending replay and is not sent until it succeeds: a session never introduced gets no
+// calls, and a dead M1K3 costs one dial per message. Confidence 0.8.
 // Context: Kev, 2026-11-28, on the awesome-mcp-servers listing, which needs a Glama
 // quality grade: "Build it".
 'use strict';
@@ -51,6 +54,7 @@ const MESSAGES = {
   badPort: 'The M1K3 port must be a number between 1 and 65535.',
   timedOut: 'M1K3 took too long to answer, so this call was dropped. Check the M1K3 app and try again.',
   bridgeFault: 'The M1K3 bridge hit a fault relaying this call. Try again.',
+  handshakeRefused: 'M1K3 did not accept this client yet. Check the M1K3 app, then try again.',
   offline:
     "This is M1K3's tool list, answered by the bridge because it can't reach the M1K3 app on this Mac yet. "
     + 'To use the tools, open the M1K3 app, switch on Settings > Server > MCP server, and paste its access token '
@@ -139,14 +143,21 @@ async function relay(message, deps) {
   const wantsReply = id !== undefined && id !== null && typeof message.method === 'string';
   const method = message && message.method;
 
+  const local = wantsReply && LOCAL_METHODS.has(method);
   if (method === 'initialize') state.pendingHandshake = null;
   if (state.pendingHandshake) {
     // The replay sends its own `initialized`; the client's one is spent on the bridge.
     if (method === 'notifications/initialized') return [];
-    await replayHandshake(deps);
+    // Until the replay succeeds the message is not sent: a session that was never
+    // introduced gets no calls, and a dead M1K3 costs one dial per message, not two.
+    const replay = await replayHandshake(deps);
+    if (!replay.ok) {
+      if (local && replay.unreachable) return [answerLocally(message, replay.reason)];
+      if (!wantsReply) return [];
+      return [errorFor(id, replay.unreachable ? replay.reason : MESSAGES.handshakeRefused)];
+    }
   }
 
-  const local = wantsReply && LOCAL_METHODS.has(method);
   const { ok, replies, unreachable, reason } = await forward(message, local ? shortWait(deps) : deps);
   if (ok || !local || !unreachable) return replies;
   if (method === 'initialize') state.pendingHandshake = message.params || {};
@@ -158,13 +169,19 @@ function shortWait(deps) {
   return { ...deps, timeoutMs: Math.min(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS, cap) };
 }
 
-/** Introduce the client to M1K3, now that it answers. A failure leaves it pending. */
+/**
+ * Introduce the client to M1K3. `ok` once M1K3 accepted it; otherwise `unreachable` and
+ * `reason` say why, and the handshake stays pending for the next message.
+ */
 async function replayHandshake(deps) {
   const init = { jsonrpc: '2.0', id: HANDSHAKE_ID, method: 'initialize', params: deps.state.pendingHandshake };
-  const { ok, replies } = await forward(init, shortWait(deps));
-  if (!ok || !replies.some((r) => r && r.id === HANDSHAKE_ID && r.result)) return;
-  const { ok: sent } = await forward({ jsonrpc: '2.0', method: 'notifications/initialized' }, shortWait(deps));
-  if (sent) deps.state.pendingHandshake = null;
+  const sent = await forward(init, shortWait(deps));
+  if (!sent.ok) return sent;
+  if (!sent.replies.some((r) => r && r.id === HANDSHAKE_ID && r.result)) return { ok: false, unreachable: false };
+  const done = await forward({ jsonrpc: '2.0', method: 'notifications/initialized' }, shortWait(deps));
+  if (!done.ok) return done;
+  deps.state.pendingHandshake = null;
+  return { ok: true };
 }
 
 /**
